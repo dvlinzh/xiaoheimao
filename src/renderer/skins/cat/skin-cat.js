@@ -50,8 +50,8 @@
 
       const cvs = document.createElement("canvas");
       cvs.id = "pet-canvas";
-      // 画布需容纳最宽的素材（cat-sleep 434px），否则尾巴/边缘会被画布裁掉
-      cvs.width = 440; cvs.height = 404;
+      // 画布需容纳最高素材（拎起 512px），否则拖拽姿态耳朵会被画布裁掉
+      cvs.width = 440; cvs.height = 516;
       const SCALE = 0.42;
       cvs.style.cssText = `position:absolute;left:50%;bottom:2px;width:${Math.round(cvs.width * SCALE)}px;height:${Math.round(cvs.height * SCALE)}px;transform:translateX(-50%);transform-origin:50% 100%;`;
       host.appendChild(cvs);
@@ -83,6 +83,12 @@
         // 单层渲染：整只猫（含尾巴）围绕底部中心一体呼吸——不再分层，无接缝
         const cx = cvs.width / 2, cy = cvs.height;
         ctx.save();
+        if (dragging) {
+          // 拎起晃动：脑袋为圆心（素材坐标 46%,22%），身体像钟摆一样小幅摆动
+          const px = ox + img.width * 0.46, py = oy + img.height * 0.22;
+          const ang = Math.sin((t / 1100) * Math.PI * 2) * 0.055;
+          ctx.translate(px, py); ctx.rotate(ang); ctx.translate(-px, -py);
+        }
         ctx.filter = filter;
         ctx.translate(cx, cy);
         ctx.scale(1 + BREATH.bodyAmp * breath, 1 + BREATH.bodyAmp * 0.6 * breath);
