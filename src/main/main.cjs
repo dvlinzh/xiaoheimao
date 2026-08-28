@@ -207,8 +207,9 @@ function positionDock() {
   const wa = workArea();
   const pb = petWin.getBounds();
   // 圆环绕着猫：dock 窗以猫的水平中心为圆心，环心对准猫头（耳朵高度）
+  // +85：环整体抬离头顶（原 +120 图标贴耳朵太近）
   const x = pb.x + Math.round(PET_W / 2 - DOCK_W / 2);
-  const y = pb.y - DOCK_H + 120;
+  const y = pb.y - DOCK_H + 85;
   dockWin.setPosition(Math.min(Math.max(x, wa.x + 4), wa.x + wa.width - DOCK_W - 4),
                       Math.min(Math.max(y, wa.y + 4), wa.y + wa.height - DOCK_H - 4));
 }
