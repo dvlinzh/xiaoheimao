@@ -76,8 +76,8 @@ function petPos(wa) {
   if (petEdge === "taskbar") {
     const x = Number.isFinite(petXTB) ? petXTB : wa.x + Math.round((wa.width - PET_W) / 2);
     // 脚底对齐方案（皮肤按素材最低不透明行对齐画布底=窗口底）：
-    // offset = 窗口底压入任务栏的深度。用户终选 ≈10px（坐实在任务栏上）。
-    return { x: Math.min(Math.max(x, wa.x + 4), wa.x + wa.width - PET_W - 4), y: wa.y + wa.height - PET_H + 10 };
+    // offset = 窗口底压入任务栏的深度。用户终选 ≈13px（坐实任务栏）。
+    return { x: Math.min(Math.max(x, wa.x + 4), wa.x + wa.width - PET_W - 4), y: wa.y + wa.height - PET_H + 13 };
   }
   const x = petEdge === "left" ? wa.x + 8 : wa.x + wa.width - PET_W - 8;
   const y = Number.isFinite(petY)
