@@ -227,7 +227,7 @@ function positionSettings() {
     x = petEdge === "left" ? pb.x + PET_W + 6 : pb.x - b.width - 6;
     if (x < wa.x + 6) x = pb.x + PET_W + 6;
   }
-  const y = Math.round(pb.y + (PET_H - b.height) / 2);   // 与猫垂直居中
+  let y = Math.round(pb.y + (PET_H - b.height) / 2);   // 与猫垂直居中
   y = Math.min(Math.max(y, wa.y + 8), wa.y + wa.height - b.height - 8);
   settingsWin.setPosition(x, y);
 }
