@@ -29,24 +29,109 @@
         i.onerror = () => res();
         i.src = "/assets/cat/" + f;
       })));
-      // 尾区多边形（cat-hull.ps1 生成）：poly=尾层软蒙版包络，bodyPoly=身体挖洞轮廓
-      let TAILDEF = {};
-      try {
-        TAILDEF = await fetch("/assets/cat/cat-tails.json").then((r) => r.json());
-        for (const k of Object.keys(TAILDEF)) TAILDEF[k.replace(/^cat-/, "")] = TAILDEF[k];
-        // 呼吸轴心 = 尾根接合点（素材坐标）：洞蒙版（bodyPoly）的左缘顶点质心——贴屁股那一端。
-        // 旧算法取「bodyPoly 最右点」作屁股参照是错的：洞蒙版本身是尾巴条带形状，
-        // 最右点落在大尾巴中段 → 轴心偏中，根部反而离轴心最远、摆幅最大 = 断缝来源。
-        // 轴心在接缝上 → 接缝位移≈0，根部焊死，尾尖摆幅最大。
-        for (const def of Object.values(TAILDEF)) {
-          const body = def.bodyPoly || def.poly;
-          let minX = Infinity;
-          for (const p of body) if (p[0] < minX) minX = p[0];
-          let sx = 0, sy = 0, n = 0;
-          for (const p of body) if (p[0] <= minX + 6) { sx += p[0]; sy += p[1]; n++; }
-          def.root = [Math.round(sx / n), Math.round(sy / n)];
+      // 尾巴蒙版：颜色区域生长（不用手调多边形——手工顶点会有残端/裂片）。
+      // 种子=蓝紫渐变特征像素（B-R>28 且 B>100 且不透明），BFS 向周边扩展，
+      // 局部色差≤46 才长入（尾巴渐变暗部的浅渐变），到身体黑交界自动停 → 精确尾巴像素。
+      // hard=精确蒙版（身体层挖洞用，身体层即原图剩余=干净无尾）；
+      // soft=blur(3px)+四方平移外扩≈9px（尾巴层裁出用，盖住洞口+呼吸摆动余量）；
+      // root=蒙版最左像素行（贴身体根部）→ 呼吸轴心，根部零位移。
+      function buildTailData(img) {
+        const w = img.width, h = img.height;
+        const c = document.createElement("canvas");
+        c.width = w; c.height = h;
+        const cx = c.getContext("2d", { willReadFrequently: true });
+        cx.drawImage(img, 0, 0);
+        const dd = cx.getImageData(0, 0, w, h).data;
+        const seen = new Uint8Array(w * h);
+        const q = [];
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const i = (y * w + x) * 4;
+          if (dd[i + 3] > 220 && dd[i + 2] - dd[i] > 40 && dd[i + 2] > 110) {
+            const p = y * w + x;
+            if (!seen[p]) { seen[p] = 1; q.push(p); }
+          }
         }
-      } catch {}
+        if (q.length < 50) return null;   // 姿态无尾巴（如 ask/sleep 兜底）
+        const THR = 46;
+        let head = 0;
+        while (head < q.length) {
+          const p = q[head++];
+          const x = p % w, y = (p / w) | 0;
+          const i = p * 4;
+          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const nx = x + dx, ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+            const np = ny * w + nx;
+            if (seen[np]) continue;
+            const ni = np * 4;
+            if (dd[ni + 3] < 160) continue;
+            if (dd[ni + 2] - dd[ni] <= 20) continue;   // 蓝紫性保持：身体黑像素永远进不来
+            const dr = Math.abs(dd[i] - dd[ni]) + Math.abs(dd[i + 1] - dd[ni + 1]) + Math.abs(dd[i + 2] - dd[ni + 2]);
+            if (dr <= THR) { seen[np] = 1; q.push(np); }
+          }
+        }
+        // 连通域过滤：只保留最大域（尾巴主体），丢弃图边缘渐晕等碎域污染
+        const lab = new Int32Array(w * h).fill(-1);
+        const comps = [];
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const p = y * w + x;
+          if (!seen[p] || lab[p] >= 0) continue;
+          const ci = comps.length;
+          let size = 0;
+          const stack = [p];
+          lab[p] = ci;
+          while (stack.length) {
+            const cp = stack.pop();
+            size++;
+            const cx2 = cp % w, cy2 = (cp / w) | 0;
+            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
+              const nx = cx2 + dx, ny = cy2 + dy;
+              if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+              const np = ny * w + nx;
+              if (seen[np] && lab[np] < 0) { lab[np] = ci; stack.push(np); }
+            }
+          }
+          comps.push(size);
+        }
+        let bestCi = 0;
+        for (let i = 1; i < comps.length; i++) if (comps[i] > comps[bestCi]) bestCi = i;
+        if (comps[bestCi] < 800) return null;
+        for (let p = 0; p < seen.length; p++) if (seen[p] && lab[p] !== bestCi) seen[p] = 0;
+        let minX = Infinity, minY = 0, count = 0, sy = 0, syN = 0;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          if (seen[y * w + x]) { count++; if (x < minX) { minX = x; minY = y; } }
+        }
+        if (count < 300) return null;
+        for (let y = 0; y < h; y++) {
+          const x0 = minX;
+          for (let x = x0; x <= x0 + 12 && x < w; x++) {
+            if (seen[y * w + x]) { sy += y; syN++; }
+          }
+        }
+        const hard = document.createElement("canvas");
+        hard.width = w; hard.height = h;
+        const hc = hard.getContext("2d");
+        const id = hc.createImageData(w, h);
+        const px = id.data;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          if (seen[y * w + x]) px[(y * w + x) * 4 + 3] = 255;
+        }
+        hc.putImageData(id, 0, 0);
+        const soft = document.createElement("canvas");
+        soft.width = w; soft.height = h;
+        const sc = soft.getContext("2d");
+        sc.filter = "blur(3px)";
+        sc.drawImage(hard, 0, 0);
+        sc.filter = "none";
+        for (const [dx, dy] of [[6, 0], [-6, 0], [0, 6], [0, -6]]) sc.drawImage(hard, dx, dy);
+        return { hard, soft, root: [minX, Math.round(sy / Math.max(1, syN))] };
+      }
+
+      const tailData = {};
+      for (const k of Object.keys(imgs)) {
+        const d = buildTailData(imgs[k]);
+        if (d) tailData[k] = d;
+      }
 
       const cvs = document.createElement("canvas");
       cvs.id = "pet-canvas";
@@ -61,35 +146,6 @@
       workBody.width = cvs.width; workBody.height = cvs.height;
       const workTail = document.createElement("canvas");
       workTail.width = cvs.width; workTail.height = cvs.height;
-      const maskCache = {};
-      function mask(pose, soft, ox, oy) {
-        const sig = pose + (soft ? ":s" : ":h");
-        if (maskCache[sig]) return maskCache[sig];
-        const td = TAILDEF[pose];
-        const m = document.createElement("canvas");
-        m.width = cvs.width; m.height = cvs.height;
-        const mc = m.getContext("2d");
-        // 尾层与洞都用「静止轮廓」：摆动已移除，不需要扫掠包络，
-        // 包络会把身体像素圈进尾层、跟着呼吸缩放而与身体错位成重影。
-        const src = td.bodyPoly || td.poly;
-        if (soft) mc.filter = "blur(3px)";
-        mc.beginPath();
-        mc.moveTo(src[0][0] + ox, src[0][1] + oy);
-        for (let i = 1; i < src.length; i++) mc.lineTo(src[i][0] + ox, src[i][1] + oy);
-        mc.closePath();
-        mc.fillStyle = "#fff";
-        mc.fill();
-        // 尾层外扩 8px（呼吸缩放尖端最大位移 ~4.5px，余量充足）、洞贴轮廓无外扩：
-        // 尾层在任何呼吸相位都完整盖住洞口，不露缝
-        if (soft) {
-          mc.lineWidth = 16;
-          mc.strokeStyle = "#fff";
-          mc.stroke();
-        }
-        mc.filter = "none";
-        maskCache[sig] = m;
-        return m;
-      }
 
       let mood = "idle";
       let dragging = false;
@@ -109,23 +165,23 @@
         if (!img) return;
         const ox = Math.floor((cvs.width - img.width) / 2);
         const oy = cvs.height - img.height;
-        const td = TAILDEF[pose];
+        const td = tailData[pose];
         const filter = dragging ? "none" : (MOOD_FILTER[pose] || "none");
         const breath = Math.sin((t / BREATH.period) * Math.PI * 2);
 
         if (td) {
-          // 每帧重建图层：身体层=完整图-尾巴形状（挖洞）；尾巴层=完整图∩软蒙版
+          // 每帧重建图层：身体层=完整图-尾巴蒙版（挖洞）；尾巴层=完整图∩软蒙版(外扩+羽化)
           const bc = workBody.getContext("2d");
           bc.clearRect(0, 0, cvs.width, cvs.height);
           bc.drawImage(img, ox, oy);
           bc.globalCompositeOperation = "destination-out";
-          bc.drawImage(mask(pose, false, ox, oy), 0, 0);
+          bc.drawImage(td.hard, ox, oy);
           bc.globalCompositeOperation = "source-over";
           const tc = workTail.getContext("2d");
           tc.clearRect(0, 0, cvs.width, cvs.height);
           tc.drawImage(img, ox, oy);
           tc.globalCompositeOperation = "destination-in";
-          tc.drawImage(mask(pose, true, ox, oy), 0, 0);
+          tc.drawImage(td.soft, ox, oy);
           tc.globalCompositeOperation = "source-over";
           /* 两层共用同一套身体呼吸矩阵（bodyT）：
              身体层画完后在同一矩阵内再叠尾巴摆动（tailExtra 绕尾根）。
@@ -171,7 +227,7 @@
       requestAnimationFrame(loop);
 
       /* 调试可视化（CDP 取用）：导出各图层组件供断缝诊断 */
-      window.__mbLayers = { cvs, imgs, workBody, workTail, maskCache, TAILDEF };
+      window.__mbLayers = { cvs, imgs, workBody, workTail, tailData };
 
       function applyDragClass() {
         cvs.classList.toggle("dragged", dragging);
