@@ -218,18 +218,16 @@ function positionSettings() {
   const wa = workArea();
   const pb = petWin.getBounds();
   const b = settingsWin.getBounds();          // 高度自适应（fitHeight），用实际值定位
-  // 贴猫原则：底边对齐猫头顶上方 6px，水平贴侧边 6px（任务栏模式居中于猫）
+  // 贴猫侧面：水平贴猫侧边 6px，垂直与猫居中
   let x;
   if (petEdge === "taskbar") {
-    x = pb.x + Math.round((PET_W - b.width) / 2);
-    if (x < wa.x + 6) x = wa.x + 6;
-    if (x + b.width > wa.x + wa.width - 6) x = wa.x + wa.width - b.width - 6;
+    x = pb.x - b.width - 6;                   // 默认左侧
+    if (x < wa.x + 6) x = pb.x + PET_W + 6;   // 撞左墙换右侧
   } else {
     x = petEdge === "left" ? pb.x + PET_W + 6 : pb.x - b.width - 6;
     if (x < wa.x + 6) x = pb.x + PET_W + 6;
   }
-  let y = pb.y - b.height - 6;
-  if (y < wa.y + 8) y = Math.min(pb.y + PET_H + 8, wa.y + wa.height - b.height - 8);
+  const y = Math.round(pb.y + (PET_H - b.height) / 2);   // 与猫垂直居中
   y = Math.min(Math.max(y, wa.y + 8), wa.y + wa.height - b.height - 8);
   settingsWin.setPosition(x, y);
 }

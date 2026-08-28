@@ -298,8 +298,10 @@ summary em { font-style: normal; color: var(--dim); font-size: 10.5px; font-weig
 .dz-float .dz-sub { font-size: 10.5px; opacity: .8; }
 .dz-toggle { background: #059669; box-shadow: 0 12px 32px rgba(5, 150, 105, .32); }
 .dz-del { background: #dc2626; box-shadow: 0 12px 32px rgba(220, 38, 38, .32); }
-.dz-float.armed { outline: 3px solid rgba(255, 255, 255, .75); transform: translateX(-50%) scale(1.06); }
-@keyframes dz-in { from { opacity: 0; transform: translate(-50%, 16px); } to { opacity: 1; transform: translate(-50%, 0); } }
+/* 分区是 .dz-stack（fixed 居中容器）的 flex 子元素，自身不再做 translateX 居中——
+   旧的 translateX(-50%) 会让 armed 分区左滑半个身位、入场时从左侧飞入（外观即「漂移」） */
+.dz-float.armed { outline: 3px solid rgba(255, 255, 255, .75); transform: scale(1.06); }
+@keyframes dz-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 .drag-ghost {
   position: fixed; z-index: 1300; pointer-events: none;
   transform: translate(-50%, -50%) rotate(-2deg);
