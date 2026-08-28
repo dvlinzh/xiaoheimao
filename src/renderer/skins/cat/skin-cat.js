@@ -76,7 +76,9 @@
         // 脚底对齐画布底：各姿态底部留白不同（idle 14px / sleep 89px…），
         // 按图片底边会悬空。bottomRow 无数据（异常）时回退图片底边。
         const oy = cvs.height - 1 - (bottomRow[pose] ?? img.height - 1);
-        const filter = dragging ? "none" : (MOOD_FILTER[pose] || "none");
+        // 光效按 mood 名查表（alert 红光 / celebrate 紫光 / ask 青光）——
+        // 旧代码误用 pose 名查（crouch/run），红紫两色从未生效
+        const filter = dragging ? "none" : (MOOD_FILTER[mood] || "none");
         const breath = Math.sin((t / BREATH.period) * Math.PI * 2);
         // 单层渲染：整只猫（含尾巴）围绕底部中心一体呼吸——不再分层，无接缝
         const cx = cvs.width / 2, cy = cvs.height;
