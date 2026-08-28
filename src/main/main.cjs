@@ -133,23 +133,33 @@ function createPet() {
   petWin.on("closed", () => { petWin = null; });
 }
 
+/** 唤起面板：刷新 blur 宽限期基准（每次 show 都算一次「刚打开」），并尝试抢焦点 */
+function summonBubble() {
+  bubbleShowAt = Date.now();
+  if (bubbleWin && !bubbleWin.isDestroyed()) {
+    bubbleWin.show();
+    bubbleWin.focus();
+  }
+}
+
 async function openBubble(harness) {
   if (!harness) return;
   const url = `http://127.0.0.1:${port}/bubble.html?harness=${encodeURIComponent(harness)}&side=${petEdge}`;
   const reuse = bubbleWin && !bubbleWin.isDestroyed();
   if (reuse && lastBubbleHarness === harness) {
     // 同一 harness：不重载（保留滚动位置），仅唤起
-    bubbleWin.show();
+    summonBubble();
     positionBubble();
     return;
   }
   lastBubbleHarness = harness;
   if (reuse) {
     bubbleWin.loadURL(url);
-    bubbleWin.show();
+    summonBubble();
     positionBubble();
     return;
   }
+  bubbleShowAt = Date.now();   // show 事件会再刷一次，这里兜底防事件早于监听
   bubbleWin = new BrowserWindow({
     width: panelW, height: panelH,
     transparent: true,
@@ -171,17 +181,21 @@ async function openBubble(harness) {
     log("[bubble] load FAILED", code, desc));
   bubbleWin.webContents.on("console-message", (_e, level, message, line, source) =>
     log("[bubble:console]", message, `(${source}:${line})`));
-  const openedAt = Date.now();
   // 点击面板以外的任何界面 → 自动收回（图钉钉住时例外）
-  // 宽限期：点击来自不可聚焦的 dock 窗，进程非前台，Windows 会在打开后 ~0.6s 收回焦点
-  // 造成「闪开即关」的假象——打开后 1.2s 内的 blur 是假失焦，忽略
+  // 假失焦防护：从不可聚焦的 dock 窗/热键唤起时进程非前台，Windows 会在打开后
+  // ~0.6s 强制收回焦点造成「闪开即关」——show 后 1.2s 内的 blur 直接忽略；
+  // bubbleShowAt 在每次 show 事件刷新（覆盖复用窗口的再次唤起）。
   bubbleWin.on("blur", () => {
-    log("[bubble] blur → hide, pinned:", bubblePinned, "age:", Date.now() - openedAt, "ms");
+    const age = Date.now() - bubbleShowAt;
+    log("[bubble] blur, pinned:", bubblePinned, "age:", age, "ms");
     if (bubblePinned) return;
-    if (Date.now() - openedAt < 1200) return;
+    if (age < 1200) return;
     if (bubbleWin && !bubbleWin.isDestroyed()) bubbleWin.hide();
   });
-  bubbleWin.on("show", () => log("[bubble] shown, bounds:", JSON.stringify(bubbleWin.getBounds())));
+  bubbleWin.on("show", () => {
+    bubbleShowAt = Date.now();
+    log("[bubble] shown, bounds:", JSON.stringify(bubbleWin.getBounds()));
+  });
   positionBubble();
 }
 
@@ -263,7 +277,11 @@ function showSettings(show) {
   } else if (settingsWin && !settingsWin.isDestroyed()) settingsWin.hide();
 }
 
-ipcMain.on("dock-toggle", () => showDock(!dockWin || dockWin.isDestroyed() || !dockWin.isVisible()));
+ipcMain.on("dock-toggle", () => {
+  const vis = dockWin && !dockWin.isDestroyed() && dockWin.isVisible();
+  log("[dock] toggle →", vis ? "hide" : "show");
+  showDock(!vis);
+});
 
 /* ── 面板拖边缩放：渲染层抓边条上报方向，主进程跟随光标调窗口 ── */
 const PANEL_MIN_W = 380, PANEL_MIN_H = 500;
