@@ -109,8 +109,6 @@ function createPet() {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
-      // 桌宠窗永不聚焦，Chromium 会对后台窗节流 rAF——呼吸/竖耳动画会整只冻住，必须关掉
-      backgroundThrottling: false,
     },
   });
   petWin.setAlwaysOnTop(true, "screen-saver");
@@ -214,7 +212,7 @@ function showDock(show) {
         width: DOCK_W, height: DOCK_H,
         transparent: true, frame: false, resizable: false,
         alwaysOnTop: true, hasShadow: false, focusable: false, skipTaskbar: true,
-        webPreferences: { preload: path.join(__dirname, "preload.cjs"), contextIsolation: true, nodeIntegration: false, backgroundThrottling: false },
+        webPreferences: { preload: path.join(__dirname, "preload.cjs"), contextIsolation: true, nodeIntegration: false },
       });
       dockWin.loadURL(`http://127.0.0.1:${port}/dock.html`);
       dockWin.webContents.once("did-finish-load", () => {

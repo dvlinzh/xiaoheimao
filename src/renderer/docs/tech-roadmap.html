@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>思维板·KDB 技术路线图</title>
+<style>
+  :root {
+    --ink: #1f1f1f; --paper: #faf4e6; --card: #fffdf6;
+    --carrot: #e8843c; --gold: #f2c14e; --leaf: #6abe30;
+    --gap: #d95763; --city: #6cabdd; --dim: #8a8474; --navy: #1d2a5a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 28px 0 48px;
+    background: var(--paper);
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    color: var(--ink);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  h1 {
+    font-size: 22px; letter-spacing: 2px; margin: 0 0 4px;
+  }
+  .sub { color: var(--dim); font-size: 12px; margin-bottom: 22px; }
+  .wrap { width: 1040px; max-width: 96vw; }
+
+  .layer {
+    background: var(--card);
+    border: 3px solid var(--ink); border-radius: 14px;
+    box-shadow: 5px 5px 0 var(--ink);
+    padding: 14px 18px 16px; margin: 0 0 6px;
+  }
+  .layer > .lt {
+    display: flex; align-items: baseline; gap: 10px;
+    font-weight: 800; font-size: 15px; margin-bottom: 10px;
+  }
+  .lt .tag {
+    font-size: 10px; font-weight: 700; letter-spacing: 2px;
+    color: #fff; background: var(--ink); border-radius: 6px; padding: 2px 8px;
+  }
+  .lt .note { color: var(--dim); font-size: 11px; font-weight: 400; }
+
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .box {
+    flex: 1; min-width: 200px;
+    border: 2.5px solid var(--ink); border-radius: 10px;
+    padding: 9px 12px; background: #fff;
+  }
+  .box b { font-size: 13px; }
+  .box .d { font-size: 11px; color: #555; line-height: 1.55; margin-top: 3px; }
+  .box .pill {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    border-radius: 999px; padding: 1px 8px; margin: 4px 4px 0 0;
+    border: 2px solid var(--ink);
+  }
+  .ok    { background: #e4f3d4; }
+  .part  { background: #fdeec8; }
+  .todo  { background: #f6dcdE; }
+  .acc-carrot { background: var(--carrot); }
+  .acc-gold   { background: var(--gold); }
+  .acc-leaf   { background: var(--leaf); }
+  .acc-city   { background: var(--city); }
+  .acc-gap    { background: var(--gap); }
+  .acc-navy   { background: var(--navy); }
+
+  .connector {
+    text-align: center; color: var(--dim); font-size: 11px;
+    padding: 2px 0 10px; letter-spacing: 1px;
+  }
+  .connector b { color: var(--ink); }
+
+  /* 数据流 */
+  .flow {
+    display: flex; gap: 0; align-items: stretch; flex-wrap: wrap;
+  }
+  .step {
+    flex: 1; min-width: 96px;
+    border: 2.5px solid var(--ink); border-radius: 10px;
+    background: #fff; padding: 8px 8px 9px; text-align: center;
+    position: relative;
+  }
+  .step .n {
+    display: inline-block; width: 18px; height: 18px; line-height: 15px;
+    border: 2px solid var(--ink); border-radius: 50%;
+    background: var(--gold); font-size: 11px; font-weight: 800; margin-bottom: 4px;
+  }
+  .step .t { font-size: 11.5px; font-weight: 700; line-height: 1.35; }
+  .step .s { font-size: 9.5px; color: var(--dim); margin-top: 2px; }
+  .arrow {
+    align-self: center; padding: 0 4px; font-size: 15px; font-weight: 900; color: var(--carrot);
+  }
+
+  /* 路线时间轴 */
+  .tl { display: flex; gap: 12px; }
+  .stage {
+    flex: 1; border: 2.5px solid var(--ink); border-radius: 10px;
+    padding: 10px 12px; background: #fff; position: relative;
+  }
+  .stage h3 { margin: 0 0 6px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .st { font-size: 10px; font-weight: 800; border: 2px solid var(--ink); border-radius: 999px; padding: 0 8px; }
+  .st-done { background: var(--leaf); }
+  .st-wip  { background: var(--gold); }
+  .st-next { background: #eee6d2; color: #777; border-color: #b9b09a; }
+  .stage ul { margin: 0; padding-left: 16px; font-size: 11px; line-height: 1.7; }
+  .stage.done { background: #f2f8e8; }
+  .stage.wip  { background: #fdf3d5; }
+  .stage.next { background: #f7f3ea; }
+
+  /* 技术债 */
+  .debt {
+    border: 3px solid var(--gap); border-radius: 14px;
+    box-shadow: 5px 5px 0 var(--gap);
+    background: #fdf1f0; padding: 12px 18px 14px; margin-top: 18px;
+  }
+  .debt .lt { font-weight: 800; font-size: 15px; color: var(--gap); margin-bottom: 8px; }
+  .debt ol { margin: 0; padding-left: 20px; font-size: 12px; line-height: 1.8; }
+  .debt b { color: #a33; }
+
+  .legend { margin-top: 14px; font-size: 11px; color: var(--dim); text-align: center; }
+</style>
+</head>
+<body>
+  <h1>思维板 · KDB — 技术路线图</h1>
+  <div class="sub">mind-board-pet v0.4 · 跨 harness 思维整理桌宠 · 2026-08-27</div>
+
+  <div class="wrap">
+
+    <!-- ① 接入层 -->
+    <div class="layer">
+      <div class="lt"><span class="tag">① 接入层</span>各 AI 工具怎么把想法送进来 <span class="note">协议注入 = 软约束，工具调用 = 硬通道</span></div>
+      <div class="row">
+        <div class="box">
+          <b>Claude Code</b> <span class="pill ok">已接</span>
+          <div class="d">.mcp.json 注册 stdio 服务器；SessionStart 注入全量整理协议，UserPromptSubmit 每轮注入状态行（缺口数/待确认新目标）。</div>
+          <span class="pill acc-carrot">MCP</span><span class="pill acc-gold">双钩子</span>
+        </div>
+        <div class="box">
+          <b>DSH 原生插件</b> <span class="pill todo">待对接</span>
+          <div class="d">dsh-mind-board 本尊仍在 ~/.dsh 独立存储；P3 改一行数据路径即并入共享中枢，保留其右侧面板作第二视图。</div>
+          <span class="pill acc-city">右栏面板</span>
+        </div>
+        <div class="box">
+          <b>Codex / Gemini / OpenCode</b> <span class="pill todo">待接</span>
+          <div class="d">同一份 server 命令写进各家 MCP 配置即可；无 hook 能力的用 AGENTS.md 写软约定。</div>
+          <span class="pill acc-navy">MCP 即插座</span>
+        </div>
+      </div>
+    </div>
+    <div class="connector">▼ mind_board_organize / control / query（stdio JSON-RPC） ＋ HTTP /api/*</div>
+
+    <!-- ② 中枢 -->
+    <div class="layer">
+      <div class="lt"><span class="tag">② 中枢层</span>零依赖 Node 核心，三端复用同一份逻辑</div>
+      <div class="row">
+        <div class="box">
+          <b>store.mjs — 数据中枢</b> <span class="pill ok">26 项冒烟</span>
+          <div class="d">四层骨架（想法/要点/方案/缺口）· 同层去重（Jaccard≥0.7）· 目标变化检测（&lt;0.25 → 拒写并置 pendingNewTask 强制先问用户）· 原子写盘 · journal 自动轮转 · settings 注册表。</div>
+        </div>
+        <div class="box">
+          <b>mcp/server.mjs — 工具面</b> <span class="pill ok">握手+落盘实测</span>
+          <div class="d">organize（增量整理）/ control（宿主动作）/ query（紧凑视图）。被任意 harness 的 MCP 客户端拉起，写同一目录。</div>
+        </div>
+        <div class="box">
+          <b>server/app.mjs — 服务面</b>
+          <div class="d">127.0.0.1 单机 HTTP：overview / skeleton / action / mode / prefs / export。端口约定：<b>13134</b> 真实 Electron · <b>13136</b> 浏览器预览（防串台）。</div>
+        </div>
+        <div class="box">
+          <b>hooks/*.mjs — 协议面</b>
+          <div class="d">FULL_PROTOCOL（四层 schema+不脑补原则+字数红线）+ statusLine（一行状态，95% 上下文节省）。压缩后自动重注入。</div>
+        </div>
+      </div>
+    </div>
+    <div class="connector">▼ 读写</div>
+
+    <!-- ③ 存储 -->
+    <div class="layer" style="background:#f3ecd9">
+      <div class="lt"><span class="tag">③ 存储层</span>~/.mind-board/ — 文件即协议，跨 harness 的最大公约数</div>
+      <div class="row">
+        <div class="box" style="flex:1"><b>projects/*.json</b><div class="d">项目档案 + harness 出身戳（harnesses[] 记录谁写过）</div></div>
+        <div class="box" style="flex:1"><b>skeletons/*.json</b><div class="d">多目标骨架 {goals[], currentGoalId}</div></div>
+        <div class="box" style="flex:1"><b>journal.jsonl</b><div class="d">追加式事件流，>1MB 轮转；驱动宠物动效</div></div>
+        <div class="box" style="flex:1"><b>settings.json</b><div class="d">模块化注册表：mode/skin/modules/greetings/petEdge…</div></div>
+      </div>
+    </div>
+    <div class="connector">▼ 2.5s 轮询 overview ＋ 点击动作回写</div>
+
+    <!-- ④ 呈现层 -->
+    <div class="layer">
+      <div class="lt"><span class="tag">④ 呈现层</span>Electron 四窗架构（替代点击穿透，右键/拖拽必达）<span class="note">浏览器兜底：node src/server/app.mjs</span></div>
+      <div class="row">
+        <div class="box">
+          <b>宠物窗</b> 190×220 <span class="pill part">拖拽修复中</span>
+          <div class="d">角色本体 + 开场白气泡。皮肤插槽统一 API：mount(host)→{setMood, hop, juggle, flash}，换肤零重启。现役：照片马赛克拼豆 KDB（Wikipedia 正面照 → 44×58 珠，gen-kdb-photo.mjs 管线）。</div>
+          <span class="pill acc-gold">表情机</span>
+        </div>
+        <div class="box">
+          <b>表情状态机</b>
+          <div class="d">优先级：待确认「?」&gt; 庆祝「♥」&gt; 新缺口「!」&gt; 入睡「Zzz」&gt; 待机。颠球彩蛋（点击/闲置自颠）独立通道不打断表情。</div>
+        </div>
+        <div class="box">
+          <b>图标条窗 / 设置窗</b> <span class="pill ok">透明壳</span>
+          <div class="d">dock：全透明只留 harness 圆片+缺口角标，点 KDB 显隐；settings：14 项（模式/贴边三态/置顶/字号/皮肤/彩蛋/自启/教程…）。</div>
+        </div>
+        <div class="box">
+          <b>气泡窗</b> 470×660
+          <div class="d">RPG 对话框四层骨架 · 思路HP血条 · 拖拽删除（400ms 驻留）· 多目标切换 · 双主题（ink 深夜/cream 奶油）· 三档字号。</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 数据流 -->
+    <div class="layer" style="margin-top:18px">
+      <div class="lt"><span class="tag">心跳</span>一次完整数据流（你说一句话会发生什么）</div>
+      <div class="flow">
+        <div class="step"><span class="n">1</span><div class="t">你对 AI 说话</div><div class="s">想法/结论/疑虑</div></div>
+        <div class="arrow">→</div>
+        <div class="step"><span class="n">2</span><div class="t">钩子注入协议</div><div class="s">SessionStart 全量<br>UserPrompt 状态行</div></div>
+        <div class="arrow">→</div>
+        <div class="step"><span class="n">3</span><div class="t">agent 调 organize</div><div class="s">顺手归类，不打断回答</div></div>
+        <div class="arrow">→</div>
+        <div class="step"><span class="n">4</span><div class="t">store 合并落盘</div><div class="s">去重·目标检测·journal</div></div>
+        <div class="arrow">→</div>
+        <div class="step"><span class="n">5</span><div class="t">宠物窗感知</div><div class="s">2.5s 轮询 → 表情/角标</div></div>
+        <div class="arrow">→</div>
+        <div class="step"><span class="n">6</span><div class="t">点圆片开气泡</div><div class="s">四层骨架可视 · 动作回写</div></div>
+      </div>
+    </div>
+
+    <!-- 演进路线 -->
+    <div class="layer" style="margin-top:18px">
+      <div class="lt"><span class="tag">⑤ 演进路线</span>已走 · 在走 · 将走</div>
+      <div class="tl">
+        <div class="stage done">
+          <h3>P0 数据中枢 <span class="st st-done">✓ 完成</span></h3>
+          <ul><li>store 四层骨架+去重+目标检测</li><li>MCP 三工具全链路实测</li><li>CC 双钩子协议注入</li><li>冒烟测试 26 项</li></ul>
+        </div>
+        <div class="stage done">
+          <h3>P1 桌宠壳 <span class="st st-done">✓ 完成</span></h3>
+          <ul><li>Electron 透明窗上线</li><li>像素兔 → SVG 漫画 → 拼豆三代角色</li><li>表情/庆祝/颠球动效</li><li>Ctrl+Alt+B / H 热键</li></ul>
+        </div>
+        <div class="stage wip">
+          <h3>P2 交互完善 <span class="st st-wip">进行中</span></h3>
+          <ul><li>四窗架构（根治穿透类 bug）✓</li><li>模块化注册表（功能/皮肤/开场白）✓</li><li>设置窗 14 项 ✓</li><li><b>拖拽吸附 — 修复中</b></li></ul>
+        </div>
+        <div class="stage next">
+          <h3>P3 多 harness <span class="st st-next">待启动</span></h3>
+          <ul><li>DSH 数据路径并入 ~/.mind-board</li><li>Codex / Gemini MCP 配置片段</li><li>AGENTS.md 软约定模板</li></ul>
+        </div>
+        <div class="stage next">
+          <h3>P4 产品化 <span class="st st-next">待启动</span></h3>
+          <ul><li>electron-builder 打包（解锁自启）</li><li>系统通知（全屏不错过缺口）</li><li>8-bit 音效 · 外部皮肤包</li></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 技术债 -->
+    <div class="debt">
+      <div class="lt">⚠ 技术债与风险（诚实清单）</div>
+      <ol>
+        <li><b>拖拽失效（当前首伤）</b>：mousedown 未达渲染层（probe 日志为证）。主嫌：focusable:false 窗口事件、透明像素命中、窗口移动抢捕获。已加日志探针，逐项排除中。</li>
+        <li><b>整理是软约束</b>：模型偶尔跳过 organize 调用；每轮状态行会把它拉回来，但不是 100%。</li>
+        <li><b>dev 模式自启禁用</b>：需 P4 打包后解锁。</li>
+        <li><b>DSH 双数据源</b>：对接前两边各自为政，骨架不同步。</li>
+      </ol>
+    </div>
+
+    <div class="legend">■ 已完成 <span style="color:var(--leaf)">绿</span> · ■ 进行中 <span style="color:var(--gold)">金</span> · ■ 待启动 <span style="color:var(--dim)">灰</span> — 配色与 KDB 球衣同源</div>
+  </div>
+</body>
+</html>

@@ -34,9 +34,7 @@ const LAYER_TEXT_KEY = { ideas: "text", points: "text", plans: "title", gaps: "t
 function readJson(path) {
   try {
     if (!existsSync(path)) return null;
-    let raw = readFileSync(path, "utf8");
-    if (raw.charCodeAt(0) === 0xfeff) raw = raw.slice(1);   // 旧工具写盘可能带 BOM，直接 parse 会静默丢文件
-    return JSON.parse(raw);
+    return JSON.parse(readFileSync(path, "utf8"));
   } catch { return null; }
 }
 

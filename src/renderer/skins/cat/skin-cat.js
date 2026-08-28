@@ -45,24 +45,6 @@
       host.appendChild(cvs);
       const ctx = cvs.getContext("2d", { willReadFrequently: true });
 
-      /* 底部空白扫描：每张素材最低的不透明行（脚底）。裁剪留下的透明裙边
-       * 会让角色悬空（如 ask 底部 ~100px 全透明）——渲染时统一按脚底对齐画布底。 */
-      const bottomRow = {};
-      for (const [k, img] of Object.entries(imgs)) {
-        const oc = document.createElement("canvas");
-        oc.width = img.width; oc.height = img.height;
-        const octx = oc.getContext("2d", { willReadFrequently: true });
-        octx.drawImage(img, 0, 0);
-        const d = octx.getImageData(0, 0, oc.width, oc.height).data;
-        let b = oc.height - 1;
-        outer: for (; b >= 0; b--) {
-          for (let x = 0; x < oc.width; x++) {
-            if (d[(b * oc.width + x) * 4 + 3] > 8) break outer;
-          }
-        }
-        bottomRow[k] = b;
-      }
-
       const workBody = document.createElement("canvas");
       workBody.width = cvs.width; workBody.height = cvs.height;
       const workTail = document.createElement("canvas");
@@ -114,8 +96,7 @@
         const img = imgs[pose] || imgs.idle;
         if (!img) return;
         const ox = Math.floor((cvs.width - img.width) / 2);
-        // 脚底对齐画布底：素材最低不透明行压到最后一行（无底部空白时与旧逻辑等价）
-        const oy = cvs.height - 1 - (bottomRow[pose] ?? img.height - 1);
+        const oy = cvs.height - img.height;
         const td = TAILDEF[pose];
         const filter = dragging ? "none" : (MOOD_FILTER[pose] || "none");
         const breath = Math.sin((t / BREATH.period) * Math.PI * 2);
@@ -154,15 +135,8 @@
           ctx.filter = "none";
           ctx.restore();
         } else {
-          // 无尾区数据兜底：整体围绕底部中心微呼吸，保证任何姿势都有生命感
-          const cx = cvs.width / 2, cy = cvs.height;
-          ctx.save();
           ctx.filter = filter;
-          ctx.translate(cx, cy);
-          ctx.scale(1 + BREATH.bodyAmp * breath, 1 + BREATH.bodyAmp * 0.6 * breath);
-          ctx.translate(-cx, -cy);
           ctx.drawImage(img, ox, oy);
-          ctx.restore();
           ctx.filter = "none";
         }
 
