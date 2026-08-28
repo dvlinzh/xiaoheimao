@@ -509,12 +509,18 @@ function summarize(projectId, rec) {
 /** 兔壳轮询的总览：按最近活跃排序的项目列表（客户端自行按 harness 分组） */
 export function overview() {
   ensureDirs();
+  const mtime = (p) => { try { return statSync(p).mtimeMs; } catch { return 0; } };
   const ids = readdirSync(PROJECTS_DIR).filter((f) => f.endsWith(".json"));
   const items = [];
   for (const f of ids) {
     try {
       const rec = JSON.parse(readFileSync(join(PROJECTS_DIR, f), "utf8"));
-      if (rec?.id) items.push(summarize(rec.id, rec));
+      if (rec?.id) {
+        // liveAtMs = 项目档案/骨架的文件 mtime：钩子每轮 tick、MCP 每次整理都会写盘，
+        // 所以它能真实反映「这个 harness 此刻是否在跑」，而非历史的 updatedAt 字段
+        const liveAtMs = Math.max(mtime(join(PROJECTS_DIR, f)), mtime(skeletonPath(rec.id)));
+        items.push({ ...summarize(rec.id, rec), liveAtMs });
+      }
     } catch {}
   }
   items.sort((a, b) => b.updatedAtMs - a.updatedAtMs);
@@ -588,14 +594,21 @@ export function exportAll() {
   return out;
 }
 
-export function importAll(data) {
+export function importAll(data, opts = {}) {
   if (!data || data.version !== 1 || !data.tasks) return { ok: false, message: "格式不符" };
+  const from = opts.from || "import";   // 导入来源标记：让 harness 分组有归属（这批数据多半来自 dsh 插件）
   let n = 0;
   for (const [oldId, item] of Object.entries(data.tasks)) {
     // 新 id 防冲突
     const nid = existsSync(join(PROJECTS_DIR, oldId + ".json"))
       ? "p" + randomUUID().slice(0, 8) : oldId;
-    writeJson(join(PROJECTS_DIR, nid + ".json"), { ...item.task, id: nid });
+    const rec = { ...item.task, id: nid };
+    // 老数据没有 harnesses：补上来源 + harness 兜底（否则全进 "other"，图标坞被 42 枚爪印淹没）
+    if (!Array.isArray(rec.harnesses) || !rec.harnesses.length) {
+      rec.harness = rec.harness && rec.harness !== "unknown" ? rec.harness : from;
+      rec.harnesses = [rec.harness];
+    }
+    writeJson(join(PROJECTS_DIR, nid + ".json"), rec);
     if (item.skeleton) writeJson(skeletonPath(nid), item.skeleton);
     n++;
   }

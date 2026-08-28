@@ -1,8 +1,12 @@
-// dock.js — harness 图标条（小黑猫色系：暗色圆底 + harness 本尊图标）
-// 有官方原图（assets/icons/<h>.png）用原图；没有的用简化绘制版。
+// dock.js — harness 图标环（小黑猫色系：暗色圆底 + harness 本尊图标）
+// 布局：圆片以猫头为圆心、上半圆弧自动排布（1 枚在正头顶，多枚均布）。
+// 存活：只显示「正在跑」的 harness——项目文件 10 分钟内有写入才算活
+//       （钩子每轮 tick、MCP 每次整理都会写盘；没启动的 harness 直接不画）。
+// 图标：assets/icons/<h>.png 存在就用实物图；没有则绘制兜底（dsh 用字母标，
+//       不再画猜测的鲸——把真图标丢进 assets/icons/dsh.png 即自动替换）。
 const ICON_COLOR = {
   "claude-code": "#fbbf24",   // 金圈
-  dsh: "#a855f7",             // 紫焰
+  dsh: "#5ea3f7",             // DeepSeek 蓝
   codex: "#5eead4",           // 青纹
   gemini: "#60a5fa",          // 拖尾蓝
   opencode: "#c8c8cc",        // 官方灰标
@@ -12,15 +16,22 @@ const LABELS = {
   "claude-code": "Claude", dsh: "DSH", codex: "Codex",
   gemini: "Gemini", opencode: "OpenCode", other: "其他",
 };
-
-const seenKey = "mb.seen";
-let seen = {};
-try { seen = JSON.parse(localStorage.getItem(seenKey) || "{}"); } catch {}
-
 const ICON_IMG = {
-  "claude-code": "claude.png",   // Claude 官方托盘星芒（本机桌面端资源）
-  opencode: "opencode.png",      // OpenCode 官方 exe 图标
+  "claude-code": "claude.png",
+  opencode: "opencode.png",
+  dsh: "dsh.png",             // 可能不存在，启动时探测
 };
+const LIVE_MS = 10 * 60 * 1000;   // 10 分钟无写入 = 该 harness 未在跑
+
+const imgOk = {};   // 实物图标探测缓存
+async function probeIcons() {
+  await Promise.all(Object.entries(ICON_IMG).map(async ([h, f]) => {
+    try {
+      const r = await fetch("/assets/icons/" + f, { method: "HEAD" });
+      imgOk[h] = r.ok;
+    } catch { imgOk[h] = false; }
+  }));
+}
 
 const ICONS = {
   // Gemini 四角星芒
@@ -33,14 +44,14 @@ const ICONS = {
     }
     return s;
   },
-  // DSH 鲸影
-  dsh: (c) => `<path fill="${c}" d="M3.5 23.5 C9 13.5 20 9.5 28 12.5 C32.5 14.2 35 17.8 35 21.5 C35 24.6 32.2 26.6 28.6 25.8 C22 24.4 13 25.6 7.5 25.2 C4.8 25 2.8 24.6 3.5 23.5 Z M27.5 11.5 C29.5 7.5 33.5 5.5 36.5 6 C34.8 8.8 34.2 11.8 34.5 14.6 C36.6 12.4 38.8 11.6 38.2 15.4 C37.8 17.8 35.6 19.6 33.2 19.2 L29.5 15.8 Z"/>`,
+  // DSH 字母标（没有官方图时的兜底，不再画猜测的鲸）
+  dsh: (c) => `<text x="20" y="27.5" text-anchor="middle" font-size="19" font-weight="800" fill="${c}" font-family="'Segoe UI',sans-serif">D</text>`,
   // 其他：爪印
   other: (c) => `<g fill="${c}"><ellipse cx="20" cy="27.6" rx="8.8" ry="7"/><ellipse cx="7.4" cy="17.6" rx="3.7" ry="4.7" transform="rotate(-24 7.4 17.6)"/><ellipse cx="15.4" cy="11.3" rx="3.8" ry="5.1" transform="rotate(-9 15.4 11.3)"/><ellipse cx="24.6" cy="11.3" rx="3.8" ry="5.1" transform="rotate(9 24.6 11.3)"/><ellipse cx="32.6" cy="17.6" rx="3.7" ry="4.7" transform="rotate(24 32.6 17.6)"/></g>`,
 };
 
 function iconSvg(h, size) {
-  if (ICON_IMG[h]) {
+  if (ICON_IMG[h] && imgOk[h]) {
     return `<img src="/assets/icons/${ICON_IMG[h]}" width="${size}" height="${size}" style="border-radius:50%;object-fit:contain" draggable="false" alt="">`;
   }
   const c = ICON_COLOR[h] || ICON_COLOR.other;
@@ -48,36 +59,74 @@ function iconSvg(h, size) {
   return `<svg viewBox="0 0 40 40" width="${size}" height="${size}" aria-hidden="true">${body}</svg>`;
 }
 
+/* ── 环形布局：圆心 = 窗口底部中央（猫头位置），上半圆弧均布 ── */
+const R = 66;                 // 半径：贴着猫耳廓
+const CX = 150, CY = 168;     // 圆心（dock 窗 300×170，底部中点即猫头中心高度）
+function arcPos(i, n) {
+  // 上半圆均布：端点固定在 ±160°/±20°，n=1 时正头顶
+  if (n === 1) return { x: CX, y: CY - R };
+  const span = Math.min(40 + n * 30, 140);   // n=2 → 100°，n=4 → 160°（端点接近耳侧）
+  const start = -90 - span / 2;
+  const deg = start + (span / (n - 1)) * i;
+  const rad = (deg * Math.PI) / 180;
+  return { x: CX + R * Math.cos(rad), y: CY + R * Math.sin(rad) };
+}
+
+/* tooltip：JS 定位 + 窗口内收拢，不会再被裁 */
+const tip = document.getElementById("tip");
+function showTip(text, x, y) {
+  tip.textContent = text;
+  tip.hidden = false;
+  const tw = tip.offsetWidth;
+  tip.style.left = Math.min(Math.max(x - tw / 2, 4), 300 - tw - 4) + "px";
+  // 芯片在窗口上半部 → tooltip 放芯片上方；贴顶则翻转到下方
+  const top = y - 40;
+  tip.style.top = (top < 2 ? y + 22 : top) + "px";
+}
+function hideTip() { tip.hidden = true; }
+
+const seenKey = "mb.seen";
+let seen = {};
+let lastSig = null;
+try { seen = JSON.parse(localStorage.getItem(seenKey) || "{}"); } catch {}
+
 async function refresh() {
   try {
     const ov = await fetch("/api/overview").then((r) => r.json());
+    const now = Date.now();
     const act = (ov.projects || []).filter((p) => p.active !== false);
     const by = {};
     for (const p of act) {
       const list = p.harnesses?.length ? p.harnesses : [p.harness || "other"];
       for (const h of list) {
-        const e = by[h] || (by[h] = { gaps: 0, newest: 0 });
+        const e = by[h] || (by[h] = { gaps: 0, newest: 0, live: 0 });
         e.gaps += p.counts.gaps;
         e.newest = Math.max(e.newest, new Date(p.updatedAt).getTime());
+        e.live = Math.max(e.live, p.liveAtMs || 0);
       }
     }
-    const keys = Object.keys(by);
+    // 只保留正在跑的 harness（没启动的不出现）
+    const keys = Object.keys(by).filter((h) => now - by[h].live < LIVE_MS);
     keys.sort((a, b) => (a === "claude-code" ? -1 : b === "claude-code" ? 1 : a.localeCompare(b)));
     const modeOn = (ov.settings?.mode || "off") === "on";
-    const now = Date.now();
+    // 签名不变就不重建 DOM——3 秒轮询会把「正按着的芯片」换没，导致点击丢失
+    const sig = keys.map((h) => h + ":" + (by[h].newest > (seen[h] || 0) ? 1 : 0)).join("|");
+    if (sig === lastSig) return;
+    lastSig = sig;
+    hideTip();
     let html = "";
-    for (const h of keys) {
-      // 明暗 = 思维助手状态；红点 = 有新整理未查看
+    keys.forEach((h, i) => {
+      const { x, y } = arcPos(i, keys.length);
       const newest = by[h].newest;
-      const alive = modeOn && newest > 0 && (now - newest) < 30 * 60 * 1000;
-      const state = !modeOn ? "off" : alive ? "on" : "idle";
-      const tip = `${LABELS[h] || h}｜${state === "on" ? "整理中" : state === "idle" ? "待命（30 分钟没动静）" : "整理模式关"}`;
+      const fresh = newest > 0 && (now - newest) < 30 * 60 * 1000;
+      const state = !modeOn ? "off" : fresh ? "on" : "idle";
+      const tipText = `${LABELS[h] || h}｜${by[h].gaps ? "缺口 " + by[h].gaps + " · " : ""}${state === "on" ? "整理中" : state === "idle" ? "待命" : "整理模式关"}`;
       const hasNew = newest > (seen[h] || 0);
-      html += `<div class="chip st-${state}" data-h="${encodeURIComponent(h)}" data-tip="${tip}">`
-        + `<span class="disc">${iconSvg(h, 24)}</span>`
+      html += `<div class="chip st-${state}" data-h="${encodeURIComponent(h)}" data-tip="${tipText}" data-x="${x}" data-y="${y}" style="left:${x}px;top:${y}px">`
+        + `<span class="disc">${iconSvg(h, 30)}</span>`
         + `<span class="badge${hasNew ? " show" : ""}"></span></div>`;
-    }
-    dock.innerHTML = html || `<div class="chip" data-tip="还没有任务"><span class="disc">${iconSvg("other", 24)}</span></div>`;
+    });
+    dock.innerHTML = html;   // 无存活 harness 时留空（不再画兜底爪印）
     dock.querySelectorAll(".chip").forEach((el) => {
       el.addEventListener("click", () => {
         const h = el.dataset.h;
@@ -85,8 +134,12 @@ async function refresh() {
         try { localStorage.setItem(seenKey, JSON.stringify(seen)); } catch {}
         const badge = el.querySelector(".badge");
         if (badge) badge.classList.remove("show");
+        hideTip();
         window.petBridge?.openBubble(h);
       });
+      el.addEventListener("mouseenter", () =>
+        showTip(el.dataset.tip, Number(el.dataset.x), Number(el.dataset.y)));
+      el.addEventListener("mouseleave", hideTip);
     });
   } catch {}
 }
@@ -103,5 +156,5 @@ document.addEventListener("mousemove", (e) => {
 });
 document.addEventListener("mouseout", (e) => { if (!e.relatedTarget) setClickable(false); });
 
-refresh();
+probeIcons().then(refresh);
 setInterval(refresh, 3000);

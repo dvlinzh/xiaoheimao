@@ -1,25 +1,21 @@
-/* dock 窗 — 全透明，只有 harness 圆片 */
+/* dock 窗 — 全透明，圆片环绕猫头弧形排布 */
 html, body {
   margin: 0; width: 100%; height: 100%;
   background: transparent; overflow: hidden; user-select: none;
   font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
 }
-#dock {
-  width: 100%; height: 100%;
-  display: flex; align-items: flex-end; justify-content: center;
-  gap: 18px;
-  padding-bottom: 4px;
-}
+#dock { position: relative; width: 100%; height: 100%; }
 .chip {
-  position: relative;
+  position: absolute;
+  transform: translate(-50%, -50%);
   display: flex; flex-direction: column; align-items: center;
   cursor: pointer;
   transition: transform .12s;
 }
-.chip:hover { transform: translateY(-4px) scale(1.08); }
-.chip:active { transform: translateY(-1px); }
+.chip:hover { transform: translate(-50%, -50%) scale(1.12); }
+.chip:active { transform: translate(-50%, -50%) scale(.96); }
 .chip .disc {
-  width: 30px; height: 30px; border-radius: 50%;
+  width: 44px; height: 44px; border-radius: 50%;
   background: #16161e;
   border: 2px solid #2a2a38;
   display: flex; align-items: center; justify-content: center;
@@ -34,9 +30,10 @@ html, body {
   display: none;
 }
 .chip .badge.show { display: block; }
-.chip:hover::after {
-  content: attr(data-tip);
-  position: absolute; left: 50%; top: -28px; transform: translateX(-50%);
+/* JS 定位的 tooltip：跟随芯片但收拢在窗口内，不再被裁切 */
+#tip {
+  position: absolute; z-index: 5; pointer-events: none;
   background: #141414; color: #fff;
-  font-size: 10px; padding: 3px 8px; border-radius: 6px; white-space: nowrap; z-index: 5;
+  font-size: 10px; padding: 3px 8px; border-radius: 6px;
+  white-space: nowrap;
 }

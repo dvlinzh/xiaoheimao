@@ -25,8 +25,8 @@ let lastBubbleHarness = "";
 let bubblePinned = false;   // 面板图钉：钉住时失焦/拖拽不收起
 
 const PET_W = 190, PET_H = 220;
-const DOCK_W = 168, DOCK_H = 96;
-const SET_W = 226, SET_H = 420;
+const DOCK_W = 300, DOCK_H = 170;   // 图标环：环绕猫头的上半圆
+const SET_W = 254, SET_H = 420;
 
 /* 界面偏好（贴边/任务栏/置顶/位置），持久化在 settings.json 的附加键里 */
 let petEdge = "right";        // right | left | taskbar
@@ -181,15 +181,9 @@ function positionDock() {
   if (!petWin || petWin.isDestroyed() || !dockWin || dockWin.isDestroyed() || !dockWin.isVisible()) return;
   const wa = workArea();
   const pb = petWin.getBounds();
-  let x, y;
-  if (petEdge === "taskbar") {
-    // 圆片贴头顶：dock 内容贴窗底，底缘 ≈ 头顶上方 10px
-    x = pb.x + PET_W - DOCK_W + 10; y = pb.y - 30;
-  } else if (petEdge === "right") {
-    x = pb.x - DOCK_W - 8; y = pb.y + Math.round((PET_H - DOCK_H) / 2);
-  } else {
-    x = pb.x + PET_W + 8; y = pb.y + Math.round((PET_H - DOCK_H) / 2);
-  }
+  // 圆环绕着猫：dock 窗以猫的水平中心为圆心，环心对准猫头（耳朵高度）
+  const x = pb.x + Math.round(PET_W / 2 - DOCK_W / 2);
+  const y = pb.y - DOCK_H + 120;
   dockWin.setPosition(Math.min(Math.max(x, wa.x + 4), wa.x + wa.width - DOCK_W - 4),
                       Math.min(Math.max(y, wa.y + 4), wa.y + wa.height - DOCK_H - 4));
 }
@@ -217,9 +211,11 @@ function showDock(show) {
         alwaysOnTop: true, hasShadow: false, focusable: false, skipTaskbar: true,
         webPreferences: { preload: path.join(__dirname, "preload.cjs"), contextIsolation: true, nodeIntegration: false, backgroundThrottling: false },
       });
+      // 圆片会覆盖到猫窗区域（环绕头部），必须与猫窗同级置顶并压到最上——否则被猫窗挡住，看得见点不着
+      dockWin.setAlwaysOnTop(true, "screen-saver");
       dockWin.loadURL(`http://127.0.0.1:${port}/dock.html`);
       dockWin.webContents.once("did-finish-load", () => {
-        try { dockWin.setIgnoreMouseEvents(true, { forward: true }); } catch {}
+        try { dockWin.setIgnoreMouseEvents(true, { forward: true }); dockWin.moveTop(); } catch {}
       });
     } else dockWin.show();
     positionDock();
@@ -390,6 +386,7 @@ setInterval(() => {
 ipcMain.on("bubble-pinned", (_e, v) => { bubblePinned = !!v; });
 
 ipcMain.on("open-bubble", (_e, payload) => {
+  log("[bubble] open request:", payload?.harness || "(empty)");
   openBubble(payload?.harness || lastBubbleHarness || "");
 });
 

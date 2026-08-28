@@ -126,7 +126,7 @@ function fitHeight() {
   const bottom = (tut && !tut.hidden)
     ? Math.ceil(tut.getBoundingClientRect().bottom)
     : Math.ceil(el.getBoundingClientRect().bottom);
-  bridge?.setWinHeight?.(Math.min(Math.max(bottom + 8, 120), 560));
+  bridge?.setWinHeight?.(Math.min(Math.max(bottom + 8, 120), 660));
 }
 
 bridge?.getState?.().then((s) => {
