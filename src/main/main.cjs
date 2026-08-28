@@ -77,9 +77,9 @@ function petPos(wa) {
     // 脚底位置标定（本机实测）：素材脚底在窗口底上方约 8px
     // （idle 14 素材像素 × 0.42 画布缩放 + 2px 画布内边距）。
     // offset = 窗口底压入任务栏的深度 = 脚底相对任务栏上沿的位置：
-    //   12 → 脚被埋 4px；4 → 悬空 4px；8 → 脚正好踩在任务栏上沿。
-    // 换素材/DPI 后按「offset = 期望下沉量 + 8」重算。
-    return { x: Math.min(Math.max(x, wa.x + 4), wa.x + wa.width - PET_W - 4), y: wa.y + wa.height - PET_H + 8 };
+    //   12 → 脚沉入 4px；8 → 踩线；10 → 微微埋进任务栏上沿（用户终选：
+    //   脚盖住任务栏，而不是被任务栏盖住，配合置顶层渲染）。
+    return { x: Math.min(Math.max(x, wa.x + 4), wa.x + wa.width - PET_W - 4), y: wa.y + wa.height - PET_H + 10 };
   }
   const x = petEdge === "left" ? wa.x + 8 : wa.x + wa.width - PET_W - 8;
   const y = Number.isFinite(petY)
