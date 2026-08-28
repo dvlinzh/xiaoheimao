@@ -34,6 +34,20 @@
       try {
         TAILDEF = await fetch("/assets/cat/cat-tails.json").then((r) => r.json());
         for (const k of Object.keys(TAILDEF)) TAILDEF[k.replace(/^cat-/, "")] = TAILDEF[k];
+        // 呼吸轴心 = 尾根接合点：取身体轮廓最右点（屁股）与尾巴 poly 中最近的顶点。
+        // 轴心落在接缝上 → 缩放/旋转时接缝点位移≈0，尾根与身体不脱开，尾尖摆幅最大
+        // （旧轴心在 poly 内部，放大后尾根相对轴心位移可达 6px，就是断缝来源）。
+        for (const def of Object.values(TAILDEF)) {
+          const body = def.bodyPoly || def.poly;
+          let bp = body[0];
+          for (const p of body) if (p[0] > bp[0]) bp = p;
+          let root = def.poly[0], best = Infinity;
+          for (const p of def.poly) {
+            const d = (p[0] - bp[0]) ** 2 + (p[1] - bp[1]) ** 2;
+            if (d < best) { best = d; root = p; }
+          }
+          def.root = root;
+        }
       } catch {}
 
       const cvs = document.createElement("canvas");
@@ -126,11 +140,13 @@
           tc.globalCompositeOperation = "source-over";
           ctx.save();
           ctx.filter = filter;
-          ctx.translate(td.px + ox, td.py + oy);
+          const ax = (td.root ? td.root[0] : td.px) + ox;   // 轴心：尾根接合点（无数据时回退旧轴心）
+          const ay = (td.root ? td.root[1] : td.py) + oy;
+          ctx.translate(ax, ay);
           const s = 1 + BREATH.tailAmp * breath;
           ctx.scale(s, s);
           ctx.rotate(BREATH.tailRot * breath);
-          ctx.translate(-(td.px + ox), -(td.py + oy));
+          ctx.translate(-ax, -ay);
           ctx.drawImage(workTail, 0, 0);
           ctx.filter = "none";
           ctx.restore();
