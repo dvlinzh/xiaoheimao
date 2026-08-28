@@ -43,7 +43,12 @@ async function readBody(req) {
   const chunks = [];
   for await (const c of req) chunks.push(c);
   if (!chunks.length) return {};
-  try { return JSON.parse(Buffer.concat(chunks).toString("utf8")); } catch { return {}; }
+  try { return JSON.parse(Buffer.concat(chunks).toString("utf8")); } catch { return null; }
+}
+
+/** POST 路由通用守卫：非法 JSON 一律 400，绝不静默当 {} 处理（会假装成功） */
+function badJson(res) {
+  return json(res, { ok: false, message: "请求体不是合法 JSON" });
 }
 
 async function route(req, res) {
@@ -61,14 +66,16 @@ async function route(req, res) {
       }
       case req.method === "GET" && path === "/api/statusline": {
         const ov = store.overview();
-        const dir = (q.get("cwd") || "").toLowerCase();
-        const hit = ov.projects.find((p) => (p.projectDir || "").toLowerCase() === dir);
+        // 归一化后再比：query 里的 cwd 可能是正斜杠，projectDir 是反斜杠
+        const dir = resolve(q.get("cwd") || process.cwd()).toLowerCase();
+        const hit = ov.projects.find((p) => p.projectDir && resolve(p.projectDir).toLowerCase() === dir);
         return send(res, 200, statusLine(hit || null), { "Content-Type": "text/plain; charset=utf-8", __path: "" });
       }
       case req.method === "GET" && path === "/api/journal":
         return json(res, store.journalTail(Number(q.get("after") || 0)));
       case req.method === "POST" && path === "/api/organize": {
         const body = await readBody(req);
+        if (!body) return badJson(res);
         let rec;
         try {
           rec = body.projectId
@@ -80,6 +87,7 @@ async function route(req, res) {
       }
       case req.method === "POST" && path === "/api/action": {
         const body = await readBody(req);
+        if (!body) return badJson(res);
         if (!body.projectId || !body.action) return json(res, { ok: false, message: "projectId/action 必填" });
         // delete 之后骨架已不存在，返回前不读全量
         const r = store.controlAction(body.projectId, { action: body.action, params: body.params || {} });
@@ -87,11 +95,13 @@ async function route(req, res) {
       }
       case req.method === "POST" && path === "/api/mode": {
         const body = await readBody(req);
+        if (!body) return badJson(res);
         store.writeSettings({ mode: body.mode === "on" ? "on" : "off" });
         return json(res, { ok: true, settings: store.readSettings() });
       }
       case req.method === "POST" && path === "/api/prefs": {
         const body = await readBody(req);
+        if (!body) return badJson(res);
         const patch = {};
         if (typeof body.tutorialDone === "boolean") patch.tutorialDone = body.tutorialDone;
         if (["s", "m", "l"].includes(body.fontSize)) patch.fontSize = body.fontSize;
@@ -121,6 +131,7 @@ async function route(req, res) {
       }
       case req.method === "POST" && path === "/api/import": {
         const body = await readBody(req);
+        if (!body) return badJson(res);
         return json(res, store.importAll(body));
       }
       default:

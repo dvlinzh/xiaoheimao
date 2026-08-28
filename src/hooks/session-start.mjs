@@ -12,12 +12,14 @@ let input = {};
 try { input = JSON.parse(stdin || "{}"); } catch {}
 
 // 全量协议 + 当前目录项目速览（如有）
+// 目录归一化后再比：CLAUDE_PROJECT_DIR 可能是正斜杠形式，projectDir 存的是反斜杠，裸比较永不命中
+import { resolve } from "node:path";
 const cwd = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 let ctx = FULL_PROTOCOL;
 try {
   const ov = overview();
-  const dir = (cwd || "").toLowerCase();
-  const hit = ov.projects.find((p) => (p.projectDir || "").toLowerCase() === dir);
+  const dir = resolve(cwd).toLowerCase();
+  const hit = ov.projects.find((p) => p.projectDir && resolve(p.projectDir).toLowerCase() === dir);
   if (hit) {
     ctx += `\n\n当前项目已有骨架：目标「${hit.currentGoal || "未定"}」，缺口 ${hit.counts.gaps} 条待补全。`;
   }

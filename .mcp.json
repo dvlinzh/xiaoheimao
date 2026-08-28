@@ -2,7 +2,7 @@
   "mcpServers": {
     "mind-board": {
       "command": "node",
-      "args": ["C:\\Users\\acer3\\Desktop\\CC\\mind-board-pet\\src\\mcp\\server.mjs"],
+      "args": ["${CLAUDE_PROJECT_DIR}/src/mcp/server.mjs"],
       "env": {
         "MIND_BOARD_HARNESS": "claude-code"
       }
