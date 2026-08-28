@@ -163,16 +163,20 @@ async function openBubble(harness) {
       nodeIntegration: false,
     },
   });
-  bubbleWin.setAlwaysOnTop(true, "floating");
+  bubbleWin.setAlwaysOnTop(true, "screen-saver");   // 与猫/dock 同级，面板不被压在猫身下
   bubbleWin.loadURL(url);
   bubbleWin.webContents.on("did-fail-load", (_e, code, desc) =>
     log("[bubble] load FAILED", code, desc));
   bubbleWin.webContents.on("console-message", (_e, level, message, line, source) =>
     log("[bubble:console]", message, `(${source}:${line})`));
+  const openedAt = Date.now();
   // 点击面板以外的任何界面 → 自动收回（图钉钉住时例外）
+  // 宽限期：点击来自不可聚焦的 dock 窗，进程非前台，Windows 会在打开后 ~0.6s 收回焦点
+  // 造成「闪开即关」的假象——打开后 1.2s 内的 blur 是假失焦，忽略
   bubbleWin.on("blur", () => {
-    log("[bubble] blur → hide, pinned:", bubblePinned);
+    log("[bubble] blur → hide, pinned:", bubblePinned, "age:", Date.now() - openedAt, "ms");
     if (bubblePinned) return;
+    if (Date.now() - openedAt < 1200) return;
     if (bubbleWin && !bubbleWin.isDestroyed()) bubbleWin.hide();
   });
   bubbleWin.on("show", () => log("[bubble] shown, bounds:", JSON.stringify(bubbleWin.getBounds())));
@@ -199,12 +203,19 @@ function positionSettings() {
   const wa = workArea();
   const pb = petWin.getBounds();
   const b = settingsWin.getBounds();          // 高度自适应（fitHeight），用实际值定位
-  let x = petEdge === "left" ? pb.x + PET_W + 10 : pb.x - b.width - 10;
-  if (x < wa.x + 8) x = pb.x + PET_W + 10;
-  // 像对话框：底边对齐猫头顶附近，向上伸展；顶部放不下则下沉到猫下方
-  let y = pb.y - b.height + 46;
-  if (y < wa.y + 12) y = pb.y + PET_H + 10;
-  y = Math.min(Math.max(y, wa.y + 12), wa.y + wa.height - b.height - 14);
+  // 贴猫原则：底边对齐猫头顶上方 6px，水平贴侧边 6px（任务栏模式居中于猫）
+  let x;
+  if (petEdge === "taskbar") {
+    x = pb.x + Math.round((PET_W - b.width) / 2);
+    if (x < wa.x + 6) x = wa.x + 6;
+    if (x + b.width > wa.x + wa.width - 6) x = wa.x + wa.width - b.width - 6;
+  } else {
+    x = petEdge === "left" ? pb.x + PET_W + 6 : pb.x - b.width - 6;
+    if (x < wa.x + 6) x = pb.x + PET_W + 6;
+  }
+  let y = pb.y - b.height - 6;
+  if (y < wa.y + 8) y = Math.min(pb.y + PET_H + 8, wa.y + wa.height - b.height - 8);
+  y = Math.min(Math.max(y, wa.y + 8), wa.y + wa.height - b.height - 8);
   settingsWin.setPosition(x, y);
 }
 
@@ -434,6 +445,7 @@ ipcMain.on("set-win-height", (_e, h) => {
   if (Math.abs(nh - b.height) < 2) return;
   const y = Math.min(b.y, wa.y + wa.height - nh - 8);
   settingsWin.setBounds({ x: b.x, y: Math.max(y, wa.y + 8), width: b.width, height: nh });
+  positionSettings();   // 高度变化后底边重新对齐猫头顶（否则会压到猫身上）
 });
 ipcMain.on("open-data-dir", () => {
   const dir = process.env.MIND_BOARD_HOME || path.join(require("node:os").homedir(), ".mind-board");
