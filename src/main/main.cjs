@@ -370,9 +370,23 @@ ipcMain.on("drag-end", () => {
 ipcMain.on("set-clickable", (_e, clickable) => {
   const win = BrowserWindow.fromWebContents(_e.sender);
   if (!win || win.isDestroyed()) return;
-  log("[clickable]", win.getTitle() || win.id, "→", !!clickable);   // 诊断：观察悬停激活是否发生
   try { win.setIgnoreMouseEvents(!clickable, { forward: true }); } catch {}
 });
+
+/* 悬停保活轮询：穿透窗的 hover 激活依赖系统鼠标钩子转发，实测会被
+   全屏游戏/UAC 遮罩等环境事件摘除且永不恢复（猫变"可看不可点"）。
+   改由主进程轮询光标位置主动驱动穿透切换——getCursorScreenPoint 是
+   普通 API，不依赖任何钩子，与 OS 事件投递状态完全解耦。 */
+setInterval(() => {
+  if (!petWin || petWin.isDestroyed()) return;
+  const c = screen.getCursorScreenPoint();
+  const b = petWin.getBounds();
+  if (c.x < b.x || c.x >= b.x + b.width || c.y < b.y || c.y >= b.y + b.height) {
+    petWin.webContents.send("cursor-pos", { inside: false });
+    return;
+  }
+  petWin.webContents.send("cursor-pos", { inside: true, x: c.x - b.x, y: c.y - b.y });
+}, 100);
 
 ipcMain.on("bubble-pinned", (_e, v) => { bubblePinned = !!v; });
 

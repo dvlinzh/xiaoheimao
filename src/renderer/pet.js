@@ -184,6 +184,13 @@ document.addEventListener("mouseout", (e) => { if (!e.relatedTarget) setClickabl
 /* 拖拽姿态：主进程判定真实拖动后推送（被拎走的猫） */
 bridge?.onDrag?.((v) => Pet?.setDrag?.(v));
 
+/* 悬停激活兜底：主进程光标轮询（见 main.cjs cursor-pos）。
+   鼠标钩子转发被系统摘除时，穿透切换靠这条通道继续工作。 */
+bridge?.onCursorPos?.(({ inside, x, y }) => {
+  if (pressInfo) return;                       // 拖拽中锁定，防中途穿透丢 mouseup
+  setClickable(inside ? overPet(x, y) : false);
+});
+
 /* ── 启动 ── */
 poll();
 setInterval(poll, 2500);
