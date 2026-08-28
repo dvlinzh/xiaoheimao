@@ -74,10 +74,12 @@ function workArea() {
 function petPos(wa) {
   if (petEdge === "taskbar") {
     const x = Number.isFinite(petXTB) ? petXTB : wa.x + Math.round((wa.width - PET_W) / 2);
-    // +4：脚底压在任务栏上沿。素材脚底上方约有 8px 缩放后透明留白
-    // （idle 14 素材像素 × 0.42 画布缩放 + 2px 画布内边距），窗口底压入 12px 时
-    // 脚会被任务栏上沿埋住约 4px（本机实测），故收窄为 +4。换 DPI/素材后按此式重算。
-    return { x: Math.min(Math.max(x, wa.x + 4), wa.x + wa.width - PET_W - 4), y: wa.y + wa.height - PET_H + 4 };
+    // 脚底位置标定（本机实测）：素材脚底在窗口底上方约 8px
+    // （idle 14 素材像素 × 0.42 画布缩放 + 2px 画布内边距）。
+    // offset = 窗口底压入任务栏的深度 = 脚底相对任务栏上沿的位置：
+    //   12 → 脚被埋 4px；4 → 悬空 4px；8 → 脚正好踩在任务栏上沿。
+    // 换素材/DPI 后按「offset = 期望下沉量 + 8」重算。
+    return { x: Math.min(Math.max(x, wa.x + 4), wa.x + wa.width - PET_W - 4), y: wa.y + wa.height - PET_H + 8 };
   }
   const x = petEdge === "left" ? wa.x + 8 : wa.x + wa.width - PET_W - 8;
   const y = Number.isFinite(petY)
