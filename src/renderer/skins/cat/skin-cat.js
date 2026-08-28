@@ -7,10 +7,9 @@
   };
   const MOOD_POSE = {
     idle: "idle", walk: "walk", ask: "ask", alert: "crouch",
-    celebrate: "run", sleep: "sleep",
+    celebrate: "run",
   };
   const MOOD_FILTER = {
-    sleep: "brightness(.55) saturate(.75)",
     alert: "drop-shadow(0 0 14px rgba(244,63,94,.45))",
     celebrate: "drop-shadow(0 0 16px rgba(168,85,247,.5))",
     ask: "drop-shadow(0 0 12px rgba(94,234,212,.4))",
@@ -151,7 +150,6 @@
       let dragging = false;
 
       function moodFilterFor(pose) {
-        if (pose === "sleep") return "brightness(.55) saturate(.75)";
         if (pose === "crouch" && mood === "alert") return "drop-shadow(0 0 14px rgba(244,63,94,.45))";
         if (pose === "run") return "drop-shadow(0 0 16px rgba(168,85,247,.5))";
         if (pose === "ask") return "drop-shadow(0 0 12px rgba(94,234,212,.4))";
@@ -210,16 +208,6 @@
           ctx.filter = filter;
           ctx.drawImage(img, ox, oy);
           ctx.filter = "none";
-        }
-
-        if (mood === "sleep" && !dragging) {
-          ctx.fillStyle = "rgba(139,92,246,.85)";
-          ctx.font = "700 30px 'Segoe UI', sans-serif";
-          ctx.fillText("Z", 330, 96);
-          ctx.font = "700 22px 'Segoe UI', sans-serif";
-          ctx.fillText("z", 356, 74);
-          ctx.font = "700 16px 'Segoe UI', sans-serif";
-          ctx.fillText("z", 376, 58);
         }
       }
 

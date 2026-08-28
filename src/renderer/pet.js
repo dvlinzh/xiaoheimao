@@ -86,8 +86,7 @@ function applyOverview(ov) {
   if (anyAsk) mood = "ask";
   else if (Date.now() < celebrateUntil) mood = "celebrate";
   else if (Date.now() < alertUntil) mood = "alert";
-  else if (mode !== "on") mood = "sleep";
-  else if (Date.now() - Math.max(lastDataAt, lastInteraction) > 10 * 60 * 1000) mood = "sleep";
+  // 不进入睡眠（用户要求移除睡眠元素）：mode 关闭/空闲时保持 idle 待机
   Pet?.setMood(mood);
   if (mood === "celebrate") Pet?.hop();
 }
