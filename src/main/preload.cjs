@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld("petBridge", {
   dragStart: () => ipcRenderer.send("drag-start"),
   dragEnd: () => ipcRenderer.send("drag-end"),
   onDrag: (cb) => ipcRenderer.on("drag-state", (_e, v) => cb(v)),
+  onDragPhys: (cb) => ipcRenderer.on("drag-phys", (_e, v) => cb(v)),
   onCursorPos: (cb) => ipcRenderer.on("cursor-pos", (_e, p) => cb(p)),
   getState: () => ipcRenderer.invoke("get-state"),
   setPin: (v) => ipcRenderer.send("set-pin", !!v),

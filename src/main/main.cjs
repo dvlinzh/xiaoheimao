@@ -352,6 +352,7 @@ function positionBubble() {
 let dragging = false;
 let dragMoved = false;
 let dragOff = { x: 0, y: 0 };
+let dragPrevX = null;   // 上一帧光标 x（拖拽速度激励）
 let dragTimer = null;
 ipcMain.on("drag-start", () => {
   if (!petWin || petWin.isDestroyed() || dragging) return;
@@ -363,9 +364,15 @@ ipcMain.on("drag-start", () => {
   dragTimer = setInterval(() => {
     if (!dragging || !petWin || petWin.isDestroyed()) return;
     const c = screen.getCursorScreenPoint();
+    // 拖拽物理：水平速度发给渲染层（拎起晃动的激励源）
+    const vx = dragPrevX === null ? 0 : c.x - dragPrevX;
+    dragPrevX = c.x;
+    try { petWin.webContents.send("drag-phys", { vx }); } catch {}
     if (!dragMoved) {
-      // 按住未动 = 可能只是单击，先不收面板
-      if (Math.abs(c.x - p.x) + Math.abs(c.y - p.y) < 3) return;
+      // 阈值 10px：手抖/触摸板抖动（3~6px）以前会被误判成拖拽——图标环被藏掉、
+      // 猫被拎起吸附，用户的「单击唤环」几乎永远失败。与 pet.js 的单击判定
+      // （<6px）划清界限：<6 单击，6~10 忽略，≥10 拖拽。
+      if (Math.abs(c.x - p.x) + Math.abs(c.y - p.y) < 10) return;
       dragMoved = true;
       log("[drag] start at", JSON.stringify(b));
       try { petWin.webContents.send("drag-state", true); } catch {}
@@ -379,6 +386,7 @@ ipcMain.on("drag-start", () => {
   }, 16);
 });
 ipcMain.on("drag-end", () => {
+  dragPrevX = null;
   if (!dragging) return;
   dragging = false;
   clearInterval(dragTimer);

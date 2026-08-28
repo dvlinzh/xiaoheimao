@@ -182,6 +182,7 @@ document.addEventListener("mouseout", (e) => { if (!e.relatedTarget) setClickabl
 
 /* 拖拽姿态：主进程判定真实拖动后推送（被拎走的猫） */
 bridge?.onDrag?.((v) => Pet?.setDrag?.(v));
+bridge?.onDragPhys?.((v) => Pet?.setSwing?.(v.vx));   // 拖拽速度 → 拎起摆动激励
 
 /* 悬停激活兜底：主进程光标轮询（见 main.cjs cursor-pos）。
    鼠标钩子转发被系统摘除时，穿透切换靠这条通道继续工作。 */

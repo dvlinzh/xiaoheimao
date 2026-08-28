@@ -59,6 +59,7 @@
 
       let mood = "idle";
       let dragging = false;
+      let swingAng = 0, swingTarget = 0;   // 拎起摆角（rad）与速度激励目标
 
       function moodFilterFor(pose) {
         if (pose === "crouch" && mood === "alert") return "drop-shadow(0 0 14px rgba(244,63,94,.45))";
@@ -80,14 +81,16 @@
         // 旧代码误用 pose 名查（crouch/run），红紫两色从未生效
         const filter = dragging ? "none" : (MOOD_FILTER[mood] || "none");
         const breath = Math.sin((t / BREATH.period) * Math.PI * 2);
+        // 拎起摆动弹簧：角度向速度目标收敛（主进程 16ms 发一次光标水平速度）
+        swingAng += (swingTarget - swingAng) * 0.10;
+        if (!dragging) swingTarget = 0;
         // 单层渲染：整只猫（含尾巴）围绕底部中心一体呼吸——不再分层，无接缝
         const cx = cvs.width / 2, cy = cvs.height;
         ctx.save();
-        if (dragging) {
-          // 拎起晃动：脑袋为圆心（素材坐标 46%,22%），身体像钟摆一样小幅摆动
-          const px = ox + img.width * 0.46, py = oy + img.height * 0.22;
-          const ang = Math.sin((t / 1100) * Math.PI * 2) * 0.055;
-          ctx.translate(px, py); ctx.rotate(ang); ctx.translate(-px, -py);
+        if (dragging || Math.abs(swingAng) > 0.004) {
+          // 拎着后颈悬吊：轴心=素材上缘中点（后颈），身体随拖拽速度甩动
+          const px = ox + img.width * 0.5, py = oy + img.height * 0.10;
+          ctx.translate(px, py); ctx.rotate(swingAng); ctx.translate(-px, -py);
         }
         ctx.filter = filter;
         ctx.translate(cx, cy);
@@ -108,6 +111,10 @@
       return {
         el: cvs,
         setMood(m) { if (m !== mood) { mood = m; } },
+        setSwing(vx) {
+          // 光标水平速度（px/16ms）→ 目标摆角：快拖甩得开，上限约 ±17°
+          swingTarget = Math.max(-0.30, Math.min(0.30, -(vx || 0) * 0.012));
+        },
         setDrag(v) {
           dragging = !!v;
           applyDragClass();
