@@ -19,6 +19,12 @@ let greeted = false;
 const stage = $("#stage");
 const zone = $("#rabbit-zone");
 
+/* 诊断计数器：观察 OS 层鼠标事件是否真的投递进渲染层（CDP 读 window.__mbEvts） */
+window.__mbEvts = { move: 0, down: 0, up: 0 };
+document.addEventListener("mousemove", () => window.__mbEvts.move++, true);
+document.addEventListener("mousedown", () => window.__mbEvts.down++, true);
+document.addEventListener("mouseup", () => window.__mbEvts.up++, true);
+
 /* ── 皮肤装载 ── */
 let curSkin = "";
 async function adoptSkin(name) {

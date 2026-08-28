@@ -370,6 +370,7 @@ ipcMain.on("drag-end", () => {
 ipcMain.on("set-clickable", (_e, clickable) => {
   const win = BrowserWindow.fromWebContents(_e.sender);
   if (!win || win.isDestroyed()) return;
+  log("[clickable]", win.getTitle() || win.id, "→", !!clickable);   // 诊断：观察悬停激活是否发生
   try { win.setIgnoreMouseEvents(!clickable, { forward: true }); } catch {}
 });
 

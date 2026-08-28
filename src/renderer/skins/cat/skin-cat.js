@@ -16,7 +16,7 @@
     ask: "drop-shadow(0 0 12px rgba(94,234,212,.4))",
   };
   /* 呼吸参数：身体 0.8%，尾巴 3% + 微转——尾巴幅度明显大于身体 */
-  const BREATH = { period: 2600, bodyAmp: 0.008, tailAmp: 0.02, tailRot: 0.009 };
+  const BREATH = { period: 2600, bodyAmp: 0.008, tailAmp: 0.04, tailRot: 0.018 };
 
   window.PetSkinCat = {
     name: "cat",
