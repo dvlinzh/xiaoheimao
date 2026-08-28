@@ -1,0 +1,19 @@
+{
+  "name": "mind-board-pet",
+  "description": "思维板·小兔 — 跨 harness 共享的思维整理面板。数据中枢 + MCP 工具 + 桌宠壳。",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/main/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "pet": "node src/server/app.mjs",
+    "test": "node scripts/smoke-test.mjs"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  },
+  "dependencies": {
+    "@fontsource/fusion-pixel-12px-proportional-sc": "^5.3.0"
+  }
+}

@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>尾巴分层校验</title>
+<style>
+  body { background: #2a2a38; margin: 0; padding: 20px; display: flex; gap: 16px; flex-wrap: wrap; }
+  canvas { width: 169px; height: 161px; background: #46465a; border-radius: 8px; }
+  div { text-align: center; color: #ccc; font: 12px sans-serif; }
+</style>
+</head>
+<body>
+<div id="hosts"></div>
+<script>
+const POSES = ["cat-idle", "cat-walk", "cat-crouch", "cat-run"];
+const TAILWAVE = {
+  idle: [6, 4500], crouch: [4.5, 5000], walk: [8, 900], run: [8, 1600],
+  ask: [6, 4500], sleep: [1.5, 5000], celebrate: [8, 1600], alert: [4.5, 5000],
+};
+let flick = null;
+setInterval(() => { if (Math.random() < 0.5) flick = { t0: performance.now(), dur: 700, amp: 5 + Math.random() * 3, dir: Math.random() < 0.5 ? -1 : 1 }; }, 5000);
+
+function tailAngleNow(key, t) {
+  const wave = TAILWAVE[key.replace(/^cat-/, "")] || [0, 3000];
+  let deg = Math.sin((t / wave[1]) * Math.PI * 2) * wave[0]
+    + Math.sin((t / 1900) * Math.PI * 2) * (wave[0] * 0.35);
+  if (flick) {
+    const p = (t - flick.t0) / flick.dur;
+    if (p >= 1) flick = null;
+    else deg += Math.sin(p * Math.PI) * flick.amp * flick.dir;
+  }
+  return deg * Math.PI / 180;
+}
+
+(async () => {
+  const tails = await fetch("/assets/cat/cat-tails.json").then(r => r.json());
+  const hosts = document.getElementById("hosts");
+  const canvases = {};
+  const imgs = {};
+  await Promise.all(POSES.map(n => new Promise(res => {
+    const i = new Image();
+    i.onload = () => { imgs[n] = i; res(); };
+    i.src = `/assets/cat/${n}.png`;
+  })));
+  for (const n of POSES) {
+    const d = document.createElement("div");
+    const c = document.createElement("canvas");
+    c.width = 424; c.height = 404;
+    d.appendChild(c);
+    const cap = document.createElement("div");
+    cap.textContent = n;
+    d.appendChild(cap);
+    hosts.appendChild(d);
+    canvases[n] = { c, ctx: c.getContext("2d", { willReadFrequently: true }) };
+  }
+  const workB = document.createElement("canvas");
+  workB.width = 424; workB.height = 404;
+  const workT = document.createElement("canvas");
+  workT.width = 424; workT.height = 404;
+  const maskCache = {};
+  // idle image widened; search box covers full tail
+  function mask(n, soft) {
+    const k = n + (soft ? ":s" : ":h");
+    if (maskCache[k]) return maskCache[k];
+    const td = tails[n];
+    const m = document.createElement("canvas");
+    m.width = 424; m.height = 404;
+    const mc = m.getContext("2d");
+    const src = td.bodyPoly || td.poly;
+    if (soft) mc.filter = "blur(3px)";
+    mc.beginPath();
+    mc.moveTo(src[0][0], src[0][1]);
+    for (let i = 1; i < src.length; i++) mc.lineTo(src[i][0], src[i][1]);
+    mc.closePath();
+    mc.fillStyle = "#fff";
+    mc.fill();
+    mc.lineWidth = soft ? 8 : 2;
+    mc.strokeStyle = "#fff";
+    mc.stroke();
+    mc.filter = "none";
+    maskCache[k] = m;
+    return m;
+  }
+
+  function render(n, t) {
+    const { ctx } = canvases[n];
+    const img = imgs[n];
+    if (!img) return;
+    const ox = Math.floor((424 - img.width) / 2);
+    const oy = 404 - img.height;
+    const td = tails[n];
+    ctx.clearRect(0, 0, 424, 404);
+    if (!td) { ctx.drawImage(img, ox, oy); return; }
+    const breath = Math.sin((t / 2600) * Math.PI * 2);
+    const bc = workB.getContext("2d");
+    bc.clearRect(0, 0, 424, 404);
+    bc.drawImage(img, ox, oy);
+    bc.globalCompositeOperation = "destination-out";
+    bc.drawImage(mask(n, false), 0, 0);
+    bc.globalCompositeOperation = "source-over";
+    const tc = workT.getContext("2d");
+    tc.clearRect(0, 0, 424, 404);
+    tc.drawImage(img, ox, oy);
+    tc.globalCompositeOperation = "destination-in";
+    tc.drawImage(mask(n, true), 0, 0);
+    tc.globalCompositeOperation = "source-over";
+    const cx = 212, cy = 404;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(1 + 0.008 * breath, 1 + 0.008 * 0.6 * breath);
+    ctx.translate(-cx, -cy);
+    ctx.drawImage(workB, 0, 0);
+    ctx.restore();
+    ctx.save();
+    ctx.translate(td.px + ox, td.py + oy);
+    const s = 1 + 0.03 * breath;
+    ctx.scale(s, s);
+    ctx.rotate(0.009 * breath);
+    ctx.translate(-(td.px + ox), -(td.py + oy));
+    ctx.drawImage(workT, 0, 0);
+    ctx.restore();
+  }
+
+  window.__render = (t) => { for (const n of POSES) render(n, t); };
+  window.__debug = { canvases, imgs, tails, render };
+
+  // ASCII 观察器：尾区采样成字符画
+  window.__ascii = (n, t) => {
+    render(n, t);
+    const ctx = canvases[n].ctx;
+    const td = tails[n];
+    const xs = td.poly.map(p => p[0]), ys = td.poly.map(p => p[1]);
+    const x0 = Math.min(...xs) - 25, x1 = Math.max(...xs) + 15;
+    const y0 = Math.min(...ys) - 20, y1 = Math.max(...ys) + 20;
+    const ox = Math.floor((424 - imgs[n].width) / 2), oy = 404 - imgs[n].height;
+    let out = "";
+    for (let y = y0; y < y1; y += 6) {
+      let row = "";
+      for (let x = x0; x < x1; x += 4) {
+        const d = ctx.getImageData(x, y, 1, 1).data;
+        if (d[3] < 20) { row += "."; continue; }
+        const mx = Math.max(d[0], d[1], d[2]), mn = Math.min(d[0], d[1], d[2]);
+        if (mx - mn > 40 && d[2] >= d[0]) row += d[2] > d[1] ? "P" : "B";   // 紫/蓝
+        else if (d[0] > 180 && d[1] > 140) row += "Y";
+        else if (d[3] < 200) row += "f";
+        else row += "#";
+      }
+      out += row + "\n";
+    }
+    return out;
+  };
+
+  window.__render(0);
+})();
+</script>
+</body>
+</html>

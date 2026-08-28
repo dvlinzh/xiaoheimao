@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "mind-board": {
+      "command": "node",
+      "args": ["${CLAUDE_PROJECT_DIR}/src/mcp/server.mjs"],
+      "env": {
+        "MIND_BOARD_HARNESS": "claude-code"
+      }
+    }
+  }
+}

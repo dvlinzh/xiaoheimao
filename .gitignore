@@ -1,0 +1,4 @@
+node_modules/
+*.log
+pet-shot*.png
+pet2-shot*.png

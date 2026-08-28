@@ -1,0 +1,42 @@
+/* dock 窗 — 全透明，只有 harness 圆片 */
+html, body {
+  margin: 0; width: 100%; height: 100%;
+  background: transparent; overflow: hidden; user-select: none;
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+#dock {
+  width: 100%; height: 100%;
+  display: flex; align-items: flex-end; justify-content: center;
+  gap: 18px;
+  padding-bottom: 4px;
+}
+.chip {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center;
+  cursor: pointer;
+  transition: transform .12s;
+}
+.chip:hover { transform: translateY(-4px) scale(1.08); }
+.chip:active { transform: translateY(-1px); }
+.chip .disc {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: #16161e;
+  border: 2px solid #2a2a38;
+  display: flex; align-items: center; justify-content: center;
+}
+/* 状态只靠图标灰化程度区分；边框恒定、无光晕 */
+.chip.st-idle .disc { filter: grayscale(1) brightness(.92); }
+.chip.st-off .disc { filter: grayscale(1) brightness(.62); }
+.chip .badge {
+  position: absolute; top: -2px; right: -2px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #f43f5e; border: 2px solid #16161e;
+  display: none;
+}
+.chip .badge.show { display: block; }
+.chip:hover::after {
+  content: attr(data-tip);
+  position: absolute; left: 50%; top: -28px; transform: translateX(-50%);
+  background: #141414; color: #fff;
+  font-size: 10px; padding: 3px 8px; border-radius: 6px; white-space: nowrap; z-index: 5;
+}

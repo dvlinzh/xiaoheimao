@@ -1,0 +1,125 @@
+/* 设置面板 + 新手教程卡 —— 炭黑统一小黑猫：黑底、灰阶层次、白字值列、严格两列对齐 */
+:root {
+  --bg: #0d0d12;
+  --card: #16161e;
+  --card2: #1f1f2a;
+  --line: #2a2a38;
+  --line2: #3a3a4a;
+  --text: #e8e6f0;
+  --dim: #8a8798;
+  --faint: #55525f;
+  --amber: #e8e6f0;        /* 值列统一亮白（不再彩色强调） */
+  --amber-soft: #1f1f2a;
+  --amber-border: #3a3a4a;
+  --green: #9a97a8;
+  --red: #f0716c;
+  --red-soft: rgba(240, 113, 108, .1);
+  --red-border: rgba(240, 113, 108, .35);
+}
+
+#settings {
+  position: relative; margin: 8px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 4px 12px 10px;
+  overflow: hidden;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+#settings .st-title {
+  color: var(--text); font-size: 13px; font-weight: 600; letter-spacing: .5px;
+  padding: 8px 8px 6px;
+}
+/* 分组：细线分节 + 小号灰组名 */
+#settings .st-group { padding: 2px 0 4px; }
+#settings .st-group + .st-group { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 6px; }
+#settings .st-group-title {
+  font-size: 10px; letter-spacing: 2px; color: var(--faint);
+  padding: 2px 8px 4px; font-weight: 400;
+}
+/* 行：标签左（固定宽 + 不换行）、值贴右——两列严格对齐 */
+#settings .st-row {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; border: 0; background: none;
+  color: var(--text); font-family: inherit; font-size: 13px;
+  padding: 6px 8px; cursor: pointer; text-align: left;
+  border-radius: 7px; line-height: 1.5;
+}
+#settings .st-row:hover { background: var(--card2); }
+#settings .st-row .st-lb,
+#settings .st-row > span:first-child {
+  flex: none; width: 68px; min-width: 68px;
+  white-space: nowrap; overflow: visible;
+}
+#settings .st-row b {
+  color: var(--dim); font-weight: 600; font-size: 12px;
+  flex: none; margin-left: auto;   /* 值列统一贴右，两列对齐 */
+}
+#settings .st-row .st-arrow { color: var(--faint); font-size: 14px; flex: none; }
+#settings .st-row.danger { color: var(--red); }
+#settings .st-row.danger b, #settings .st-row.danger .st-arrow { color: var(--red); }
+#settings .st-row.danger:hover { background: var(--red-soft); }
+#settings .st-row:disabled { color: var(--faint); cursor: not-allowed; }
+#settings .st-row:disabled b { color: var(--faint); }
+#settings .st-row:disabled:hover { background: none; }
+#settings .st-sep { height: 1px; background: var(--line); margin: 5px 8px; }
+#settings .st-note {
+  font-style: normal; font-size: 10.5px; color: var(--faint);
+  font-weight: 400; flex: none;
+}
+
+/* 滑杆行：细轨 + 白圆滑块 */
+#settings .st-row.slider { cursor: default; }
+#settings .st-row.slider:hover { background: none; }
+#settings .st-ctl { display: flex; align-items: center; gap: 8px; flex: none; width: 120px; }
+#settings .st-range {
+  -webkit-appearance: none; appearance: none;
+  width: 76px; height: 2px; border-radius: 999px; cursor: pointer;
+  background: var(--line2); outline: none; margin: 0;
+}
+#settings .st-range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--text); border: 2px solid var(--card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .4); cursor: pointer;
+}
+#settings .st-range::-moz-range-thumb {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--text); border: 2px solid var(--card); cursor: pointer;
+}
+#settings .st-range::-moz-range-track { height: 2px; border-radius: 999px; background: var(--line2); }
+#settings .st-val {
+  font-family: inherit; font-size: 12px; color: var(--text);
+  min-width: 30px; text-align: right; flex: none;
+}
+
+/* ── 新手教程卡（同炭黑） ── */
+#tutorial {
+  position: absolute; inset: 8px;
+  z-index: 5;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: inherit;
+}
+#tutorial .tt-title {
+  color: var(--text); letter-spacing: .5px; font-size: 14px;
+  font-weight: 600; padding-bottom: 8px;
+}
+#tutorial .tt-line { color: var(--text); font-size: 12.5px; line-height: 2; }
+#tutorial .tt-line.dim { color: var(--dim); font-size: 10.5px; line-height: 1.8; }
+#tutorial .tt-line i {
+  display: inline-block; width: 6px; height: 6px;
+  margin-right: 8px; background: var(--text);
+  border-radius: 50%; opacity: .8;
+}
+#tt-ok {
+  margin-top: 10px; width: 100%;
+  border: 1px solid var(--line2); background: var(--card2);
+  color: var(--text); border-radius: 8px;
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  padding: 6px 0; cursor: pointer;
+}
+#tt-ok:hover { background: var(--line); }
+#tt-ok:active { transform: translateY(1px); }

@@ -1,0 +1,114 @@
+/* 宠物窗 + 设置窗 —— 小黑猫的视觉语言（角色自己的东西，不跟思维板面板走纸色）：
+   炭黑底 + 紫焰描边 + 金圈强调 + 怒焰警示 */
+:root {
+  --bg: #12121a;
+  --card: rgba(24, 24, 32, .97);
+  --card2: rgba(255, 255, 255, .07);
+  --line: rgba(168, 85, 247, .26);
+  --line2: rgba(168, 85, 247, .42);
+  --text: #f2f0f8;
+  --dim: #b3adc4;
+  --faint: #8f89a3;
+  /* 猫色系 */
+  --amber: #fbbf24;   /* 金圈：强调/当前值 */
+  --violet: #a855f7;  /* 紫焰：描边/标题 */
+  --purple: #8b5cf6;  /* 紫瞳 */
+  --teal: #5eead4;    /* 青纹 */
+  --red: #f43f5e;     /* 怒焰：危险 */
+  --blue: #60a5fa;    /* 拖尾蓝 */
+  /* 语义别名 */
+  --amber-soft: rgba(251, 191, 36, .14);
+  --amber-border: rgba(251, 191, 36, .4);
+  --red-soft: rgba(244, 63, 94, .14);
+  --red-border: rgba(244, 63, 94, .4);
+  /* 旧别名 */
+  --ink: #ece9f5;
+  --paper: rgba(24, 24, 32, .97);
+  --carrot: #fbbf24;
+  --leaf: #5eead4;
+  --gap: #f43f5e;
+  --gold: #fbbf24;
+  --pink: #e76c8c;
+  --city: #60a5fa;
+}
+html, body {
+  margin: 0; padding: 0; width: 100%; height: 100%;
+  background: transparent; overflow: hidden; user-select: none;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+#stage { position: relative; width: 100%; height: 100%; }
+#rabbit-zone {
+  position: absolute; inset: 0;
+  cursor: grab;
+}
+#rabbit-zone:active { cursor: grabbing; }
+#pet-host { position: absolute; inset: 0; }
+
+/* 角色：小黑猫 */
+/* 尺寸由 skin-cat.js 内联设置（随画布宽高自适应），此处只定定位 */
+#pet-canvas {
+  position: absolute; left: 50%; bottom: 2px;
+  transform: translateX(-50%);
+  transform-origin: 50% 100%;
+}
+.hop {
+  animation: pet-hop .5s cubic-bezier(.34, 1.6, .64, 1) both !important;
+}
+@keyframes pet-hop {
+  0%   { transform: translateX(-50%) translateY(0) scale(1,1); }
+  35%  { transform: translateX(-50%) translateY(-20px) scale(.96,1.05); }
+  65%  { transform: translateX(-50%) translateY(0) scale(1.04,.94); }
+  100% { transform: translateX(-50%) translateY(0) scale(1,1); }
+}
+/* 被拎走：悬挂摆荡（拖拽专属动作，与双击跳跃区分） */
+#pet-canvas.dragged {
+  animation: cat-swing 1.5s ease-in-out infinite !important;
+  transform-origin: 50% 12%;
+}
+@keyframes cat-swing {
+  0%, 100% { transform: translateX(-50%) rotate(-5deg) translateY(3px); }
+  50%      { transform: translateX(-50%) rotate(6deg) translateY(3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #pet-canvas, #pet-canvas.hop { animation: none !important; }
+}
+
+/* ── 开场白气泡：暗色卡片 + 紫焰描边 ── */
+/* 开场白：小黑猫自己的语言 —— 纯优雅黑，无彩色光 */
+#speech {
+  position: absolute; top: 8px; left: 50%;
+  transform: translateX(-50%);
+  max-width: 172px;
+  background: rgba(24, 24, 32, .96);
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .45);
+  color: #f2f0f8;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 12px; line-height: 1.6;
+  padding: 7px 11px;
+  text-align: center;
+  animation: speech-pop .25s cubic-bezier(.34,1.56,.64,1);
+  z-index: 5;
+}
+/* 小尖角：指向下方的猫 */
+#speech::after {
+  content: "";
+  position: absolute; left: 50%; bottom: -5px;
+  width: 8px; height: 8px; margin-left: -4px;
+  background: rgba(24, 24, 32, .96);
+  border-right: 1px solid rgba(255, 255, 255, .14);
+  border-bottom: 1px solid rgba(255, 255, 255, .14);
+  transform: rotate(45deg);
+}
+#speech[hidden] { display: none; }
+@keyframes speech-pop {
+  from { transform: translateX(-50%) scale(.6); opacity: 0; }
+  to   { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+html.in-browser body { background: #f3f0e8; }   /* 兜底预览用浅底，否则黑猫看不清 */
+html.in-browser #stage::before {
+  content: "browser fallback";
+  position: absolute; top: 2px; left: 6px;
+  color: var(--dim); font-size: 10px; z-index: 6;
+}

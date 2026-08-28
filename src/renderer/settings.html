@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'">
+<title>设置</title>
+<link rel="stylesheet" href="./pet.css">
+<link rel="stylesheet" href="./pet-panels.css">
+</head>
+<body>
+<div id="settings">
+  <div class="st-title" data-i18n="settings.title">设置</div>
+
+  <div class="st-group">
+    <div class="st-group-title" data-i18n="group.organize">整理</div>
+    <button class="st-row" id="st-mode"><span data-i18n="mode">整理模式</span><b id="st-mode-v">关</b></button>
+    <div class="st-row slider" id="st-interval">
+      <span class="st-lb" data-i18n="interval">整理频率</span>
+      <span class="st-ctl">
+        <input type="range" class="st-range" id="st-interval-r" min="1" max="3" step="1" value="2" title="每几轮对话提醒整理一次">
+      </span>
+      <b class="st-val" id="st-interval-v">2 轮</b>
+    </div>
+  </div>
+
+  <div class="st-group">
+    <div class="st-group-title" data-i18n="group.window">窗口</div>
+    <button class="st-row" id="st-pin"><span data-i18n="pin">窗口置顶</span><b id="st-pin-v">开</b></button>
+    <div class="st-row slider" id="st-font">
+      <span class="st-lb" data-i18n="fontSize">面板字号</span>
+      <span class="st-ctl">
+        <input type="range" class="st-range" id="st-font-r" min="0" max="2" step="1" value="1">
+      </span>
+      <b class="st-val" id="st-font-v">10pt</b>
+    </div>
+  </div>
+
+  <div class="st-group">
+    <div class="st-group-title" data-i18n="group.data">数据</div>
+    <button class="st-row" id="st-data"><span data-i18n="dataDir">数据目录</span><b class="st-arrow">›</b></button>
+    <button class="st-row" id="st-export"><span data-i18n="export">导出数据</span><b class="st-arrow">›</b></button>
+  </div>
+
+  <div class="st-group">
+    <div class="st-group-title" data-i18n="group.app">应用</div>
+    <button class="st-row" id="st-fontfam"><span data-i18n="fontFamily">面板字体</span><b id="st-fontfam-v">原版衬线</b></button>
+    <button class="st-row" id="st-language"><span data-i18n="lang">语言 Language</span><b id="st-language-v">中文</b></button>
+    <button class="st-row" id="st-autostart" title=""><span data-i18n="autostart">开机自启</span><b id="st-autostart-v">关</b></button>
+    <button class="st-row" id="st-tutorial"><span data-i18n="tutorial">新手教程</span><b class="st-arrow">›</b></button>
+    <button class="st-row" id="st-hide"><span data-i18n="hide">先躲一下</span><em class="st-note" data-i18n="hide.note">后台继续</em></button>
+    <button class="st-row danger" id="st-quit"><span data-i18n="quit">彻底退下</span><b class="st-arrow">›</b></button>
+  </div>
+</div>
+
+<div id="tutorial" hidden>
+  <div class="tt-title" data-i18n="tutorial">新手教程</div>
+  <div class="tt-line"><i class="k1"></i><span data-i18n="tut.click">单击我 → 呼出工具图标</span></div>
+  <div class="tt-line"><i class="k2"></i><span data-i18n="tut.panel">点图标 → 打开思维板</span></div>
+  <div class="tt-line"><i class="k3"></i><span data-i18n="tut.drag">按住我拖动 → 换个位置</span></div>
+  <div class="tt-line"><i class="k4"></i><span data-i18n="tut.rightclick">右键我 → 打开这个设置</span></div>
+  <div class="tt-line"><i class="k5"></i><span data-i18n="tut.dblclick">双击我 → 扑击一下</span></div>
+  <div class="tt-line dim"><span data-i18n="tut.hotkey">热键: Ctrl+Alt+B 面板 / Ctrl+Alt+H 躲</span></div>
+  <button id="tt-ok" data-i18n="tut.ok">知道了</button>
+</div>
+
+<script src="./i18n.js"></script>
+<script src="./settings.js"></script>
+</body>
+</html>
