@@ -34,19 +34,17 @@
       try {
         TAILDEF = await fetch("/assets/cat/cat-tails.json").then((r) => r.json());
         for (const k of Object.keys(TAILDEF)) TAILDEF[k.replace(/^cat-/, "")] = TAILDEF[k];
-        // 呼吸轴心 = 尾根接合点：取身体轮廓最右点（屁股）与尾巴 poly 中最近的顶点。
-        // 轴心落在接缝上 → 缩放/旋转时接缝点位移≈0，尾根与身体不脱开，尾尖摆幅最大
-        // （旧轴心在 poly 内部，放大后尾根相对轴心位移可达 6px，就是断缝来源）。
+        // 呼吸轴心 = 尾根接合点（素材坐标）：洞蒙版（bodyPoly）的左缘顶点质心——贴屁股那一端。
+        // 旧算法取「bodyPoly 最右点」作屁股参照是错的：洞蒙版本身是尾巴条带形状，
+        // 最右点落在大尾巴中段 → 轴心偏中，根部反而离轴心最远、摆幅最大 = 断缝来源。
+        // 轴心在接缝上 → 接缝位移≈0，根部焊死，尾尖摆幅最大。
         for (const def of Object.values(TAILDEF)) {
           const body = def.bodyPoly || def.poly;
-          let bp = body[0];
-          for (const p of body) if (p[0] > bp[0]) bp = p;
-          let root = def.poly[0], best = Infinity;
-          for (const p of def.poly) {
-            const d = (p[0] - bp[0]) ** 2 + (p[1] - bp[1]) ** 2;
-            if (d < best) { best = d; root = p; }
-          }
-          def.root = root;
+          let minX = Infinity;
+          for (const p of body) if (p[0] < minX) minX = p[0];
+          let sx = 0, sy = 0, n = 0;
+          for (const p of body) if (p[0] <= minX + 6) { sx += p[0]; sy += p[1]; n++; }
+          def.root = [Math.round(sx / n), Math.round(sy / n)];
         }
       } catch {}
 
@@ -116,35 +114,37 @@
         const breath = Math.sin((t / BREATH.period) * Math.PI * 2);
 
         if (td) {
-          // 身体层：挖洞 + 微呼吸（围绕底部中心）
+          // 每帧重建图层：身体层=完整图-尾巴形状（挖洞）；尾巴层=完整图∩软蒙版
           const bc = workBody.getContext("2d");
           bc.clearRect(0, 0, cvs.width, cvs.height);
           bc.drawImage(img, ox, oy);
           bc.globalCompositeOperation = "destination-out";
           bc.drawImage(mask(pose, false, ox, oy), 0, 0);
           bc.globalCompositeOperation = "source-over";
-          const cx = cvs.width / 2, cy = cvs.height;
-          ctx.save();
-          ctx.filter = filter;
-          ctx.translate(cx, cy);
-          ctx.scale(1 + BREATH.bodyAmp * breath, 1 + BREATH.bodyAmp * 0.6 * breath);
-          ctx.translate(-cx, -cy);
-          ctx.drawImage(workBody, 0, 0);
-          ctx.restore();
-          // 尾巴层：羽化蒙版 + 大幅度呼吸（绕身体内轴心缩放 + 微转）
           const tc = workTail.getContext("2d");
           tc.clearRect(0, 0, cvs.width, cvs.height);
           tc.drawImage(img, ox, oy);
           tc.globalCompositeOperation = "destination-in";
           tc.drawImage(mask(pose, true, ox, oy), 0, 0);
           tc.globalCompositeOperation = "source-over";
+          /* 两层共用同一套身体呼吸矩阵（bodyT）：
+             身体层画完后在同一矩阵内再叠尾巴摆动（tailExtra 绕尾根）。
+             洞的边缘与尾巴层的 bodyT 分量严格同步 → 任何相位两者零相对位移，
+             断开只可能来自 tailExtra 本身（由软蒙版外扩覆盖）。
+             旧实现两层各自 save/restore，洞绕底部中心、尾巴绕尾根各转各的，
+             相位拉开后洞缘露出背景——就是「尾巴断开一截」的来源。 */
+          const cx = cvs.width / 2, cy = cvs.height;
+          const bodySx = 1 + BREATH.bodyAmp * breath;
+          const bodySy = 1 + BREATH.bodyAmp * 0.6 * breath;
           ctx.save();
           ctx.filter = filter;
-          const ax = (td.root ? td.root[0] : td.px) + ox;   // 轴心：尾根接合点（无数据时回退旧轴心）
+          ctx.translate(cx, cy); ctx.scale(bodySx, bodySy); ctx.translate(-cx, -cy);
+          ctx.drawImage(workBody, 0, 0);
+          // 尾巴摆动：轴心=尾根接合点（bodyT 空间内，随身体一起动）
+          const ax = (td.root ? td.root[0] : td.px) + ox;
           const ay = (td.root ? td.root[1] : td.py) + oy;
-          ctx.translate(ax, ay);
           const s = 1 + BREATH.tailAmp * breath;
-          ctx.scale(s, s);
+          ctx.translate(ax, ay); ctx.scale(s, s);
           ctx.rotate(BREATH.tailRot * breath);
           ctx.translate(-ax, -ay);
           ctx.drawImage(workTail, 0, 0);
@@ -169,6 +169,9 @@
 
       function loop(t) { render(t); requestAnimationFrame(loop); }
       requestAnimationFrame(loop);
+
+      /* 调试可视化（CDP 取用）：导出各图层组件供断缝诊断 */
+      window.__mbLayers = { cvs, imgs, workBody, workTail, maskCache, TAILDEF };
 
       function applyDragClass() {
         cvs.classList.toggle("dragged", dragging);
