@@ -23,6 +23,8 @@ let dockWin = null;
 let settingsWin = null;
 let lastBubbleHarness = "";
 let bubblePinned = false;   // 面板图钉：钉住时失焦/拖拽不收起
+let bubbleShowAt = 0;       // 最近一次 show 的时间（blur 宽限期基准）
+let bubbleFocusedOnce = false;   // 本窗口是否真正拿到过焦点（没拿到过的 blur 是假失焦）
 
 const PET_W = 190, PET_H = 220;
 const DOCK_W = 300, DOCK_H = 170;   // 图标环：环绕猫头的上半圆
@@ -236,7 +238,7 @@ function showDock(show) {
       dockWin.webContents.once("did-finish-load", () => {
         try { dockWin.setIgnoreMouseEvents(true, { forward: true }); dockWin.moveTop(); } catch {}
       });
-    } else dockWin.show();
+    } else { dockWin.show(); dockWin.moveTop(); }   // 每次唤出都重新压到猫窗之上，否则重叠区的芯片点不到
     positionDock();
   } else if (dockWin && !dockWin.isDestroyed()) dockWin.hide();
 }
@@ -257,6 +259,7 @@ function showSettings(show) {
       settingsWin.loadURL(`http://127.0.0.1:${port}/settings.html`);
     } else settingsWin.show();
     positionSettings();
+    positionBubble();   // 设置窗弹出后让思维面板避让（若开着）
   } else if (settingsWin && !settingsWin.isDestroyed()) settingsWin.hide();
 }
 
@@ -304,16 +307,25 @@ function positionBubble() {
   const b = bubbleWin.getBounds();
   let x, y;
   if (petEdge === "taskbar") {
-    // 站任务栏：气泡悬在头顶侧方
+    // 站任务栏：思维面板放猫侧面（垂直居中猫身）
     x = pb.x - b.width - 8;
     if (x < wa.x + 8) x = pb.x + PET_W + 8;
-    y = pb.y - b.height + 46;
+    y = pb.y + Math.round((PET_H - b.height) / 2);
   } else if (petEdge === "right") {
     x = pb.x - b.width - 6;
     y = Math.round(pb.y + (pb.height - b.height) / 2);
   } else {
     x = pb.x + PET_W + 6;
     y = Math.round(pb.y + (pb.height - b.height) / 2);
+  }
+  // 避让设置窗：设置窗贴猫优先，气泡与它重叠就往外侧让
+  if (settingsWin && !settingsWin.isDestroyed() && settingsWin.isVisible()) {
+    const sb = settingsWin.getBounds();
+    const overlap = x < sb.x + sb.width && x + b.width > sb.x && y < sb.y + sb.height && y + b.height > sb.y;
+    if (overlap) {
+      if (x + b.width / 2 < sb.x + sb.width / 2) x = sb.x - b.width - 6;   // 气泡在左 → 让到设置窗左边
+      else x = sb.x + sb.width + 6;                                       // 气泡在右 → 让到设置窗右边
+    }
   }
   x = Math.min(Math.max(x, wa.x + 8), wa.x + wa.width - b.width - 8);
   y = Math.min(Math.max(y, wa.y + 8), wa.y + wa.height - b.height - 8);
@@ -465,10 +477,10 @@ app.whenReady().then(async () => {
     return;
   }
 
-  globalShortcut.register("Control+Alt+B", () => {
+  globalShortcut.register("Control+Alt+B", async () => {
     if (!petWin || petWin.isDestroyed()) createPet();
     else if (bubbleWin && !bubbleWin.isDestroyed() && bubbleWin.isVisible()) bubbleWin.hide();
-    else openBubble(lastBubbleHarness || firstHarness());
+    else openBubble(lastBubbleHarness || await firstHarness());
   });
   // Ctrl+Alt+H：躲起来 / 唤回兔子
   globalShortcut.register("Control+Alt+H", () => {
@@ -483,7 +495,19 @@ app.whenReady().then(async () => {
 app.on("before-quit", () => { try { globalShortcut.unregisterAll(); } catch {} });
 app.on("window-all-closed", () => app.quit());
 
-/** 数据里第一个 harness（供热键冷启动用） */
-function firstHarness() {
-  return "";
+/** 数据里最近活跃的 harness（供热键冷启动用） */
+async function firstHarness() {
+  try {
+    const { overview } = await import("../core/store.mjs");
+    const now = Date.now();
+    const by = {};
+    for (const p of overview().projects) {
+      for (const h of (p.harnesses?.length ? p.harnesses : [p.harness || "other"])) {
+        by[h] = Math.max(by[h] || 0, p.liveAtMs || 0);
+      }
+    }
+    const live = Object.entries(by).filter(([, t]) => now - t < 10 * 60 * 1000)
+      .sort((a, b) => b[1] - a[1]);
+    return live[0]?.[0] || "";
+  } catch { return ""; }
 }
