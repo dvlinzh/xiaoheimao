@@ -86,7 +86,7 @@ function applyOverview(ov) {
   if (anyAsk) mood = "ask";
   else if (Date.now() < celebrateUntil) mood = "celebrate";
   else if (Date.now() < alertUntil) mood = "alert";
-  // 不进入睡眠（用户要求移除睡眠元素）：mode 关闭/空闲时保持 idle 待机
+  else if (mode !== "on") mood = "sleep";   // 关闭整理：趴着待机（无变暗/Zzz，纯姿态）
   Pet?.setMood(mood);
   if (mood === "celebrate") Pet?.hop();
 }

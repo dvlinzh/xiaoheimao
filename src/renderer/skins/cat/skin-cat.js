@@ -7,7 +7,7 @@
   };
   const MOOD_POSE = {
     idle: "idle", walk: "walk", ask: "ask", alert: "crouch",
-    celebrate: "run",
+    celebrate: "run", sleep: "sleep",   // 趴着仅是姿态：暗化/Zzz 不恢复
   };
   const MOOD_FILTER = {
     alert: "drop-shadow(0 0 14px rgba(244,63,94,.45))",
