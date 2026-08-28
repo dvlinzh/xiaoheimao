@@ -74,12 +74,9 @@ function workArea() {
 function petPos(wa) {
   if (petEdge === "taskbar") {
     const x = Number.isFinite(petXTB) ? petXTB : wa.x + Math.round((wa.width - PET_W) / 2);
-    // 脚底位置标定（本机实测）：素材脚底在窗口底上方约 8px
-    // （idle 14 素材像素 × 0.42 画布缩放 + 2px 画布内边距）。
-    // offset = 窗口底压入任务栏的深度 = 脚底相对任务栏上沿的位置：
-    //   12 → 脚沉入 4px；8 → 踩线；10 → 微微埋进任务栏上沿（用户终选：
-    //   脚盖住任务栏，而不是被任务栏盖住，配合置顶层渲染）。
-    return { x: Math.min(Math.max(x, wa.x + 4), wa.x + wa.width - PET_W - 4), y: wa.y + wa.height - PET_H + 10 };
+    // 脚底对齐方案（皮肤按素材最低不透明行对齐画布底=窗口底）：
+    // offset = 窗口底压入任务栏的深度 = 脚底微埋量。用户终选微埋 ≈2px。
+    return { x: Math.min(Math.max(x, wa.x + 4), wa.x + wa.width - PET_W - 4), y: wa.y + wa.height - PET_H + 2 };
   }
   const x = petEdge === "left" ? wa.x + 8 : wa.x + wa.width - PET_W - 8;
   const y = Number.isFinite(petY)

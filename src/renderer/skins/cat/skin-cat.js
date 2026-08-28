@@ -132,6 +132,26 @@
         if (d) tailData[k] = d;
       }
 
+      /* 底部空白扫描：每张素材最低的不透明行（脚底）。各姿态裁剪留白不同
+       * （idle 14px / ask 89px / sleep 89px…），按图片底边对齐会让角色悬空
+       * （趴睡会飘在任务栏上方）。渲染统一按脚底对齐画布底——窗口底即脚底，
+       * 任务栏偏移即微埋量。 */
+      const bottomRow = {};
+      for (const [k, img] of Object.entries(imgs)) {
+        const oc = document.createElement("canvas");
+        oc.width = img.width; oc.height = img.height;
+        const octx = oc.getContext("2d", { willReadFrequently: true });
+        octx.drawImage(img, 0, 0);
+        const d = octx.getImageData(0, 0, oc.width, oc.height).data;
+        let b = oc.height - 1;
+        outer: for (; b >= 0; b--) {
+          for (let x = 0; x < oc.width; x++) {
+            if (d[(b * oc.width + x) * 4 + 3] > 8) break outer;
+          }
+        }
+        bottomRow[k] = b;
+      }
+
       const cvs = document.createElement("canvas");
       cvs.id = "pet-canvas";
       // 画布需容纳最宽的素材（cat-sleep 434px），否则尾巴/边缘会被画布裁掉
@@ -162,7 +182,9 @@
         const img = imgs[pose] || imgs.idle;
         if (!img) return;
         const ox = Math.floor((cvs.width - img.width) / 2);
-        const oy = cvs.height - img.height;
+        // 脚底对齐画布底：各姿态底部留白不同（idle 14px / sleep 89px…），
+        // 按图片底边会悬空。bottomRow 无数据（异常）时回退图片底边。
+        const oy = cvs.height - 1 - (bottomRow[pose] ?? img.height - 1);
         const td = tailData[pose];
         const filter = dragging ? "none" : (MOOD_FILTER[pose] || "none");
         const breath = Math.sin((t / BREATH.period) * Math.PI * 2);
