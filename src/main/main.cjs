@@ -74,8 +74,10 @@ function workArea() {
 function petPos(wa) {
   if (petEdge === "taskbar") {
     const x = Number.isFinite(petXTB) ? petXTB : wa.x + Math.round((wa.width - PET_W) / 2);
-    // +12：把角色脚底精确压到任务栏上沿（窗口底部有少量透明留白）
-    return { x: Math.min(Math.max(x, wa.x + 4), wa.x + wa.width - PET_W - 4), y: wa.y + wa.height - PET_H + 12 };
+    // +4：脚底压在任务栏上沿。素材脚底上方约有 8px 缩放后透明留白
+    // （idle 14 素材像素 × 0.42 画布缩放 + 2px 画布内边距），窗口底压入 12px 时
+    // 脚会被任务栏上沿埋住约 4px（本机实测），故收窄为 +4。换 DPI/素材后按此式重算。
+    return { x: Math.min(Math.max(x, wa.x + 4), wa.x + wa.width - PET_W - 4), y: wa.y + wa.height - PET_H + 4 };
   }
   const x = petEdge === "left" ? wa.x + 8 : wa.x + wa.width - PET_W - 8;
   const y = Number.isFinite(petY)
