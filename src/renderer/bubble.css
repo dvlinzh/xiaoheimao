@@ -1,20 +1,22 @@
-/* 思维板·面板 — 原版设计语言：Georgia 衬线 + 琥珀签名线 + 语义三色 + 文档式分节 */
+/* 思维板·面板 — 优雅黑（与设置面板同源：docs/style-guide.md 纯灰系）
+   结构沿用原版：Georgia 衬线 + 语义三色 + 文档式分节；高亮统一近白中性 */
 :root {
-  --bg: #faf9f5;
-  --card: #fdfcf9;
-  --card2: #f1eee6;
-  --line: #e6e2d6;
-  --line2: #d8d3c4;
-  --text: #2b2822;
-  --dim: #8d8878;
-  --faint: #b5af9e;
-  --amber: #d97706;
-  --amber-soft: rgba(217, 119, 6, .12);
-  --amber-border: rgba(217, 119, 6, .32);
-  --green: #059669;
-  --red: #dc2626;
-  --red-soft: rgba(220, 38, 38, .1);
-  --red-border: rgba(220, 38, 38, .3);
+  --bg: #0d0d0f;
+  --card: #141416;
+  --card2: #202024;
+  --line: #28282e;
+  --line2: #34343c;
+  --text: #ececec;
+  --dim: #9a9aa2;
+  --faint: #66666e;
+  /* 交互高亮（原琥珀位）：近白中性，悬停/聚焦/勾选都用它 */
+  --amber: #d6d6dc;
+  --amber-soft: rgba(255, 255, 255, .06);
+  --amber-border: rgba(255, 255, 255, .22);
+  --green: #58a873;
+  --red: #f0716c;
+  --red-soft: rgba(240, 113, 108, .1);
+  --red-border: rgba(240, 113, 108, .3);
 
   /* 正文字体（默认 = 原版衬线 Georgia，可在设置切换） */
   --font-body: Georgia, "Times New Roman", "Songti SC", "SimSun", serif;
@@ -24,16 +26,7 @@ body[data-font-family="song"] { --font-body: "Songti SC", "SimSun", "Noto Serif 
 body[data-font-family="sans"] { --font-body: "Segoe UI", "Microsoft YaHei", "PingFang SC", -apple-system, sans-serif; }
 body[data-font-family="kai"]  { --font-body: "Kaiti SC", "KaiTi", "STKaiti", "LXGW WenKai", serif; }
 body[data-font-family="hei"]  { --font-body: "Source Han Sans SC", "Noto Sans CJK SC", "Heiti SC", "Microsoft YaHei", sans-serif; }
-body[data-theme="ink"] {
-  --bg: #1b1a17;
-  --card: #21201c;
-  --card2: #2a2823;
-  --line: #37342c;
-  --line2: #46423a;
-  --text: #ece9e2;
-  --dim: #99937f;
-  --faint: #6b6656;
-}
+/* panelTheme 已随「优雅黑」统一为单主题（ink/cream 均同外观），data-theme 仅保留兼容 */
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body {
@@ -61,8 +54,8 @@ html.in-browser body { background: var(--bg); }
   position: relative; height: 100%;
   background: var(--card);
   border: 1px solid var(--line);
-  border-left: 3px solid var(--amber);   /* 琥珀签名线 */
-  border-radius: 10px;
+  border-left: 3px solid var(--line2);   /* 签名线：同系灰，不抢黑 */
+  border-radius: 14px;
   display: flex; flex-direction: column;
   animation: pop .18s ease-out both;
   overflow: hidden;
@@ -76,8 +69,8 @@ html.in-browser body { background: var(--bg); }
   content: "";
   position: absolute; right: 5px; top: 42%;
   width: 7px; height: 7px; border-radius: 50%;
-  background: var(--amber);
-  opacity: .8;
+  background: var(--faint);
+  opacity: .9;
 }
 html.side-left .comic::after { right: auto; left: 5px; }
 
@@ -296,11 +289,11 @@ summary em { font-style: normal; color: var(--dim); font-size: 10.5px; font-weig
 .dz-float[hidden] { display: none !important; }
 .dz-float .dz-icon { display: flex; align-items: center; justify-content: center; opacity: .9; }
 .dz-float .dz-sub { font-size: 10.5px; opacity: .8; }
-.dz-toggle { background: #059669; box-shadow: 0 12px 32px rgba(5, 150, 105, .32); }
-.dz-del { background: #dc2626; box-shadow: 0 12px 32px rgba(220, 38, 38, .32); }
+.dz-toggle { background: #24523a; box-shadow: 0 12px 32px rgba(0, 0, 0, .45); }
+.dz-del { background: #5a2a28; box-shadow: 0 12px 32px rgba(0, 0, 0, .45); }
 /* 分区是 .dz-stack（fixed 居中容器）的 flex 子元素，自身不再做 translateX 居中——
    旧的 translateX(-50%) 会让 armed 分区左滑半个身位、入场时从左侧飞入（外观即「漂移」） */
-.dz-float.armed { outline: 3px solid rgba(255, 255, 255, .75); transform: scale(1.06); }
+.dz-float.armed { outline: 3px solid rgba(255, 255, 255, .55); transform: scale(1.06); }
 @keyframes dz-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 .drag-ghost {
   position: fixed; z-index: 1300; pointer-events: none;

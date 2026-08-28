@@ -212,6 +212,9 @@ function positionDock() {
   const y = pb.y - DOCK_H + 85;
   dockWin.setPosition(Math.min(Math.max(x, wa.x + 4), wa.x + wa.width - DOCK_W - 4),
                       Math.min(Math.max(y, wa.y + 4), wa.y + wa.height - DOCK_H - 4));
+  // 关键：芯片区与猫窗范围重叠，猫窗任何一次 setPosition/激活都可能反压到 dock
+  // 之上（表现为「点芯片点到的却是猫」）。dock 可见期间每次定位都重新压顶。
+  dockWin.moveTop();
 }
 
 function positionSettings() {
@@ -252,7 +255,11 @@ function showDock(show) {
       });
     } else { dockWin.show(); dockWin.moveTop(); }   // 每次唤出都重新压到猫窗之上，否则重叠区的芯片点不到
     positionDock();
-  } else if (dockWin && !dockWin.isDestroyed()) dockWin.hide();
+  } else if (dockWin && !dockWin.isDestroyed()) {
+    dockWin.hide();
+    chipRects = [];
+    if (petWin && !petWin.isDestroyed()) petWin.webContents.send("chip-rects", []);
+  }
 }
 
 function showSettings(show) {
@@ -313,6 +320,17 @@ ipcMain.on("panel-resize-end", () => {
   panelResize = null;
 });
 ipcMain.on("dock-hide", () => showDock(false));
+
+/* ── 芯片命中排除：dock 上报芯片客户区矩形 → 换算屏幕坐标 → 推给猫窗。
+   猫窗在 overPet 里对这些矩形返回「不命中」，点击芯片永远不会被猫窗截胡
+   （此前 dock 与猫的 z-order/穿透竞争造成「点芯片点到的却是猫」）。 ── */
+let chipRects = [];
+ipcMain.on("chip-rects", (_e, rects) => {
+  chipRects = Array.isArray(rects) ? rects : [];
+  const d = dockWin && !dockWin.isDestroyed() ? dockWin.getContentBounds() : null;
+  const screenRects = d ? chipRects.map((r) => ({ ...r, x: r.x + d.x, y: r.y + d.y })) : [];
+  if (petWin && !petWin.isDestroyed()) petWin.webContents.send("chip-rects", screenRects);
+});
 ipcMain.on("settings-toggle", () => showSettings(!settingsWin || settingsWin.isDestroyed() || !settingsWin.isVisible()));
 ipcMain.on("settings-hide", () => showSettings(false));
 

@@ -150,11 +150,21 @@ function buildAlphaMap() {
   } catch {}
 }
 
+/* 芯片命中排除：dock 可见时，其芯片屏幕矩形由主进程推送过来。
+   光标落在这些矩形内时猫一律不命中——点击芯片永远不会被猫窗截胡。 */
+let chipRects = [];
+bridge?.onChipRects?.((r) => { chipRects = Array.isArray(r) ? r : []; });
+
 function overPet(x, y) {
   const sp = $("#speech");
   if (sp && !sp.hidden) {
     const r = sp.getBoundingClientRect();
     if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return true;
+  }
+  // 屏幕坐标 = 窗口原点 + 客户区坐标（缩放 1:1）
+  const sx = (window.screenX || 0) + x, sy = (window.screenY || 0) + y;
+  for (const r of chipRects) {
+    if (sx >= r.x && sx <= r.x + r.w && sy >= r.y && sy <= r.y + r.h) return false;
   }
   const cvs = Pet?.el;
   if (!cvs) return false;

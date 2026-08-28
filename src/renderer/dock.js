@@ -21,7 +21,7 @@ const ICON_IMG = {
   opencode: "opencode.png",
   dsh: "dsh.png",             // 可能不存在，启动时探测
 };
-const LIVE_MS = 10 * 60 * 1000;   // 10 分钟无写入 = 该 harness 未在跑
+const LIVE_MS = 30 * 60 * 1000;   // 30 分钟无写入 = 视为未运行（钩子 tick 偶发滞后时环不该空掉）
 
 const imgOk = {};   // 实物图标探测缓存
 async function probeIcons() {
@@ -126,21 +126,38 @@ async function refresh() {
         + `<span class="disc">${iconSvg(h, 30)}</span>`
         + `<span class="badge${hasNew ? " show" : ""}"></span></div>`;
     });
+    console.log("[dock] rebuild, keys:", keys.join(","));
     dock.innerHTML = html;   // 无存活 harness 时留空（不再画兜底爪印）
     dock.querySelectorAll(".chip").forEach((el) => {
-      el.addEventListener("click", () => {
+      // pointerdown 即触发：click 会等 mouseup，若恰好赶上 3 秒轮询重建 DOM，
+      // 按下的元素被换掉、click 丢失——表现为「点不到芯片」。防重入双保险。
+      let fired = false;
+      const openChip = () => {
+        if (fired) return;
+        fired = true;
+        setTimeout(() => { fired = false; }, 500);
         const h = el.dataset.h;
+        console.log("[dock] chip open:", h);
         seen[h] = Date.now();
         try { localStorage.setItem(seenKey, JSON.stringify(seen)); } catch {}
         const badge = el.querySelector(".badge");
         if (badge) badge.classList.remove("show");
         hideTip();
         window.petBridge?.openBubble(h);
-      });
+      };
+      el.addEventListener("pointerdown", openChip);
+      el.addEventListener("click", openChip);
       el.addEventListener("mouseenter", () =>
         showTip(el.dataset.tip, Number(el.dataset.x), Number(el.dataset.y)));
       el.addEventListener("mouseleave", hideTip);
     });
+    // 上报芯片矩形（外扩 8px 热区）：主进程换算屏幕坐标后推给猫窗做命中排除，
+    // 保证「点芯片」永远不会被底下的猫窗截胡
+    const rects = keys.map((h, i) => {
+      const { x, y } = arcPos(i, keys.length);
+      return { x: x - 30, y: y - 30, w: 60, h: 60 };
+    });
+    window.petBridge?.sendChipRects?.(rects);
   } catch {}
 }
 
@@ -149,12 +166,18 @@ let clickable = false;
 function setClickable(c) {
   if (c === clickable) return;
   clickable = c;
+  console.log("[dock] clickable →", c);
   window.petBridge?.setClickable(c);
 }
 document.addEventListener("mousemove", (e) => {
   setClickable(!!e.target.closest?.(".chip"));
 });
-document.addEventListener("mouseout", (e) => { if (!e.relatedTarget) setClickable(false); });
+document.addEventListener("mouseout", (e) => {
+  if (!e.relatedTarget) {
+    console.log("[dock] mouseout-null target:", e.target.className || e.target.id);
+    setClickable(false);
+  }
+});
 
 probeIcons().then(refresh);
 setInterval(refresh, 3000);
