@@ -24,7 +24,6 @@ let settingsWin = null;
 let lastBubbleHarness = "";
 let bubblePinned = false;   // 面板图钉：钉住时失焦/拖拽不收起
 let bubbleShowAt = 0;       // 最近一次 show 的时间（blur 宽限期基准）
-let bubbleFocusedOnce = false;   // 本窗口是否真正拿到过焦点（没拿到过的 blur 是假失焦）
 
 const PET_W = 190, PET_H = 220;
 const DOCK_W = 300, DOCK_H = 170;   // 图标环：环绕猫头的上半圆
