@@ -11,10 +11,10 @@ copyFileSync(PATH, "src/renderer/assets/cat/cat-tails.bak.json");
 console.log("已备份 -> cat-tails.bak.json");
 
 const CUTS = {
-  "cat-idle":   { body: 292, poly: 286 },   // 球左缘（素材目测：球在 x290-330 深紫小球），poly 左出 6px 羽化
-  "cat-walk":   { body: 303, poly: 297 },
-  "cat-run":    { body: 293, poly: 287 },
-  "cat-crouch": { body: 277, poly: 271 },
+  "cat-idle":   { body: 323, poly: 317 },   // 球右缘（素材放大核验：球 x290-322）
+  "cat-walk":   { body: 325, poly: 319 },
+  "cat-run":    { body: 210, poly: 204 },   // 球 x183-210（3x 放大核验）
+  "cat-crouch": { body: 222, poly: 216 },   // 球 x195-222（3x 放大核验）
 };
 
 // Sutherland–Hodgman：保留 x>=cut 半边，缺口用竖边闭合（凹多边形同样正确）
