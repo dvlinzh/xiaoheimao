@@ -33,11 +33,9 @@ async function api(path, body) {
 function labels() {
   $("#st-mode-v").textContent = mode === "on" ? I18N.t("on") : I18N.t("off");
   $("#st-interval-v").textContent = organizeInterval + I18N.t("interval.unit");
-  $("#st-interval-r").value = String(organizeInterval);
   $("#st-pin-v").textContent = pin ? I18N.t("on") : I18N.t("off");
   $("#st-fontfam-v").textContent = I18N.t((FONT_FAMILY.find((f) => f.id === fontFamily) || FONT_FAMILY[0]).label);
   $("#st-font-v").textContent = FONT_PT[fontSize] || "10pt";
-  $("#st-font-r").value = String(FONT_CYCLE.indexOf(fontSize) < 0 ? 1 : FONT_CYCLE.indexOf(fontSize));
   $("#st-language-v").textContent = LANG_LABEL[language] || "中文";
   $("#st-autostart-v").textContent = autostart ? I18N.t("on") : I18N.t("off");
 }
@@ -64,25 +62,42 @@ $("#st-mode").addEventListener("click", async () => {
   mode = r?.settings?.mode || (mode === "on" ? "off" : "on");
   labels();
 });
-/* 整理频率：滑动选择（1/2/3 轮） */
-$("#st-interval-r").addEventListener("input", async (e) => {
-  organizeInterval = Number(e.target.value);
-  labels();
-  await api("/api/prefs", { organizeInterval });
-});
-/* 面板字体：点击循环切换（默认原版衬线 Georgia） */
-$("#st-fontfam").addEventListener("click", async () => {
-  const i = FONT_FAMILY.findIndex((f) => f.id === fontFamily);
-  fontFamily = FONT_FAMILY[(i + 1) % FONT_FAMILY.length].id;
-  labels();
-  await api("/api/prefs", { fontFamily });
-});
-/* 面板字号：滑动选择（9/10/12pt） */
-$("#st-font-r").addEventListener("input", async (e) => {
-  fontSize = FONT_CYCLE[Number(e.target.value)] || "m";
-  labels();
-  await api("/api/prefs", { fontSize });
-});
+/* 子菜单行通用绑定：点击展开选项，选中写回并收起 */
+function bindSub(rowId, subId, getCur, fmtOpt, apply) {
+  const row = $(rowId), sub = $(subId);
+  const opts = [...sub.querySelectorAll(".st-opt")];
+  const render = () => {
+    const cur = String(getCur());
+    for (const el of opts) {
+      el.textContent = fmtOpt(el.dataset.v);
+      el.classList.toggle("on", el.dataset.v === cur);
+    }
+  };
+  render();
+  row.addEventListener("click", () => {
+    const open = sub.hidden;
+    sub.hidden = !open;
+    row.classList.toggle("exp", open);
+    if (open) render();
+    fitHeight();
+  });
+  for (const el of opts) {
+    el.addEventListener("click", async () => {
+      await apply(el.dataset.v);
+      render(); labels();
+      sub.hidden = true; row.classList.remove("exp");
+      fitHeight();
+    });
+  }
+}
+bindSub("#st-interval", "#st-interval-sub",
+  () => organizeInterval,
+  (v) => v + I18N.t("interval.unit"),
+  async (v) => { organizeInterval = Number(v); await api("/api/prefs", { organizeInterval }); });
+bindSub("#st-font", "#st-font-sub",
+  () => fontSize,
+  (v) => FONT_PT[v] || v,
+  async (v) => { fontSize = v; await api("/api/prefs", { fontSize }); });
 /* 面板字体：点击循环切换 */
 $("#st-fontfam").addEventListener("click", async () => {
   const i = FONT_FAMILY.findIndex((f) => f.id === fontFamily);

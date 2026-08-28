@@ -14,26 +14,32 @@
   <div class="st-group">
     <div class="st-group-title" data-i18n="group.organize">整理</div>
     <button class="st-row" id="st-mode"><span class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l1.7 4.8L18.5 10l-4.8 1.7L12 16.5l-1.7-4.8L5.5 10l4.8-1.2z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></span><span class="st-lb" data-i18n="mode">整理模式</span><b id="st-mode-v">关</b></button>
-    <div class="st-row slider" id="st-interval">
+    <button class="st-row sub-toggle" id="st-interval">
       <span class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg></span>
       <span class="st-lb" data-i18n="interval">整理频率</span>
-      <span class="st-ctl">
-        <input type="range" class="st-range" id="st-interval-r" min="1" max="3" step="1" value="2" title="每几轮对话提醒整理一次">
-      </span>
       <b class="st-val" id="st-interval-v">2 轮</b>
+      <b class="st-arrow">›</b>
+    </button>
+    <div class="st-sub" id="st-interval-sub" hidden>
+      <button class="st-opt" data-v="1"></button>
+      <button class="st-opt" data-v="2"></button>
+      <button class="st-opt" data-v="3"></button>
     </div>
   </div>
 
   <div class="st-group">
     <div class="st-group-title" data-i18n="group.window">窗口</div>
     <button class="st-row" id="st-pin"><span class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg></span><span class="st-lb" data-i18n="pin">窗口置顶</span><b id="st-pin-v">开</b></button>
-    <div class="st-row slider" id="st-font">
+    <button class="st-row sub-toggle" id="st-font">
       <span class="st-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></span>
       <span class="st-lb" data-i18n="fontSize">面板字号</span>
-      <span class="st-ctl">
-        <input type="range" class="st-range" id="st-font-r" min="0" max="2" step="1" value="1">
-      </span>
       <b class="st-val" id="st-font-v">10pt</b>
+      <b class="st-arrow">›</b>
+    </button>
+    <div class="st-sub" id="st-font-sub" hidden>
+      <button class="st-opt" data-v="s"></button>
+      <button class="st-opt" data-v="m"></button>
+      <button class="st-opt" data-v="l"></button>
     </div>
   </div>
 

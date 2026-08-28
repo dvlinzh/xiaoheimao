@@ -26,7 +26,7 @@ let bubblePinned = false;   // 面板图钉：钉住时失焦/拖拽不收起
 
 const PET_W = 190, PET_H = 220;
 const DOCK_W = 300, DOCK_H = 170;   // 图标环：环绕猫头的上半圆
-const SET_W = 254, SET_H = 420;
+const SET_W = 274, SET_H = 420;
 
 /* 界面偏好（贴边/任务栏/置顶/位置），持久化在 settings.json 的附加键里 */
 let petEdge = "right";        // right | left | taskbar
@@ -165,11 +165,17 @@ async function openBubble(harness) {
   });
   bubbleWin.setAlwaysOnTop(true, "floating");
   bubbleWin.loadURL(url);
+  bubbleWin.webContents.on("did-fail-load", (_e, code, desc) =>
+    log("[bubble] load FAILED", code, desc));
+  bubbleWin.webContents.on("console-message", (_e, level, message, line, source) =>
+    log("[bubble:console]", message, `(${source}:${line})`));
   // 点击面板以外的任何界面 → 自动收回（图钉钉住时例外）
   bubbleWin.on("blur", () => {
+    log("[bubble] blur → hide, pinned:", bubblePinned);
     if (bubblePinned) return;
     if (bubbleWin && !bubbleWin.isDestroyed()) bubbleWin.hide();
   });
+  bubbleWin.on("show", () => log("[bubble] shown, bounds:", JSON.stringify(bubbleWin.getBounds())));
   positionBubble();
 }
 
@@ -214,6 +220,8 @@ function showDock(show) {
       // 圆片会覆盖到猫窗区域（环绕头部），必须与猫窗同级置顶并压到最上——否则被猫窗挡住，看得见点不着
       dockWin.setAlwaysOnTop(true, "screen-saver");
       dockWin.loadURL(`http://127.0.0.1:${port}/dock.html`);
+      dockWin.webContents.on("console-message", (_e, level, message, line, source) =>
+        log("[dock:console]", message, `(${source}:${line})`));
       dockWin.webContents.once("did-finish-load", () => {
         try { dockWin.setIgnoreMouseEvents(true, { forward: true }); dockWin.moveTop(); } catch {}
       });

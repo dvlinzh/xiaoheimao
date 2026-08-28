@@ -39,10 +39,10 @@
 }
 /* 行：图标 + 标签 + 右值（规范结构） */
 #settings .st-row {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 9px;
   width: 100%; border: 0; background: none;
   color: var(--text); font-family: inherit; font-size: 13px;
-  padding: 8px 9px; cursor: pointer; text-align: left;
+  padding: 9px 10px; cursor: pointer; text-align: left;
   border-radius: 8px; line-height: 1.5;
 }
 #settings .st-row:hover { background: var(--card2); }
@@ -51,17 +51,25 @@
   display: inline-flex; align-items: center; justify-content: center;
   color: var(--dim);
 }
-#settings .st-ico svg { width: 16px; height: 16px; }
+#settings .st-ico svg { width: 16px; height: 16px; display: block; }
 #settings .st-row:hover .st-ico { color: var(--text); }
 #settings .st-row .st-lb,
 #settings .st-row > span.st-lb {
   flex: none; white-space: nowrap; overflow: visible;
 }
-#settings .st-row b {
-  color: var(--dim); font-weight: 500; font-size: 12px;
-  flex: none; margin-left: auto;   /* 值列贴右 */
+/* 右值列：所有行右缘严格对齐、同字号同色同基线 */
+#settings .st-row b,
+#settings .st-row .st-arrow,
+#settings .st-row .st-note,
+#settings .st-row .st-val {
+  flex: none; margin-left: auto;
+  display: inline-flex; align-items: center; justify-content: flex-end;
+  font-weight: 500; font-size: 12px; line-height: 1;
+  color: var(--dim); font-style: normal;
+  min-height: 16px;
 }
-#settings .st-row .st-arrow { color: var(--faint); font-size: 14px; flex: none; }
+#settings .st-row .st-arrow { color: var(--faint); font-size: 13px; }
+#settings .st-row .st-note { color: var(--faint); font-size: 10.5px; }
 #settings .st-row.danger, #settings .st-row.danger .st-ico { color: var(--red); }
 #settings .st-row.danger b, #settings .st-row.danger .st-arrow { color: var(--red); }
 #settings .st-row.danger:hover { background: var(--red-soft); }
@@ -69,35 +77,24 @@
 #settings .st-row:disabled .st-ico, #settings .st-row:disabled b { color: var(--faint); }
 #settings .st-row:disabled:hover { background: none; }
 #settings .st-sep { height: 1px; background: var(--line); margin: 5px 10px; }
-#settings .st-note {
-  font-style: normal; font-size: 10.5px; color: var(--faint);
-  font-weight: 400; flex: none; margin-left: auto;
-}
 
-/* 滑杆行：细轨 + 白圆滑块 */
-#settings .st-row.slider { cursor: default; }
-#settings .st-row.slider:hover { background: none; }
-#settings .st-ctl { display: flex; align-items: center; gap: 8px; flex: none; margin-left: auto; }
-#settings .st-range {
-  -webkit-appearance: none; appearance: none;
-  width: 70px; height: 2px; border-radius: 999px; cursor: pointer;
-  background: var(--line2); outline: none; margin: 0;
+/* 子菜单行：点击展开选项（整理频率/面板字号） */
+#settings .st-row.sub-toggle .st-arrow { transition: transform .15s ease; }
+#settings .st-row.sub-toggle.exp .st-arrow { transform: rotate(90deg); }
+#settings .st-row.sub-toggle .st-val { margin-left: auto; }
+#settings .st-row.sub-toggle .st-arrow { margin-left: 2px; }
+#settings .st-sub { padding: 1px 4px 4px; }
+#settings .st-opt {
+  display: flex; align-items: center; width: 100%;
+  padding: 6px 10px 6px 35px;   /* 对齐主行标签列（10 + icon16 + gap9） */
+  border: 0; background: none; border-radius: 7px;
+  color: var(--dim); font-family: inherit; font-size: 12.5px;
+  cursor: pointer; text-align: left; line-height: 1.5;
 }
-#settings .st-range::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none;
-  width: 12px; height: 12px; border-radius: 50%;
-  background: var(--text); border: 2px solid var(--card);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .4); cursor: pointer;
-}
-#settings .st-range::-moz-range-thumb {
-  width: 12px; height: 12px; border-radius: 50%;
-  background: var(--text); border: 2px solid var(--card); cursor: pointer;
-}
-#settings .st-range::-moz-range-track { height: 2px; border-radius: 999px; background: var(--line2); }
-#settings .st-val {
-  font-family: inherit; font-size: 12px; color: var(--dim);
-  min-width: 30px; text-align: right; flex: none;
-}
+#settings .st-opt:hover { background: var(--card2); color: var(--text); }
+#settings .st-opt::before { content: ""; width: 14px; flex: none; font-size: 11px; }
+#settings .st-opt.on { color: var(--text); }
+#settings .st-opt.on::before { content: "✓"; }
 
 /* ── 新手教程卡（同规范） ── */
 #tutorial {
