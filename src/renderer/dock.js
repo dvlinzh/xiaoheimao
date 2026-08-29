@@ -59,15 +59,26 @@ function iconSvg(h, size) {
   return `<svg viewBox="0 0 40 40" width="${size}" height="${size}" aria-hidden="true">${body}</svg>`;
 }
 
-/* ── 环形布局：圆心 = 窗口底部中央（猫头位置），上半圆弧均布 ── */
-const R = 66;                 // 半径：贴着猫耳廓
-const CX = 150, CY = 168;     // 圆心（dock 窗 300×170，底部中点即猫头中心高度）
+/* ── 环形布局：圆心 = 猫头（dock 窗底中点对准头部高度），芯片沿头周弧线非对称散布 ── */
+const R = 80;                 // 半径：比耳廓稍远一档
+const CX = 150, CY = 168;     // 圆心（dock 窗 300×200，(150,168) 对准猫头中心）
+/* 每档数量一组预设角（度，-90=正头顶）：扇形从头部左下扫到右侧
+ * （-165° 左耳下 → -20° 右耳上），间距不等、非镜像——圆心始终是猫头。 */
+const ARC_ANGLES = {
+  1: [-78],
+  2: [-122, -28],
+  3: [-150, -78, -24],
+  4: [-162, -112, -60, -22],
+  5: [-165, -124, -84, -48, -18],
+};
 function arcPos(i, n) {
-  // 上半圆均布：端点固定在 ±160°/±20°，n=1 时正头顶
-  if (n === 1) return { x: CX, y: CY - R };
-  const span = Math.min(40 + n * 30, 140);   // n=2 → 100°，n=4 → 160°（端点接近耳侧）
-  const start = -90 - span / 2;
-  const deg = start + (span / (n - 1)) * i;
+  if (n <= 5) {
+    const deg = ARC_ANGLES[n][i];
+    const rad = (deg * Math.PI) / 180;
+    return { x: CX + R * Math.cos(rad), y: CY + R * Math.sin(rad) };
+  }
+  // n>5：上半弧均布兜底
+  const deg = -180 + (180 / (n - 1)) * i;
   const rad = (deg * Math.PI) / 180;
   return { x: CX + R * Math.cos(rad), y: CY + R * Math.sin(rad) };
 }
@@ -126,7 +137,7 @@ async function refresh() {
       const hasNew = by[h].newest > (seen[h] || 0);
       const glow = state === "on" ? `--glow:${ICON_COLOR[h] || ICON_COLOR.other};` : "";
       html += `<div class="chip st-${state}" data-h="${encodeURIComponent(h)}" data-tip="${tipText}" data-x="${x}" data-y="${y}" style="left:${x}px;top:${y}px;${glow}">`
-        + `<span class="disc">${iconSvg(h, 30)}</span>`
+        + `<span class="disc">${iconSvg(h, 26)}</span>`
         + `<span class="badge${hasNew ? " show" : ""}"></span></div>`;
     });
     console.log("[dock] rebuild, keys:", keys.join(","));
