@@ -24,6 +24,7 @@ let settingsWin = null;
 let lastBubbleHarness = "";
 let bubblePinned = false;   // 面板图钉：钉住时失焦/拖拽不收起
 let bubbleShowAt = 0;       // 最近一次 show 的时间（blur 宽限期基准）
+let dockShownAt = 0;        // 图标环最近一次弹出的时间（toggle 防抖基准）
 
 const PET_W = 190, PET_H = 220;
 const DOCK_W = 300, DOCK_H = 170;   // 图标环：环绕猫头的上半圆
@@ -238,6 +239,7 @@ function positionSettings() {
 
 function showDock(show) {
   if (show) {
+    dockShownAt = Date.now();
     if (!dockWin || dockWin.isDestroyed()) {
       dockWin = new BrowserWindow({
         width: DOCK_W, height: DOCK_H,
@@ -284,6 +286,12 @@ function showSettings(show) {
 
 ipcMain.on("dock-toggle", () => {
   const vis = dockWin && !dockWin.isDestroyed() && dockWin.isVisible();
+  if (vis && Date.now() - dockShownAt < 1200) {
+    // 刚弹出 1.2s 内的再点不收：用户连续快速点猫的意图是「出现图标」，
+    // 不加防抖会 show→hide 闪一下又没了（观感即「点了没有图标」）
+    log("[dock] toggle → ignored (debounce)");
+    return;
+  }
   log("[dock] toggle →", vis ? "hide" : "show");
   showDock(!vis);
 });
