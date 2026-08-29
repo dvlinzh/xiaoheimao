@@ -23,6 +23,19 @@ html, body {
 /* 状态只靠图标灰化程度区分；边框恒定、无光晕 */
 .chip.st-idle .disc { filter: grayscale(1) brightness(.92); }
 .chip.st-off .disc { filter: grayscale(1) brightness(.62); }
+/* 正在运行的 harness：主题色一小圈呼吸光效（--glow 由 dock.js 按芯片注入） */
+.chip.st-on .disc {
+  animation: chip-glow 2.6s ease-in-out infinite;
+}
+@keyframes chip-glow {
+  0%, 100% {
+    box-shadow: 0 0 6px 1px color-mix(in srgb, var(--glow, #fff) 35%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 4px 2px color-mix(in srgb, var(--glow, #fff) 55%, transparent),
+                0 0 14px 3px color-mix(in srgb, var(--glow, #fff) 28%, transparent);
+  }
+}
 .chip .badge {
   position: absolute; top: -2px; right: -2px;
   width: 10px; height: 10px; border-radius: 50%;

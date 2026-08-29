@@ -1,9 +1,9 @@
 // dock.js — harness 图标环（小黑猫色系：暗色圆底 + harness 本尊图标）
 // 布局：圆片以猫头为圆心、上半圆弧自动排布（1 枚在正头顶，多枚均布）。
-// 存活：只显示「正在跑」的 harness——项目文件 10 分钟内有写入才算活
-//       （钩子每轮 tick、MCP 每次整理都会写盘；没启动的 harness 直接不画）。
+// 恒驻：所有装过插件的 harness 常驻显示，不因不活跃消失；
+//       10 分钟内有项目文件写盘（钩子 tick / MCP 整理）= 正在运行 → 主题色呼吸光效。
 // 图标：assets/icons/<h>.png 存在就用实物图；没有则绘制兜底（dsh 用字母标，
-//       不再画猜测的鲸——把真图标丢进 assets/icons/dsh.png 即自动替换）。
+//       把官方图标丢进 assets/icons/dsh.png 即自动替换）。
 const ICON_COLOR = {
   "claude-code": "#fbbf24",   // 金圈
   dsh: "#5ea3f7",             // DeepSeek 蓝
@@ -21,7 +21,7 @@ const ICON_IMG = {
   opencode: "opencode.png",
   dsh: "dsh.png",             // 可能不存在，启动时探测
 };
-const LIVE_MS = 30 * 60 * 1000;   // 30 分钟无写入 = 视为未运行（钩子 tick 偶发滞后时环不该空掉）
+const LIVE_MS = 10 * 60 * 1000;   // 10 分钟内有写盘 = 正在运行（亮光效；否则灰显待命）
 
 const imgOk = {};   // 实物图标探测缓存
 async function probeIcons() {
@@ -105,29 +105,32 @@ async function refresh() {
         e.live = Math.max(e.live, p.liveAtMs || 0);
       }
     }
-    // 只保留正在跑的 harness（没启动的不出现）
-    const keys = Object.keys(by).filter((h) => now - by[h].live < LIVE_MS);
+    // 所有装过插件的 harness 恒驻显示（不活跃不消失）；正在写的加光效
+    const keys = Object.keys(by);
     keys.sort((a, b) => (a === "claude-code" ? -1 : b === "claude-code" ? 1 : a.localeCompare(b)));
     const modeOn = (ov.settings?.mode || "off") === "on";
     // 签名不变就不重建 DOM——3 秒轮询会把「正按着的芯片」换没，导致点击丢失
-    const sig = keys.map((h) => h + ":" + (by[h].newest > (seen[h] || 0) ? 1 : 0)).join("|");
+    const sig = keys.map((h) => {
+      const live = now - by[h].live < LIVE_MS;
+      return h + ":" + (live ? 1 : 0) + ":" + (by[h].newest > (seen[h] || 0) ? 1 : 0);
+    }).join("|");
     if (sig === lastSig) return;
     lastSig = sig;
     hideTip();
     let html = "";
     keys.forEach((h, i) => {
       const { x, y } = arcPos(i, keys.length);
-      const newest = by[h].newest;
-      const fresh = newest > 0 && (now - newest) < 30 * 60 * 1000;
-      const state = !modeOn ? "off" : fresh ? "on" : "idle";
+      const live = now - by[h].live < LIVE_MS;   // 10 分钟内有写盘 = 正在运行
+      const state = !modeOn ? "off" : live ? "on" : "idle";
       const tipText = `${LABELS[h] || h}｜${by[h].gaps ? "缺口 " + by[h].gaps + " · " : ""}${state === "on" ? "整理中" : state === "idle" ? "待命" : "整理模式关"}`;
-      const hasNew = newest > (seen[h] || 0);
-      html += `<div class="chip st-${state}" data-h="${encodeURIComponent(h)}" data-tip="${tipText}" data-x="${x}" data-y="${y}" style="left:${x}px;top:${y}px">`
+      const hasNew = by[h].newest > (seen[h] || 0);
+      const glow = state === "on" ? `--glow:${ICON_COLOR[h] || ICON_COLOR.other};` : "";
+      html += `<div class="chip st-${state}" data-h="${encodeURIComponent(h)}" data-tip="${tipText}" data-x="${x}" data-y="${y}" style="left:${x}px;top:${y}px;${glow}">`
         + `<span class="disc">${iconSvg(h, 30)}</span>`
         + `<span class="badge${hasNew ? " show" : ""}"></span></div>`;
     });
     console.log("[dock] rebuild, keys:", keys.join(","));
-    dock.innerHTML = html;   // 无存活 harness 时留空（不再画兜底爪印）
+    dock.innerHTML = html;   // 一个 harness 都没有时才留空
     dock.querySelectorAll(".chip").forEach((el) => {
       // pointerdown 即触发：click 会等 mouseup，若恰好赶上 3 秒轮询重建 DOM，
       // 按下的元素被换掉、click 丢失——表现为「点不到芯片」。防重入双保险。
