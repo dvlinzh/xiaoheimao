@@ -1,5 +1,5 @@
-// skin-cat.js — 小黑猫皮肤：官方渲染原素 + 分层呼吸（身体微起伏，尾巴幅度更大）
-// 尾巴摆动功能已按需求移除；原图备份 assets/cat.bak-20260828/
+// skin-cat.js — 小黑猫皮肤：三姿态（idle 坐立 / sleep 趴卧 / walk 拎起）
+// 单层渲染：整猫一体呼吸；拖拽绕后颈弹簧摆；素材替换走 scripts/swap-pose.cjs
 (function () {
   const POSE_FILES = {
     idle: "cat-idle.png", walk: "cat-walk.png", sleep: "cat-sleep.png",
@@ -55,13 +55,6 @@
       let dragging = false;
       let swingAng = 0, swingTarget = 0;   // 拎起摆角（rad）与速度激励目标
 
-      function moodFilterFor(pose) {
-        if (pose === "crouch" && mood === "alert") return "drop-shadow(0 0 14px rgba(244,63,94,.45))";
-        if (pose === "run") return "drop-shadow(0 0 16px rgba(168,85,247,.5))";
-        if (pose === "ask") return "drop-shadow(0 0 12px rgba(94,234,212,.4))";
-        return "none";
-      }
-
       function render(t) {
         ctx.clearRect(0, 0, cvs.width, cvs.height);
         const pose = dragging ? "walk" : (MOOD_POSE[mood] || "idle");
@@ -71,8 +64,6 @@
         // 脚底对齐画布底：各姿态底部留白不同（idle 14px / sleep 89px…），
         // 按图片底边会悬空。bottomRow 无数据（异常）时回退图片底边。
         const oy = cvs.height - 1 - (bottomRow[pose] ?? img.height - 1);
-        // 光效按 mood 名查表（alert 红光 / celebrate 紫光 / ask 青光）——
-        // 旧代码误用 pose 名查（crouch/run），红紫两色从未生效
         const filter = dragging ? "none" : (MOOD_FILTER[mood] || "none");
         const breath = Math.sin((t / BREATH.period) * Math.PI * 2);
         // 拎起摆动弹簧：角度向速度目标收敛（主进程 16ms 发一次光标水平速度）
