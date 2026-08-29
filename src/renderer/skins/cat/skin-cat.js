@@ -2,8 +2,7 @@
 // 尾巴摆动功能已按需求移除；原图备份 assets/cat.bak-20260828/
 (function () {
   const POSE_FILES = {
-    idle: "cat-idle.png", walk: "cat-walk.png", run: "cat-run.png",
-    ask: "cat-ask.png", crouch: "cat-crouch.png", sleep: "cat-sleep.png",
+    idle: "cat-idle.png", walk: "cat-walk.png", sleep: "cat-sleep.png",
   };
   const MOOD_POSE = {
     idle: "idle", sleep: "sleep",   // alert/ask/celebrate 已按需求移除
