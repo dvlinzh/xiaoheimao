@@ -20,6 +20,13 @@ window.__mbEvts = { move: 0, down: 0, up: 0 };
 document.addEventListener("mousemove", () => window.__mbEvts.move++, true);
 document.addEventListener("mousedown", () => window.__mbEvts.down++, true);
 document.addEventListener("mouseup", () => window.__mbEvts.up++, true);
+/* 心跳探针：每 5s 经 [pet:console] 上报事件计数与穿透状态——
+   electron.log 里对比两次心跳的增量即可判断交互断在 OS 投递层还是渲染逻辑层 */
+setInterval(() => {
+  console.log("[pet] beat evts:", JSON.stringify(window.__mbEvts),
+    "clickable:", clickable, "press:", pressInfo ? "locked" : "none",
+    "alpha:", alphaMap ? "ok" : "null", "chipRects:", chipRects.length);
+}, 5000);
 
 /* ── 皮肤装载 ── */
 let curSkin = "";
