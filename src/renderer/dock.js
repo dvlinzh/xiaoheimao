@@ -174,10 +174,21 @@ document.addEventListener("mousemove", (e) => {
 });
 document.addEventListener("mouseout", (e) => {
   if (!e.relatedTarget) {
-    console.log("[dock] mouseout-null target:", e.target.className || e.target.id);
-    setClickable(false);
+    // innerHTML 重建会合成 mouseout(relatedTarget=null)。若光标实际仍悬停在
+    // 某个芯片上（重建后 DOM 的 :hover 依旧匹配），下一帧按真实悬停恢复——
+    // 否则静止的光标不再产生 mousemove，悬停态被误杀后第一次点击必穿透
+    setTimeout(() => setClickable(!!document.querySelector(".chip:hover")), 0);
   }
 });
 
 probeIcons().then(refresh);
 setInterval(refresh, 3000);
+/* 隐藏期间定时器会被 Chromium 强节流（实测可到几十分钟一次）——每次显示时
+ * 强制刷新并清签名，保证弹出来的环永远是新鲜芯片，而不是上次隐藏前的旧 DOM
+ * （曾因此整个晚上环里都是「空 keys」的残留，用户看到的是没有图标的环）。 */
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    lastSig = null;
+    refresh();
+  }
+});
