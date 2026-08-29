@@ -8,10 +8,6 @@ if (!bridge) document.documentElement.classList.add("in-browser");
 let mode = "off";
 let lastDataAt = Date.now();
 let lastInteraction = Date.now();
-let alertUntil = 0;
-let celebrateUntil = 0;
-let prevGapMap = {};
-let prevTotalGaps = null;
 let modules = { juggle: true, autoJuggle: true, speech: true, tutorial: true, celebrate: true };
 let Pet = null;            // 当前皮肤 API
 let greeted = false;
@@ -66,29 +62,8 @@ function applyOverview(ov) {
     if (modules.speech) speak((ov.settings?.greetings || ["就位。"])[Math.floor(Math.random() * (ov.settings?.greetings || ["就位。" ]).length)]);
   }
 
-  const act = (ov.projects || []).filter((p) => p.active !== false);
-
-  let totalGaps = 0;
-  for (const p of act) totalGaps += p.counts.gaps;
-  for (const p of act) {
-    const before = prevGapMap[p.id];
-    if (before !== undefined && p.counts.gaps > before) alertUntil = Date.now() + 20000;
-    prevGapMap[p.id] = p.counts.gaps;
-  }
-  if (prevTotalGaps !== null && prevTotalGaps > 0 && totalGaps === 0 && modules.celebrate) {
-    celebrateUntil = Date.now() + 2400;
-  }
-  prevTotalGaps = totalGaps;
-
-  const anyAsk = act.some((p) => p.pendingNewTask);
-
-  let mood = "idle";
-  if (anyAsk) mood = "ask";
-  else if (Date.now() < celebrateUntil) mood = "celebrate";
-  else if (Date.now() < alertUntil) mood = "alert";
-  else if (mode !== "on") mood = "sleep";   // 关闭整理：趴着待机（无变暗/Zzz，纯姿态）
-  Pet?.setMood(mood);
-  if (mood === "celebrate") Pet?.hop();
+  // 状态只剩两种：整理中 idle / 关闭整理 sleep（alert/ask/celebrate 已按需求移除）
+  Pet?.setMood(mode !== "on" ? "sleep" : "idle");
 }
 
 /* ── 开场白 ── */

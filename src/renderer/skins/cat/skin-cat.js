@@ -6,14 +6,9 @@
     ask: "cat-ask.png", crouch: "cat-crouch.png", sleep: "cat-sleep.png",
   };
   const MOOD_POSE = {
-    idle: "idle", walk: "walk", ask: "ask", alert: "crouch",
-    celebrate: "run", sleep: "sleep",   // 趴着仅是姿态：暗化/Zzz 不恢复
+    idle: "idle", sleep: "sleep",   // alert/ask/celebrate 已按需求移除
   };
-  const MOOD_FILTER = {
-    alert: "drop-shadow(0 0 14px rgba(244,63,94,.45))",
-    celebrate: "drop-shadow(0 0 16px rgba(168,85,247,.5))",
-    ask: "drop-shadow(0 0 12px rgba(94,234,212,.4))",
-  };
+  const MOOD_FILTER = {};
   /* 呼吸参数：身体 0.8%，尾巴 3% + 微转——尾巴幅度明显大于身体 */
   const BREATH = { period: 2600, bodyAmp: 0.012 };   // 用户校准 ×1.5
 
@@ -125,13 +120,11 @@
           cvs.classList.add("hop");
           setTimeout(() => cvs.classList.remove("hop"), 560);
         },
-        juggle() {   // 双击：原地连跳两下
+        juggle() {   // 双击：原地连跳三下（保持当前姿态）
           if (cvs.dataset.on) return;
           cvs.dataset.on = "1";
-          const prev = mood;
-          mood = "celebrate";
           this.hop(); setTimeout(() => this.hop(), 580); setTimeout(() => this.hop(), 1160);
-          setTimeout(() => { mood = prev; delete cvs.dataset.on; }, 1800);
+          setTimeout(() => delete cvs.dataset.on, 1800);
         },
         flash(m, ms) { this.setMood(m); setTimeout(() => this.setMood("idle"), ms); },
       };
