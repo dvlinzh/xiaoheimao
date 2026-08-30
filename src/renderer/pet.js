@@ -240,6 +240,9 @@ function buildAlphaMap() {
     if (pressInfo) return;           // 拖拽中不上报（主进程已清空形状）
     if (shapeSuppressed) return;     // 动画进行中不上报：采样来自画布后备存储（静止姿态），
                                      // 而屏幕上是跳起/摆动中的猫——上报会重新套上裁掉耳朵
+    // 关键一步：把栅格化形状上报给主进程 setShape——缺了这行窗口保持整矩形可交互，
+    // 猫周围空白全部吸收点击（OS 没有形状无从穿透）
+    window.petBridge?.sendPetShape?.(petShape);
   } catch {}
 }
 
@@ -283,7 +286,7 @@ let lastMove = { x: -1, y: -1, over: null };
 document.addEventListener("mousemove", (e) => {
   lastInteraction = Date.now();
   lastMove = { x: e.clientX, y: e.clientY, over: overPet(e.clientX, e.clientY) };
-  setClickable(nearPet(e.clientX, e.clientY));
+  // 穿透由 win.setShape 负责（形状外 OS 原生穿透），渲染层不再切换 ignoreMouseEvents
 });
 
 /* 拖拽姿态：主进程判定真实拖动后推送（被拎走的猫） */
@@ -294,7 +297,6 @@ bridge?.onDragPhys?.((v) => Pet?.setSwing?.(v.vx));   // 拖拽速度 → 拎起
 bridge?.onCursorPos?.(({ inside, x, y }) => {
   if (pressInfo) return;
   if (inside) lastCursor = { x, y, over: overPet(x, y) };
-  setClickable(inside ? nearPet(x, y) : false);
 });
 
 /* ── 启动 ── */

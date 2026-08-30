@@ -12,3 +12,6 @@ build/
 # 系统文件
 Thumbs.db
 .DS_Store
+
+# 素材备份目录（体积收敛后不再入库；需保留时放别处）
+src/renderer/assets/cat.bak-*
