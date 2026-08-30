@@ -61,13 +61,15 @@ function iconSvg(h, size) {
 
 /* ── 环形布局：120° 扇形，圆心 = 猫头中心。一条边垂直（-90° 正头顶），
  * 另一条边斜向左下（-210°，落到猫身左下侧、任务栏上方），芯片沿扇形等距分布。
- * n=1 时唯一芯片在垂直边上（正头顶）。 ── */
-const R = 80;                 // 半径：比耳廓稍远一档
-const CX = 150, CY = 168;     // 圆心（dock 窗 300×240，(150,168) 对准猫头中心）
+ * 半径随方向渐增（顶 80 → 左下 130）：猫的身体/尾巴占据左下空间，
+ * 固定半径会让左下芯片贴到身上。n=1 时唯一芯片在垂直边上（正头顶）。 ── */
+const R = 55, R_FAR = 80;
+const CX = 150, CY = 168;     // 圆心（dock 窗 300×290，(150,168) 对准猫头中心）
 function arcPos(i, n) {
   const deg = -90 - (120 / Math.max(1, n - 1)) * i;
   const rad = (deg * Math.PI) / 180;
-  return { x: CX + R * Math.cos(rad), y: CY + R * Math.sin(rad) };
+  const r = R + (R_FAR - R) * (n > 1 ? i / (n - 1) : 0);
+  return { x: CX + r * Math.cos(rad), y: CY + r * Math.sin(rad) };
 }
 
 /* tooltip：JS 定位 + 窗口内收拢，不会再被裁 */
