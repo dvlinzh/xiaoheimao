@@ -26,6 +26,7 @@ let calWin = null;
 let lastBubbleHarness = "";
 let bubblePinned = false;   // 面板图钉：钉住时失焦/拖拽不收起
 let bubbleShowAt = 0;       // 最近一次 show 的时间（blur 宽限期基准）
+let bubbleShown = false;    // 自维护的可见态：透明窗 isVisible() 不可靠（幽灵态家族的根源）
 let dockShownAt = 0;        // 图标环最近一次弹出的时间（toggle 防抖基准）
 
 const PET_W = 280, PET_H = 250;
@@ -168,8 +169,14 @@ async function openBubble(harness) {
   if (!harness) return;
   const url = `http://127.0.0.1:${port}/bubble.html?harness=${encodeURIComponent(harness)}&side=${petEdge}`;
   const reuse = bubbleWin && !bubbleWin.isDestroyed();
-  // toggle 语义：面板正显示着这个 harness 时，再点同一芯片 = 收起
-  if (reuse && lastBubbleHarness === harness && bubbleWin.isVisible()) {
+  log("[bubble] open request:", harness,
+    "| reuse:", reuse, "| last:", lastBubbleHarness, "| shown:", bubbleShown,
+    "| isVisible:", reuse ? bubbleWin.isVisible() : "n/a");
+  // toggle 语义：面板正显示着这个 harness 时，再点同一芯片 = 收起。
+  // 用自维护的 bubbleShown 而非 bubbleWin.isVisible()——透明窗的 isVisible
+  // 在 DWM 表面问题上会把「屏幕上可见」报成 false，toggle 分支被跳过，
+  // 走进唤醒分支（show 对已可见窗是 no-op）→ 用户感觉「点了关不掉」。
+  if (reuse && lastBubbleHarness === harness && bubbleShown) {
     log("[bubble] toggle → hide (chip re-click)");
     bubbleWin.hide();
     return;
@@ -223,8 +230,11 @@ async function openBubble(harness) {
   // 不再因点击别处/失焦隐藏——「点到别处面板就没了」是此前最大诟病。
   bubbleWin.on("show", () => {
     bubbleShowAt = Date.now();
+    bubbleShown = true;
     log("[bubble] shown, bounds:", JSON.stringify(bubbleWin.getBounds()));
   });
+  bubbleWin.on("hide", () => { bubbleShown = false; });
+  bubbleWin.on("closed", () => { bubbleShown = false; });
   // 拖动记忆：面板头部是 -webkit-app-region: drag，OS 直接挪窗口，Electron 仍会
   // 发 move 事件——防抖 400ms 落盘，重启后位置延续
   let moveSaveTimer = null;
@@ -730,7 +740,7 @@ app.whenReady().then(async () => {
 
   globalShortcut.register("Control+Alt+B", async () => {
     if (!petWin || petWin.isDestroyed()) createPet();
-    else if (bubbleWin && !bubbleWin.isDestroyed() && bubbleWin.isVisible()) bubbleWin.hide();
+    else if (bubbleShown) { log("[bubble] hotkey → hide"); bubbleWin.hide(); }
     else openBubble(lastBubbleHarness || await firstHarness());
   });
   // Ctrl+Alt+H：躲起来 / 唤回兔子
