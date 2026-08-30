@@ -160,6 +160,12 @@ async function openBubble(harness) {
   if (!harness) return;
   const url = `http://127.0.0.1:${port}/bubble.html?harness=${encodeURIComponent(harness)}&side=${petEdge}`;
   const reuse = bubbleWin && !bubbleWin.isDestroyed();
+  // toggle 语义：面板正显示着这个 harness 时，再点同一芯片 = 收起
+  if (reuse && lastBubbleHarness === harness && bubbleWin.isVisible()) {
+    log("[bubble] toggle → hide (chip re-click)");
+    bubbleWin.hide();
+    return;
+  }
   if (reuse && lastBubbleHarness === harness) {
     // 同一 harness：不重载（保留滚动位置），仅唤起
     summonBubble();
