@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>思维导图 · 思维板小黑猫</title>
+<style>
+  :root {
+    --bg: #0d0d0f; --card: #141416; --card2: #1b1b1f; --line: #28282e;
+    --line2: #34343c; --text: #ececec; --dim: #9a9aa2; --faint: #66666e;
+    --amber: #fbbf24; --teal: #5eead4; --sky: #5ea3f7; --violet: #8b7cf6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text); padding: 40px 24px 80px;
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif; font-size: 15px; line-height: 1.75;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  h1 { font-family: Georgia, "Songti SC", serif; font-size: 30px; margin: 0 0 6px; }
+  .sub { color: var(--dim); margin: 0 0 30px; font-size: 14.5px; }
+  h2 { font-size: 19px; margin: 40px 0 10px; padding-left: 12px; border-left: 3px solid var(--amber); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 24px; overflow-x: auto; }
+  .card svg { display: block; margin: 0 auto; }
+  .faint { color: var(--faint); font-size: 12.5px; margin-top: 20px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>思维导图</h1>
+<p class="sub">以「思维板小黑猫」为中心的概念全景。四个主分支 = 四类关注点。</p>
+
+<div class="card">
+<svg viewBox="0 0 1060 600" font-family="'Segoe UI','Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="mm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#34343c"/>
+    </marker>
+  </defs>
+  <style>
+    .ctr { fill: #16161e; stroke: #34343c; stroke-width: 1.4; rx: 14; }
+    .ct { fill: #ececec; font-size: 15px; font-weight: 700; }
+    .ct2 { fill: #9a9aa2; font-size: 10.5px; }
+    .br { fill: #1b1b1f; stroke: #34343c; stroke-width: 1.2; rx: 10; }
+    .bt { fill: #ececec; font-size: 12.5px; font-weight: 700; }
+    .bd { fill: #9a9aa2; font-size: 10.5px; }
+    .lf { fill: #1b1b1f; stroke: #28282e; stroke-width: 1; rx: 8; }
+    .lft { fill: #c8c8d0; font-size: 11px; }
+    .lk { stroke: #34343c; stroke-width: 1.1; fill: none; }
+  </style>
+
+  <!-- 中心 -->
+  <rect x="430" y="262" width="200" height="76" rx="14" class="ctr"/>
+  <text x="530" y="294" text-anchor="middle" class="ct">思维板 · 小黑猫</text>
+  <text x="530" y="316" text-anchor="middle" class="ct2">跨 harness 共享思维板</text>
+
+  <!-- 分支①：四层模型（左上） -->
+  <path d="M440 270 C380 220 330 200 296 188" class="lk"/>
+  <rect x="120" y="160" width="176" height="56" rx="10" class="br"/>
+  <text x="208" y="184" text-anchor="middle" class="bt">① 四层模型</text>
+  <text x="208" y="202" text-anchor="middle" class="bd">成熟度管线</text>
+  <rect x="34" y="222" width="128" height="28" rx="8" class="lf"/>
+  <text x="98" y="241" text-anchor="middle" class="lft">想法=初步设想</text>
+  <rect x="168" y="222" width="128" height="28" rx="8" class="lf"/>
+  <text x="232" y="241" text-anchor="middle" class="lft">缺口=闭环缺失</text>
+  <rect x="34" y="256" width="128" height="28" rx="8" class="lf"/>
+  <text x="98" y="275" text-anchor="middle" class="lft">方案=候选路线</text>
+  <rect x="168" y="256" width="128" height="28" rx="8" class="lf"/>
+  <text x="232" y="275" text-anchor="middle" class="lft">要点=重点预览</text>
+
+  <!-- 分支②：接入（左下） -->
+  <path d="M440 320 C380 360 340 376 304 384" class="lk"/>
+  <rect x="120" y="366" width="176" height="56" rx="10" class="br"/>
+  <text x="208" y="390" text-anchor="middle" class="bt">② 接入层</text>
+  <text x="208" y="408" text-anchor="middle" class="bd">三条标准通道</text>
+  <rect x="34" y="428" width="110" height="28" rx="8" class="lf"/>
+  <text x="89" y="447" text-anchor="middle" class="lft">Hooks 注入</text>
+  <rect x="152" y="428" width="110" height="28" rx="8" class="lf"/>
+  <text x="207" y="447" text-anchor="middle" class="lft">MCP stdio</text>
+  <rect x="270" y="428" width="118" height="28" rx="8" class="lf"/>
+  <text x="329" y="447" text-anchor="middle" class="lft">HTTP API</text>
+
+  <!-- 分支③：壳（右上） -->
+  <path d="M620 270 C680 230 720 216 752 210" class="lk"/>
+  <rect x="752" y="182" width="180" height="56" rx="10" class="br"/>
+  <text x="842" y="206" text-anchor="middle" class="bt">③ 桌宠壳</text>
+  <text x="842" y="224" text-anchor="middle" class="bd">可抛弃展示层</text>
+  <rect x="770" y="246" width="96" height="28" rx="8" class="lf"/>
+  <text x="818" y="265" text-anchor="middle" class="lft">猫窗</text>
+  <rect x="874" y="246" width="96" height="28" rx="8" class="lf"/>
+  <text x="922" y="265" text-anchor="middle" class="lft">图标环</text>
+  <rect x="770" y="280" width="96" height="28" rx="8" class="lf"/>
+  <text x="818" y="299" text-anchor="middle" class="lft">面板</text>
+  <rect x="874" y="280" width="96" height="28" rx="8" class="lf"/>
+  <text x="922" y="299" text-anchor="middle" class="lft">设置</text>
+
+  <!-- 分支④：数据与生命周期（右下） -->
+  <path d="M620 320 C690 350 730 362 766 366" class="lk"/>
+  <rect x="766" y="340" width="180" height="56" rx="10" class="br"/>
+  <text x="856" y="364" text-anchor="middle" class="bt">④ 数据与生命周期</text>
+  <text x="856" y="382" text-anchor="middle" class="bd">文件即数据库</text>
+  <rect x="700" y="404" width="150" height="28" rx="8" class="lf"/>
+  <text x="775" y="423" text-anchor="middle" class="lft">draft→reflected</text>
+  <rect x="858" y="404" width="150" height="28" rx="8" class="lf"/>
+  <text x="933" y="423" text-anchor="middle" class="lft">supersedes 链</text>
+  <rect x="700" y="438" width="150" height="28" rx="8" class="lf"/>
+  <text x="775" y="457" text-anchor="middle" class="lft">14 天缺口衰减</text>
+  <rect x="858" y="438" width="150" height="28" rx="8" class="lf"/>
+  <text x="933" y="457" text-anchor="middle" class="lft">原子写盘</text>
+</svg>
+</div>
+
+<h2>文字版全图</h2>
+<div class="card">
+<pre>
+思维板·小黑猫
+├── ① 四层模型（成熟度管线：想法→缺口→方案→要点）
+│   ├── 想法 = 自然语言初步设想（原始素材，归纳入库）
+│   ├── 缺口 = 设想到落地的逻辑闭环缺失（驱动推进）
+│   ├── 方案 = 填充缺口的候选路线（adopted 唯一）
+│   └── 要点 = 重点预览 + ↗完整版链接（项目地图/图解/流程图收录于此）
+├── ② 接入层（三条标准通道）
+│   ├── Hooks：会话协议 + 每轮一行状态
+│   ├── MCP stdio：organize / query / control
+│   └── HTTP：本地 API + 静态页（浏览器兜底）
+├── ③ 桌宠壳（可抛弃展示层）
+│   ├── 猫窗（逐像素命中 · 呼吸 · 拎起摆动）
+│   ├── 图标环（恒驻 · 扇形 · 运行光晕）
+│   ├── 面板（默认钉住 · 拖拽删除 · 总览视图）
+│   └── 设置 + 仪表盘
+└── ④ 数据与生命周期
+    ├── draft → clarifying → reflected → archived
+    ├── supersedes 替代链（旧认知退场）
+    ├── 14 天缺口衰减
+    └── 原子写盘 + journal 事件流
+</pre>
+</div>
+
+<p class="faint">
+  图解系列：/docs/project-map.html 项目地图 · /docs/components.html 组件图解 ·
+  /docs/organize-principle.html 整理算法 · /docs/methodology.html 方法论 · /docs/dock-principle.html 图标环
+</p>
+
+</div>
+</body>
+</html>

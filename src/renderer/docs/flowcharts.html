@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>流程图集 · 思维板小黑猫</title>
+<style>
+  :root {
+    --bg: #0d0d0f; --card: #141416; --card2: #1b1b1f; --line: #28282e;
+    --line2: #34343c; --text: #ececec; --dim: #9a9aa2; --faint: #66666e;
+    --amber: #fbbf24; --teal: #5eead4; --sky: #5ea3f7; --red: #f0716c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text); padding: 40px 24px 80px;
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif; font-size: 15px; line-height: 1.75;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h1 { font-family: Georgia, "Songti SC", serif; font-size: 30px; margin: 0 0 6px; }
+  .sub { color: var(--dim); margin: 0 0 30px; font-size: 14.5px; }
+  h2 { font-size: 19px; margin: 44px 0 10px; padding-left: 12px; border-left: 3px solid var(--amber); }
+  .lead { color: var(--dim); font-size: 14px; margin: 0 0 18px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; overflow-x: auto; margin-bottom: 16px; }
+  .card svg { display: block; margin: 0 auto; }
+  .faint { color: var(--faint); font-size: 12.5px; margin-top: 20px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>流程图集</h1>
+<p class="sub">四条核心流程的端到端图解：启动链路、一轮整理闭环、面板开合与防抖、拖拽删除状态机。</p>
+
+<!-- ══ ① 启动链路 ══ -->
+<h2>① 启动链路</h2>
+<p class="lead">从双击到五窗就位，全链约 3 秒。</p>
+<div class="card">
+<svg viewBox="0 0 900 240" font-family="'Segoe UI','Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="f1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#66666e"/>
+    </marker>
+  </defs>
+  <style>
+    .b { fill: #1b1b1f; stroke: #34343c; stroke-width: 1.2; rx: 10; }
+    .t { fill: #ececec; font-size: 12.5px; font-weight: 700; }
+    .d { fill: #9a9aa2; font-size: 10.5px; }
+    .fl { stroke: #66666e; stroke-width: 1.2; fill: none; marker-end: url(#f1); }
+    .ft { fill: #9a9aa2; font-size: 10.5px; }
+  </style>
+  <rect x="20" y="40" width="160" height="64" rx="10" class="b"/>
+  <text x="100" y="66" text-anchor="middle" class="t">双击 喵喵启动.bat</text>
+  <text x="100" y="86" text-anchor="middle" class="d">或 npm start</text>
+  <path class="fl" d="M180 72 L210 72"/>
+  <rect x="210" y="40" width="180" height="64" rx="10" class="b"/>
+  <text x="300" y="66" text-anchor="middle" class="t">Electron 主进程</text>
+  <text x="300" y="86" text-anchor="middle" class="d">main.cjs whenReady</text>
+  <path class="fl" d="M390 72 L420 72"/>
+  <rect x="420" y="40" width="220" height="64" rx="10" class="b"/>
+  <text x="530" y="66" text-anchor="middle" class="t">本地 HTTP 服务</text>
+  <text x="530" y="86" text-anchor="middle" class="d">127.0.0.1:13134 · 端口冲突自动复用</text>
+  <path class="fl" d="M640 72 L650 72"/>
+  <rect x="650" y="40" width="230" height="64" rx="10" class="b"/>
+  <text x="765" y="66" text-anchor="middle" class="t">五窗就位</text>
+  <text x="765" y="86" text-anchor="middle" class="d">猫(1653,825) · 环 · 面板 · 设置 · 仪表盘</text>
+  <text x="20" y="140" class="ft">热键 Ctrl+Alt+B 面板 · Ctrl+Alt+H 藏猫 · 右键猫=设置 · 单击猫=图标环 · 双击=连跳三下</text>
+  <text x="20" y="164" class="ft">交互契约每条规则都对应一次真实事故（z-order 反压/抖动误判/幽灵面板/节流空环——详见 /docs/components.html ⑤）</text>
+  <text x="20" y="204" class="ft">托盘：右键菜单（显示/设置/自启/退出）</text>
+</svg>
+</div>
+
+<!-- ══ ② 一轮整理闭环 ══ -->
+<h2>② 一轮整理闭环</h2>
+<p class="lead">AI 的副业：正常回答的同时，条目已经入库。</p>
+<div class="card">
+<svg viewBox="0 0 900 300" font-family="'Segoe UI','Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="f2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#fbbf24"/>
+    </marker>
+  </defs>
+  <style>
+    .b2 { fill: #1b1b1f; stroke: #fbbf24; stroke-width: 1.2; rx: 10; }
+    .t2 { fill: #ececec; font-size: 12.5px; font-weight: 700; }
+    .d2 { fill: #9a9aa2; font-size: 10.5px; }
+    .fl2 { stroke: #fbbf24; stroke-width: 1.2; fill: none; marker-end: url(#f2); }
+    .ft2 { fill: #fbbf24; font-size: 10.5px; }
+  </style>
+  <rect x="20" y="40" width="170" height="76" rx="10" class="b2"/>
+  <text x="105" y="66" text-anchor="middle" class="t2">用户开口</text>
+  <text x="105" y="86" text-anchor="middle" class="d2">想法/结论/方案/疑问</text>
+  <path class="fl2" d="M190 78 L215 78"/>
+  <rect x="215" y="40" width="170" height="76" rx="10" class="b2"/>
+  <text x="300" y="66" text-anchor="middle" class="t2">钩子注入状态行</text>
+  <text x="300" y="86" text-anchor="middle" class="d2">每轮一行 · 到点催促</text>
+  <path class="fl2" d="M385 78 L410 78"/>
+  <rect x="410" y="40" width="170" height="76" rx="10" class="b2"/>
+  <text x="495" y="66" text-anchor="middle" class="t2">AI 回答 + organize</text>
+  <text x="495" y="86" text-anchor="middle" class="d2">归纳改写 · 打包提交</text>
+  <path class="fl2" d="M580 78 L605 78"/>
+  <rect class="b2" x="605" y="40" width="140" height="76" rx="10"/>
+  <text x="675" y="66" text-anchor="middle" class="t2">mergeList 合并</text>
+  <text x="675" y="86" text-anchor="middle" class="d2">bigram≥0.7 去重 · supersedes</text>
+  <path class="fl2" d="M745 78 L770 78"/>
+  <rect x="770" y="40" width="110" height="76" rx="10" class="b2"/>
+  <text x="825" y="66" text-anchor="middle" class="t2">原子落盘</text>
+  <text x="825" y="86" text-anchor="middle" class="d2">tmp+rename</text>
+  <path class="fl2" d="M825 116 L825 150 L495 150 L495 122" stroke-dasharray="4 3"/>
+  <text x="560" y="166" class="ft2">面板 2.5s 轮询 → 四层列表自动亮起（用户无需任何操作）</text>
+  <text x="20" y="220" class="ft2">漂移防护：若 AI 提交了疑似换目标的 goal → 拒写 + pendingNewTask + 强制先问用户</text>
+  <text x="20" y="244" class="ft2">计数回执：applied 回执告诉 AI 这轮实际新增/更新了几条——归纳质量由回执反馈调节</text>
+</svg>
+</div>
+
+<!-- ══ ③ 面板开合与防抖 ══ -->
+<h2>③ 面板开合与防抖</h2>
+<p class="lead">点芯片必现、点猫必弹、连点不闪没——每条规则背后是一次真实事故。</p>
+<div class="card">
+<svg viewBox="0 0 900 260" font-family="'Segoe UI','Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="f3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#5eead4"/>
+    </marker>
+  </defs>
+  <style>
+    .b3 { fill: #1b1b1f; stroke: #5eead4; stroke-width: 1.2; rx: 10; }
+    .t3 { fill: #ececec; font-size: 12.5px; font-weight: 700; }
+    .d3 { fill: #9a9aa2; font-size: 10.5px; }
+    .fl3 { stroke: #5eead4; stroke-width: 1.2; fill: none; marker-end: url(#f3); }
+    .ft3 { fill: #9a9aa2; font-size: 10.5px; }
+  </style>
+  <rect x="20" y="40" width="250" height="76" rx="10" class="b3"/>
+  <text x="145" y="66" text-anchor="middle" class="t3">点芯片 → pointerdown 即触发</text>
+  <text x="145" y="86" text-anchor="middle" class="d3">防重建吃点击 · 500ms 防重入</text>
+  <path class="fl3" d="M270 78 L295 78"/>
+  <rect x="295" y="40" width="250" height="76" rx="10" class="b3"/>
+  <text x="420" y="66" text-anchor="middle" class="t3">open-bubble IPC → 主进程</text>
+  <text x="420" y="86" text-anchor="middle" class="d3">复用窗口 · 先显示再切内容</text>
+  <path class="fl3" d="M545 78 L570 78"/>
+  <rect x="570" y="40" width="250" height="76" rx="10" class="b3"/>
+  <text x="695" y="66" text-anchor="middle" class="t3">幽灵态修复：isVisible→hide+show</text>
+  <text x="695" y="86" text-anchor="middle" class="d3">blur 后 Electron 记可见但表面已丢</text>
+  <path class="fl3" d="M820 78 L838 78" stroke-dasharray="4 3"/>
+  <rect x="20" y="140" width="250" height="76" rx="10" class="b3"/>
+  <text x="145" y="166" text-anchor="middle" class="t3">1.2s blur 宽限</text>
+ <text x="145" y="186" text-anchor="middle" class="d3">非前台开窗被系统收焦点 → 闪开即关</text>
+  <rect x="295" y="140" width="250" height="76" rx="10" class="b3"/>
+  <text x="420" y="166" text-anchor="middle" class="t3">默认钉住：点别处/拖猫不消失</text>
+  <text x="420" y="186" text-anchor="middle" class="d3">图钉/Esc 显式关闭</text>
+  <rect x="570" y="140" width="250" height="76" rx="10" class="b3"/>
+  <text x="695" y="166" text-anchor="middle" class="t3">toggle 防抖 1.2s</text>
+  <text x="695" y="186" text-anchor="middle" class="d3">连点猫不闪没
+  <text x="20" y="244" class="ft3">z-order 契约：dock 每次定位 moveTop + 芯片矩形命中排除——猫永不截胡芯片点击</text>
+</svg>
+</div>
+
+<!-- ══ ④ 拖拽删除状态机 ══ -->
+<h2>④ 拖拽删除状态机</h2>
+<div class="card">
+<svg viewBox="0 0 900 300" font-family="'Segoe UI','Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="f4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#66666e"/>
+    </marker>
+  </defs>
+  <style>
+    .b4 { fill: #1b1b1f; stroke: #34343c; stroke-width: 1.2; rx: 10; }
+    .t4 { fill: #ececec; font-size: 12.5px; font-weight: 700; }
+    .d4 { fill: #9a9aa2; font-size: 10.5px; }
+    .fl4 { stroke: #66666e; stroke-width: 1.2; fill: none; marker-end: url(#f4); }
+    .ft4 { fill: #9a9aa2; font-size: 10.5px; }
+  </style>
+  <rect x="20" y="40" width="200" height="76" rx="10" class="b4"/>
+  <text x="120" y="66" text-anchor="middle" class="t4">mousedown 条目</text>
+  <text x="120" y="86" text-anchor="middle" class="d4">记录起点 + 载荷</text>
+  <path class="fl4" d="M120 116 L120 140"/>
+  <rect x="20" y="140" width="200" height="76" rx="10" class="b4"/>
+  <text x="120" y="166" text-anchor="middle" class="t4">移动 ≥6px → active</text>
+  <text x="120" y="186" text-anchor="middle" class="d4">半透明 + 幽灵卡 + 底部两区滑入</text>
+  <path class="fl4" d="M220 178 L250 178"/>
+  <rect x="250" y="140" width="230" height="76" rx="10" class="b4"/>
+  <text x="365" y="166" text-anchor="middle" class="t4">mousemove → armZone</text>
+  <text x="365" y="186" text-anchor="middle" class="d4">悬停区高亮（outline+scale）</text>
+  <path class="fl4" d="M480 178 L510 178"/>
+  <rect x="510" y="140" width="250" height="76" rx="10" class="b4"/>
+  <text x="635" y="166" text-anchor="middle" class="t4">mouseup → zoneAt 判定落点</text>
+  <text x="635" y="186" text-anchor="middle" class="d4">红区→删除 / 绿区→标记已实现</text>
+  <path class="fl4" d="M635 216 L635 240 L645 240"/>
+  <rect x="510" y="240" width="250" height="40" rx="10" class="b4"/>
+  <text x="635" y="266" text-anchor="middle" class="d4">红区 + 项目载荷 → 二次确认模态 → /api/action delete</text>
+  <path class="fl4" d="M240 178 L268 178"/>
+  <text x="20" y="290" class="ft4">endDrag 兜底：窗口 blur/鼠标离文档 → 清幽灵卡 + 收起两区（防残留）</text>
+</svg>
+</div>
+
+<p class="faint">相关图解：/docs/components.html 组件图解集 · /docs/organize-principle.html 整理算法 · /docs/project-map.html 项目地图 · /docs/mindmap.html 思维导图</p>
+
+</div>
+</body>
+</html>
