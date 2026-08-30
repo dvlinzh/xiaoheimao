@@ -150,7 +150,7 @@ function buildAlphaMap() {
     for (let i = 0; i < m.length; i++) m[i] = d[i * 4 + 3];
     alphaMap = m;
     // 宽松版：素材向 8 方向各偏移 pad 后取并集（形态学膨胀），耳尖细部不再漏点
-    const pad = 19;   // canvas px ≈ 8 屏幕px（×0.42）
+    const pad = 12;   // canvas px ≈ 5 屏幕px（×0.42）：贴边可点但不吞远处点击
     const wc = document.createElement("canvas");
     wc.width = cvs.width + pad * 2; wc.height = cvs.height + pad * 2;
     const wctx = wc.getContext("2d", { willReadFrequently: true });
@@ -190,7 +190,7 @@ function hitPet(x, y, wide) {
   const px = Math.floor((x - r.left + grow) / (r.width + grow * 2) * cw);
   const py = Math.floor((y - r.top + grow) / (r.height + grow * 2) * ch);
   if (px < 0 || py < 0 || px >= cw || py >= ch) return false;
-  return map[py * cw + px] > 8;
+  return map[py * cw + px] > 100;   // 阈值 100：素材光晕（alpha 10~80）不算猫
 }
 function overPet(x, y) { return hitPet(x, y, false); }   // 严格：猫本体
 function nearPet(x, y) { return hitPet(x, y, true); }    // 宽松：含 8px 外扩（交互判定用）
