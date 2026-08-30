@@ -48,25 +48,11 @@ if (new URLSearchParams(location.search).get("side") === "left") {
 // Esc 关闭面板（钉住时也有效，属明确指令）
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") window.close(); });
 
-/* ── 折叠/展开：面板关闭只经芯片 toggle 或 Esc；此按钮把面板折成一条头部细条 ── */
+/* ── 关闭按钮：等同再点一次 harness 芯片（Esc 同效） ── */
 const pinBtn = $("#btn-pin");
-let collapsed = false;
-try { collapsed = localStorage.getItem("mb.collapsed") === "1"; } catch {}
-
-const FOLD_SVG = (open) => `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 11 L12 6 L7 11"/><path d="M17 18 L12 13 L7 18"${open ? ' opacity=".35"' : ""}/></svg>`;
-
-function applyCollapsed() {
-  document.body.classList.toggle("collapsed", collapsed);
-  pinBtn.classList.toggle("on", collapsed);
-  pinBtn.innerHTML = FOLD_SVG(collapsed);
-  pinBtn.title = collapsed ? "展开面板" : "折叠成一条（点此展开）";
-}
-pinBtn.addEventListener("click", () => {
-  collapsed = !collapsed;
-  try { localStorage.setItem("mb.collapsed", collapsed ? "1" : "0"); } catch {}
-  applyCollapsed();
-});
-applyCollapsed();
+pinBtn.title = "关闭面板（Esc 同效）";
+pinBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M18 6 6 18"/><path d="M6 6 18 18"/></svg>`;
+pinBtn.addEventListener("click", () => window.close());
 
 let curProjectId = null;
 let curSkeleton = null;
@@ -705,14 +691,7 @@ function renderOv() {
   }));
 }
 
-document.getElementById("btn-overview")?.addEventListener("click", () => {
-  if (collapsed) {   // 折叠状态先展开，再看总览
-    collapsed = false;
-    try { localStorage.setItem("mb.collapsed", "0"); } catch {}
-    applyCollapsed();
-  }
-  setOvMode(!ovMode);
-});
+document.getElementById("btn-overview")?.addEventListener("click", () => setOvMode(!ovMode));
 document.getElementById("ov-dashboard")?.addEventListener("click", () =>
   window.bubbleBridge?.openDashboard());
 $("#pt-toggle")?.addEventListener("click", (e) => {
