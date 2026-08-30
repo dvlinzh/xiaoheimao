@@ -91,10 +91,9 @@ async function poll() {
     const ov = await r.json();
     lastDataAt = Date.now();
     applyOverview(ov);
-    // 蒙版/形状周期重建：素材替换或姿态切换若未触发 setMood/setDrag，
-    // 旧的 alphaMap/setShape 会把新画面裁掉（"每个状态都被截"的根因）。
-    // 2.5s 一次的全量重建成本 ~几毫秒，换来自动对齐。
-    if (Pet) buildAlphaMap();
+    // 不要在这里周期性 buildAlphaMap()：每次重建都会重设 petWin.setShape，
+    // SetWindowRgn 在光标下方反复触发窗口区域重算，搅乱点击命中。
+    // 形状对齐由 adoptSkin / setMood / setDrag 的 rAF 回调保证。
   } catch {}
 }
 

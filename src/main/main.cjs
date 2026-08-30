@@ -442,6 +442,7 @@ function showCalibrator(show) {
       });
       calWin.loadURL(`http://127.0.0.1:${port}/docs/ring-calibrator.html`);
     } else {
+      calWin.loadURL(`http://127.0.0.1:${port}/docs/ring-calibrator.html`);   // 每次打开强制重载（页面在迭代）
       calWin.show();
       calWin.focus();
     }
