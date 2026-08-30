@@ -44,8 +44,9 @@
 
       const cvs = document.createElement("canvas");
       cvs.id = "pet-canvas";
-      // 画布需容纳最高素材（拎起 512px），否则拖拽姿态耳朵会被画布裁掉
-      cvs.width = 440; cvs.height = 516;
+      // 画布需容纳拎起摆动的甩出幅度：520 宽（尾巴侧余量）、516 高不变，
+      // 否则摆动时最左侧会被画布裁掉。显示 ×0.42，猫本体像素大小不变。
+      cvs.width = 520; cvs.height = 516;
       const SCALE = 0.42;
       cvs.style.cssText = `position:absolute;left:50%;bottom:2px;width:${Math.round(cvs.width * SCALE)}px;height:${Math.round(cvs.height * SCALE)}px;transform:translateX(-50%);transform-origin:50% 100%;`;
       host.appendChild(cvs);
@@ -73,8 +74,8 @@
         const cx = cvs.width / 2, cy = cvs.height;
         ctx.save();
         if (dragging || Math.abs(swingAng) > 0.004) {
-          // 拎着后颈悬吊：轴心=素材上缘中点（后颈），身体随拖拽速度甩动
-          const px = ox + img.width * 0.5, py = oy + img.height * 0.10;
+          // 提着头悬吊：固定点 = 头中心（头保持不动，身体随速度甩动）
+          const px = ox + img.width * 0.5, py = oy + img.height * 0.20;
           ctx.translate(px, py); ctx.rotate(swingAng); ctx.translate(-px, -py);
         }
         ctx.filter = filter;
@@ -98,7 +99,7 @@
         setMood(m) { if (m !== mood) { mood = m; } },
         setSwing(vx) {
           // 光标水平速度（px/16ms）→ 目标摆角：快拖甩得开，上限约 ±17°
-          swingTarget = Math.max(-0.30, Math.min(0.30, -(vx || 0) * 0.012));
+          swingTarget = Math.max(-0.26, Math.min(0.26, -(vx || 0) * 0.012));
         },
         setDrag(v) {
           dragging = !!v;
