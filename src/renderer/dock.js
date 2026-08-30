@@ -59,17 +59,17 @@ function iconSvg(h, size) {
   return `<svg viewBox="0 0 40 40" width="${size}" height="${size}" aria-hidden="true">${body}</svg>`;
 }
 
-/* ── 环形布局：120° 扇形，圆心 = 猫头中心。一条边垂直（-90° 正头顶），
- * 另一条边斜向左下（-210°，落到猫身左下侧、任务栏上方），芯片沿扇形等距分布。
- * 半径随方向渐增（顶 80 → 左下 130）：猫的身体/尾巴占据左下空间，
- * 固定半径会让左下芯片贴到身上。n=1 时唯一芯片在垂直边上（正头顶）。 ── */
-const R = 55, R_FAR = 80;
-const CX = 150, CY = 168;     // 圆心（dock 窗 300×290，(150,168) 对准猫头中心）
+/* ── 环形布局：120° 正圆扇形，圆心 = 用户标定十字（窗内 72,142，两眼之间偏左）。
+ * 一条边垂直（-90° 正头顶），另一条边斜向左下（-210°）；吸附左缘时水平镜像
+ * （斜边转向右下，避免朝屏幕外张开）。芯片沿扇形等距分布。 ── */
+const R = 75;
+const CX = 127, CY = 168;     // 圆心（dock 窗 300×232，(127,168) 对准标定十字）
+let MIRROR = new URLSearchParams(location.search).get("edge") === "left" ? -1 : 1;
+window.petBridge?.onPrefs?.((p) => { if (p?.edge) MIRROR = p.edge === "left" ? -1 : 1; });
 function arcPos(i, n) {
   const deg = -90 - (120 / Math.max(1, n - 1)) * i;
   const rad = (deg * Math.PI) / 180;
-  const r = R + (R_FAR - R) * (n > 1 ? i / (n - 1) : 0);
-  return { x: CX + r * Math.cos(rad), y: CY + r * Math.sin(rad) };
+  return { x: CX + MIRROR * R * Math.cos(rad), y: CY + R * Math.sin(rad) };
 }
 
 /* tooltip：JS 定位 + 窗口内收拢，不会再被裁 */

@@ -28,7 +28,7 @@ let bubbleShowAt = 0;       // 最近一次 show 的时间（blur 宽限期基�
 let dockShownAt = 0;        // 图标环最近一次弹出的时间（toggle 防抖基准）
 
 const PET_W = 190, PET_H = 220;
-const DOCK_W = 300, DOCK_H = 290;   // 图标环：120° 扇形（垂直边 → 左下斜边，高度容下远处左下芯片）
+const DOCK_W = 300, DOCK_H = 232;   // 图标环：120° 正圆扇形（R=75，圆心=标定十字）
 const SET_W = 274, SET_H = 420;
 
 /* 界面偏好（贴边/任务栏/置顶/位置），持久化在 settings.json 的附加键里 */
@@ -246,8 +246,8 @@ function positionDock() {
   const pb = petWin.getBounds();
   // 圆环绕着猫：dock 窗以猫的水平中心为圆心，环心对准猫头（耳朵高度）
   // +85：环整体抬离头顶（原 +120 图标贴耳朵太近）
-  const x = pb.x + Math.round(PET_W / 2 - DOCK_W / 2);
-  const y = pb.y - DOCK_H + 217;   // dock 内圆心 (150,168) 对准猫头中心：dockY+168 = pb.y+95
+  const x = pb.x + Math.round(PET_W / 2 - DOCK_W / 2);   // dockX+CX=127 → 圆心屏幕横坐标 = petX+72（标定十字）
+  const y = pb.y - DOCK_H + 206;   // dock 内圆心 (127,168) 对准标定十字：dockY+168 = petY+142
   dockWin.setPosition(Math.min(Math.max(x, wa.x + 4), wa.x + wa.width - DOCK_W - 4),
                       Math.min(Math.max(y, wa.y + 4), wa.y + wa.height - DOCK_H - 4));
   // 关键：芯片区与猫窗范围重叠，猫窗任何一次 setPosition/激活都可能反压到 dock

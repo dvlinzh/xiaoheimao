@@ -142,20 +142,14 @@ state = !modeOn ? <span class="v">"off"</span> : live ? <span class="v">"on"</sp
 </pre>
 </div>
 
-<!-- ═════════ ③ 排列算法 ═════════ -->
-<h2>③ 排列算法：以猫头为圆心的 120° 等距扇形（垂直边 → 左下斜边）</h2>
+<h2>③ 排列算法：120° 正圆扇形（垂直边 → 左下斜边），圆心 = 标定十字</h2>
 <p class="lead">
-  扇形一条边<b>垂直</b>（-90° 正头顶），另一条边<b>斜向左下</b>（-210°，落到猫身左侧、任务栏上方）。
-  n 枚芯片在扇形内<b>等距分布</b>：deg = -90° - (120°/(n-1))·i。半径随方向渐增（顶 55 → 左下 80）——
-  猫的身体/尾巴占据左下空间，等半径会让远端芯片贴到身上。下图为真实素材标定：十字即圆心落点。
+  扇形一条边<b>垂直</b>（-90° 正头顶），另一条边<b>斜向左下</b>（-210°，猫身左侧、任务栏上方）。
+  n 枚芯片在扇形内<b>等距分布</b>：deg = -90° - (120°/(n-1))·i。正圆弧，恒定半径 R=75。
+  下图用真实素材按 1:1.6 标定：<span style="color:var(--red)">红色十字</span>即圆心落点（窗内 72,142，你画的十字位置）。
 </p>
 <div class="card">
-<svg viewBox="0 0 900 500" font-family="'Segoe UI','Microsoft YaHei',sans-serif">
-  <defs>
-    <linearGradient id="tail3" x1="0" y1="1" x2="1" y2="0">
-      <stop offset="0" stop-color="#8b7cf6"/><stop offset=".5" stop-color="#5ea3f7"/><stop offset="1" stop-color="#5eead4"/>
-    </linearGradient>
-  </defs>
+<svg viewBox="0 0 900 500" font-family="Segoe UI,Microsoft YaHei,sans-serif">
   <style>
     .fan { fill: none; stroke: #28282e; stroke-width: 1.4; stroke-dasharray: 5 5; }
     .edge { stroke: #66666e; stroke-width: 1.2; stroke-dasharray: 3 4; }
@@ -164,63 +158,52 @@ state = !modeOn ? <span class="v">"off"</span> : live ? <span class="v">"on"</sp
     .big { fill: #ececec; font-size: 13px; font-weight: 700; }
     .winlab { fill: #66666e; font-size: 11px; }
   </style>
-
-  <!-- 猫窗 1:1.6 放大模型（190×220 → 304×352） -->
   <g transform="translate(40,60)">
     <rect x="0" y="0" width="304" height="352" fill="#101013" stroke="#34343c" stroke-width="1.4"/>
     <text x="8" y="20" class="winlab">pet 窗 190×220（×1.6 标定）</text>
-    <!-- 真实素材：idle 姿态（262×320 @0.42 = 110×134），脚底贴窗底上 13px -->
-    <image href="../assets/cat/cat-idle.png" x="64" y="118" width="176" height="214"/>
-    <!-- 圆心 = dock (150,168) → 窗内 (95,95) → ×1.6 = (152,152) -->
-    <line x1="138" y1="152" x2="166" y2="152" stroke="#f0716c" stroke-width="1.6"/>
-    <line x1="152" y1="138" x2="152" y2="166" stroke="#f0716c" stroke-width="1.6"/>
-    <circle cx="152" cy="152" r="4" fill="none" stroke="#f0716c" stroke-width="1.4"/>
-    <text x="172" y="146" fill="#f0716c" font-size="11">圆心落点 (95,95)</text>
-    <text x="172" y="162" class="deg">= dock (150,168)</text>
-    <!-- 扇形两条边 -->
-    <line x1="152" y1="152" x2="152" y2="46" class="edge"/>
-    <text x="158" y="52" class="deg">-90° 垂直边</text>
-    <line x1="152" y1="152" x2="41" y2="288" class="edge"/>
-    <text x="20" y="304" class="deg">-210° 斜向左下</text>
-    <!-- 弧线 -->
-    <path d="M152 64 A 128 128 0 0 0 41 288" class="fan"/>
-    <!-- 芯片：claude-code @ -90° R=55 → 窗(95,40) → ×1.6 (152,64) -->
-    <g transform="translate(152,64)">
+    <image href="../assets/cat/cat-idle.png" x="104" y="88" width="176" height="214"/>
+    <line x1="141" y1="287" x2="169" y2="287" stroke="#f0716c" stroke-width="1.6"/>
+    <line x1="155" y1="273" x2="155" y2="301" stroke="#f0716c" stroke-width="1.6"/>
+    <circle cx="155" cy="287" r="4" fill="none" stroke="#f0716c" stroke-width="1.4"/>
+    <text x="175" y="281" fill="#f0716c" font-size="11">圆心落点 (72,142)</text>
+    <text x="175" y="297" class="deg">= dock (127,168)</text>
+    <line x1="155" y1="287" x2="155" y2="127" class="edge"/>
+    <text x="161" y="133" class="deg">-90° 垂直边</text>
+    <line x1="155" y1="287" x2="34" y2="349" class="edge"/>
+    <text x="8" y="366" class="deg">-210° 斜向左下</text>
+    <path d="M155 167 A 120 120 0 0 0 34 349" class="fan"/>
+    <g transform="translate(155,107)">
       <circle r="29.6" class="chipc" stroke="#fbbf24"/>
       <text y="6" text-anchor="middle" font-size="19" fill="#fbbf24">✦</text>
       <circle r="33" fill="none" stroke="#fbbf24" stroke-opacity=".35" stroke-width="2"/>
-      <text y="-42" text-anchor="middle" class="deg">claude-code · -90° · R=55 · 光晕</text>
+      <text y="-42" text-anchor="middle" class="deg">claude-code · -90° · 光晕</text>
     </g>
-    <!-- 芯片：dsh @ -210° R=80 → 窗(25.7,135) → ×1.6 (41,216) -->
-    <g transform="translate(41,216)">
+    <g transform="translate(11,287)">
       <circle r="29.6" class="chipc"/>
       <text y="6" text-anchor="middle" font-size="17" fill="#5ea3f7">🐳</text>
-      <text y="-42" text-anchor="middle" class="deg">dsh · -210° · R=80 · 灰显</text>
+      <text y="-42" text-anchor="middle" class="deg">dsh · -210° · 灰显</text>
     </g>
   </g>
-
-  <!-- 右侧：公式与规则 -->
   <g transform="translate(420,60)">
     <text x="0" y="0" class="big">角度算法（dock.js · arcPos）</text>
     <g transform="translate(0,24)">
       <text y="0" class="deg" font-size="12.5">deg(i, n) = -90° - (120° / (n-1)) · i</text>
-      <text y="24" class="deg" font-size="12.5">pos(i, n) = ( CX + r·cosθ , CY + r·sinθ )</text>
-      <text y="48" class="deg" font-size="12.5">r(i) = 55 + (80 - 55) · i/(n-1)  （半径渐增）</text>
-      <text y="72" class="deg" font-size="12.5">CX,CY = dock 窗 (150,168) = 猫头中心</text>
+      <text y="24" class="deg" font-size="12.5">pos(i, n) = ( CX + MIRROR·R·cosθ , CY + R·sinθ )</text>
+      <text y="48" class="deg" font-size="12.5">R = 75 恒定（正圆）；CX,CY = dock 窗 (127,168)</text>
     </g>
     <g transform="translate(0,140)">
       <text x="0" y="0" class="big">规则</text>
       <text y="26" class="deg" font-size="12">· 扇形两条边：-90° 垂直（正头顶）→ -210° 斜向左下</text>
-      <text y="48" class="deg" font-size="12">· 等距：n=2 → -90/-210；n=3 → -90/-150/-210；n=4 → 每 40°</text>
-      <text y="70" class="deg" font-size="12">· 半径渐增 55→80：猫身/尾巴占左下空间，等半径会贴身</text>
-      <text y="92" class="deg" font-size="12">· 排序首位的 harness（claude-code）恒在垂直边（光晕位）</text>
-      <text y="114" class="deg" font-size="12">· dock 窗 300×290，定位偏移 +217（圆心=头部中心）</text>
+      <text y="48" class="deg" font-size="12">· 等距：n=2 → -90/-210；n=3 → 每 60°；n=4 → 每 40°</text>
+      <text y="70" class="deg" font-size="12">· 排序首位的 harness（claude-code）恒在垂直边（光晕位）</text>
+      <text y="92" class="deg" font-size="12">· 吸附左缘：MIRROR=-1 水平镜像，斜边转向右下</text>
+      <text y="114" class="deg" font-size="12">· dock 窗 300×232，定位 dockY = petY-26（圆心=标定十字）</text>
     </g>
     <g transform="translate(0,300)">
       <text x="0" y="0" class="big">圆心标定</text>
-      <text y="26" class="deg" font-size="12">positionDock: dockY = petY - DOCK_H + 217</text>
-      <text y="48" class="deg" font-size="12">→ dock(150,168) 落在 petY+95 = 猫头中心（左图十字）</text>
-      <text y="70" class="deg" font-size="12">若十字偏离你认可的头中心，改这个 217 即可整体平移。</text>
+      <text y="26" class="deg" font-size="12">positionDock: dockX = petX-55；dockY = petY-26</text>
+      <text y="48" class="deg" font-size="12">→ dock(127,168) 落在窗内 (72,142) = 你画的十字</text>
+      <text y="70" class="deg" font-size="12">微调：dockX/dockY 的常数各自平移圆心。</text>
     </g>
   </g>
 </svg>
