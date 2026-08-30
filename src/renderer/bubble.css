@@ -54,7 +54,6 @@ html.in-browser body { background: var(--bg); }
   position: relative; height: 100%;
   background: var(--card);
   border: 1px solid var(--line);
-  border-left: 3px solid var(--line2);   /* 签名线：同系灰，不抢黑 */
   border-radius: 14px;
   display: flex; flex-direction: column;
   animation: pop .18s ease-out both;

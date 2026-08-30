@@ -36,6 +36,7 @@ let petPin = true;
 let petY = null;              // 边缘模式的纵向位置
 let petXTB = null;            // 任务栏模式的横向位置
 let panelW = 470, panelH = 660;   // 面板尺寸（拖边记忆）
+let panelX = null, panelY = null; // 面板位置（拖动记忆，重启延续）
 function prefsFile() {
   const dir = process.env.MIND_BOARD_HOME || path.join(require("node:os").homedir(), ".mind-board");
   return path.join(dir, "settings.json");
@@ -49,6 +50,8 @@ function loadUiPrefs() {
     if (Number.isFinite(raw.petXTB)) petXTB = raw.petXTB;
     if (Number.isFinite(raw.panelW)) panelW = Math.min(Math.max(raw.panelW, 380), 1200);
     if (Number.isFinite(raw.panelH)) panelH = Math.min(Math.max(raw.panelH, 500), 1400);
+    if (Number.isFinite(raw.panelX)) panelX = raw.panelX;
+    if (Number.isFinite(raw.panelY)) panelY = raw.panelY;
   } catch {}
 }
 function saveUiPrefs() {
@@ -58,6 +61,7 @@ function saveUiPrefs() {
     try { raw = JSON.parse(readFileSync(f, "utf8")); } catch {}
     raw.petEdge = petEdge; raw.petPin = petPin; raw.petY = petY; raw.petXTB = petXTB;
     raw.panelW = panelW; raw.panelH = panelH;
+    raw.panelX = panelX; raw.panelY = panelY;
     require("node:fs").writeFileSync(f, JSON.stringify(raw, null, 2));
   } catch {}
 }
@@ -162,6 +166,9 @@ async function openBubble(harness) {
   bubbleShowAt = Date.now();   // show 事件会再刷一次，这里兜底防事件早于监听
   bubbleWin = new BrowserWindow({
     width: panelW, height: panelH,
+    // 记忆位置：有就延续上次摆放（positionBubble 里再做屏幕内钳制），没有走避让逻辑
+    x: Number.isFinite(panelX) ? panelX : undefined,
+    y: Number.isFinite(panelY) ? panelY : undefined,
     transparent: true,
     frame: false,
     resizable: true,
@@ -195,6 +202,19 @@ async function openBubble(harness) {
   bubbleWin.on("show", () => {
     bubbleShowAt = Date.now();
     log("[bubble] shown, bounds:", JSON.stringify(bubbleWin.getBounds()));
+  });
+  // 拖动记忆：面板头部是 -webkit-app-region: drag，OS 直接挪窗口，Electron 仍会
+  // 发 move 事件——防抖 400ms 落盘，重启后位置延续
+  let moveSaveTimer = null;
+  bubbleWin.on("move", () => {
+    if (moveSaveTimer) return;
+    moveSaveTimer = setTimeout(() => {
+      moveSaveTimer = null;
+      if (!bubbleWin || bubbleWin.isDestroyed()) return;
+      const b = bubbleWin.getBounds();
+      panelX = b.x; panelY = b.y;
+      saveUiPrefs();
+    }, 400);
   });
   positionBubble();
 }
@@ -323,6 +343,7 @@ ipcMain.on("panel-resize-end", () => {
   if (panelResize && bubbleWin && !bubbleWin.isDestroyed()) {
     const b = bubbleWin.getBounds();
     panelW = b.width; panelH = b.height;
+    panelX = b.x; panelY = b.y;
     saveUiPrefs();
   }
   panelResize = null;
@@ -347,6 +368,13 @@ function positionBubble() {
   const wa = workArea();
   const pb = petWin.getBounds();
   const b = bubbleWin.getBounds();
+  // 有记忆位置（用户拖过）→ 只做屏幕内钳制，不再自动归位到猫侧
+  if (Number.isFinite(panelX) && Number.isFinite(panelY)) {
+    const x = Math.min(Math.max(panelX, wa.x + 8), wa.x + wa.width - b.width - 8);
+    const y = Math.min(Math.max(panelY, wa.y + 8), wa.y + wa.height - b.height - 8);
+    bubbleWin.setPosition(x, y);
+    return;
+  }
   let x, y;
   if (petEdge === "taskbar") {
     // 站任务栏：思维面板放猫侧面（垂直居中猫身）
