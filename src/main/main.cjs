@@ -293,7 +293,9 @@ function showDock(show) {
       dockWin.webContents.on("render-process-gone", (_e, details) =>
         log("[dock] render-process-gone:", JSON.stringify(details)));
       dockWin.webContents.once("did-finish-load", () => {
-        try { dockWin.setIgnoreMouseEvents(true, { forward: true }); dockWin.moveTop(); } catch {}
+        // 环打开期间整窗可交互（标准弹层语义）；旧模型在此切穿透态，
+        // 会在显示完成后把窗口永久切回穿透——点芯片无反应的元凶
+        try { dockWin.setIgnoreMouseEvents(false); dockWin.moveTop(); } catch {}
       });
     } else {
       // 每次唤出强制重载页面：穿透窗渲染进程可能静默僵死/DOM 冻结在旧态
