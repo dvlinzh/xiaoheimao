@@ -726,6 +726,8 @@ app.whenReady().then(async () => {
     log("[main] server ready, port:", port, "reused:", !!r.isReused);
     createPet();
     createTray();
+    // 命令行 --calibrator：启动时直接打开图标环标定窗
+    if (process.argv.includes("--calibrator")) setTimeout(() => showCalibrator(true), 400);
   } catch (e) {
     log("[main] startup FAILED:", e?.stack || String(e));
     return;
