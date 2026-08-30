@@ -347,6 +347,12 @@ const HINT_KEYS = {
   ideas: "hint.ideas", points: "hint.points", plans: "hint.plans", gaps: "hint.gaps",
 };
 
+function hintLi(text) {   // 空层占位提示（重构时曾被删定义——空层一渲染就抛错，后续层全部消失）
+  const li = document.createElement("li");
+  li.className = "hint";
+  li.textContent = text;
+  return li;
+}
 function renderLayer(listEl, kind, goal) {
   listEl.replaceChildren();
   const arr = goal[kind] || [];
