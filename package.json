@@ -1,7 +1,7 @@
 {
   "name": "mind-board-pet",
-  "description": "思维板·小兔 — 跨 harness 共享的思维整理面板。数据中枢 + MCP 工具 + 桌宠壳。",
-  "version": "0.1.0",
+  "description": "思维板·小黑猫 — 跨 harness 共享的思维整理面板。数据中枢 + MCP 工具 + 桌宠壳。",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "main": "src/main/main.cjs",

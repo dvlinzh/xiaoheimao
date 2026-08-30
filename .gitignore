@@ -1,1 +1,14 @@
+# 依赖与构建产物
+node_modules/
+dist/
+build/
+
+# 运行日志（electron.log / hook-debug.log 在 ~/.mind-board/，此处兜底）
+*.log
+
+# 仓库根目录调试截图（并行会话约定，见 f47f447）
 /*.png
+
+# 系统文件
+Thumbs.db
+.DS_Store
