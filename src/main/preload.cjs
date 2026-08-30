@@ -27,6 +27,8 @@ contextBridge.exposeInMainWorld("petBridge", {
   // dock 芯片屏幕矩形：dock 上报 → 主进程转发给猫窗做命中排除
   sendChipRects: (rects) => ipcRenderer.send("chip-rects", rects || []),
   onChipRects: (cb) => ipcRenderer.on("chip-rects", (_e, r) => cb(r)),
+  // 猫轮廓形状（win.setShape）：OS 级原生点击穿透
+  sendPetShape: (rects) => ipcRenderer.send("pet-shape", rects || []),
   // 项目总览仪表盘窗口
   closeDashboard: () => ipcRenderer.send("dashboard-hide"),
 });

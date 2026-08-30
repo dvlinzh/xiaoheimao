@@ -530,10 +530,17 @@ ipcMain.on("drag-end", () => {
 ipcMain.on("set-clickable", (_e, clickable) => {
   const win = BrowserWindow.fromWebContents(_e.sender);
   if (!win || win.isDestroyed()) return;
-  if (win === petWin) return;   // 猫窗交互态由主进程轮询独占驱动
+  if (win === petWin) return;   // 猫窗走 setShape 原生穿透，交互态不切换
   const who = win === petWin ? "pet" : win === dockWin ? "dock" : "other";
   log("[clickable]", who, "→", clickable);
   try { win.setIgnoreMouseEvents(!clickable, { forward: true }); } catch {}
+});
+
+/* 猫轮廓形状（win.setShape，Windows）：形状外 OS 原生点击穿透——
+   透明区点击直达下层应用，无切换竞态。渲染层栅格化 alpha 膨胀区后上报。 */
+ipcMain.on("pet-shape", (_e, rects) => {
+  if (!petWin || petWin.isDestroyed() || !Array.isArray(rects) || !rects.length) return;
+  try { petWin.setShape(rects); } catch (e) { log("[pet] setShape FAILED:", String(e)); }
 });
 
 /* 悬停保活轮询：穿透窗的 hover 激活若依赖系统鼠标钩子转发，会被

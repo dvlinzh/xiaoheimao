@@ -137,11 +137,12 @@ zone.addEventListener("contextmenu", (e) => {
    悬停到角色不透明像素才切可点击——拼豆间隙照常透传，不挡底下界面。 */
 
 let alphaMap = null;        // 严格命中：像素不透明才算
-let alphaWide = null;       // 宽松命中：整猫外扩 ~8 屏幕px（耳尖/尾巴/耳间空隙都算猫）
+let alphaWide = null;       // 宽松命中：整猫外扩 ~5 屏幕px（耳尖/尾巴/耳间空隙都算猫）
 let alphaWideW = 0, alphaWideH = 0, alphaPad = 0;
+let petShape = [];          // 窗口形状矩形（win.setShape）：OS 级原生穿透
 
 function buildAlphaMap() {
-  alphaMap = null; alphaWide = null;
+  alphaMap = null; alphaWide = null; petShape = [];
   const cvs = Pet?.el;
   if (!cvs || cvs.tagName !== "CANVAS") return;
   try {
@@ -160,6 +161,33 @@ function buildAlphaMap() {
     alphaWide = new Uint8Array(wc.width * wc.height);
     for (let i = 0; i < alphaWide.length; i++) alphaWide[i] = wd[i * 4 + 3];
     alphaWideW = wc.width; alphaWideH = wc.height; alphaPad = pad;
+    /* 形状矩形：膨胀命中区栅格化（8px 格，格内任一像素 alpha>100 即实心），
+     * 按行合并 → win.setShape。OS 在形状外原生点击穿透——
+     * 无轮询竞态、无首点吞噬，透明区点击直达下层应用。 */
+    const CELL = 8, scale = 0.42;
+    const cols = Math.ceil(wc.width / CELL), rows = Math.ceil(wc.height / CELL);
+    for (let ry = 0; ry < rows; ry++) {
+      let run = -1;
+      for (let rx = 0; rx <= cols; rx++) {
+        let filled = false;
+        if (rx < cols) {
+          outer: for (let y = ry * CELL; y < Math.min((ry + 1) * CELL, wc.height); y += 2)
+            for (let x = rx * CELL; x < Math.min((rx + 1) * CELL, wc.width); x += 2)
+              if (wd[(y * wc.width + x) * 4 + 3] > 100) { filled = true; break outer; }
+        }
+        if (filled && run < 0) run = rx;
+        if (run >= 0 && (!filled || rx === cols)) {
+          petShape.push({
+            x: Math.round((run * CELL - pad) * scale) - 1,
+            y: Math.round((ry * CELL - pad) * scale) - 1,
+            width: Math.round((rx - run) * CELL * scale) + 2,
+            height: Math.round(CELL * scale) + 2,
+          });
+          run = -1;
+        }
+      }
+    }
+    window.petBridge?.sendPetShape?.(petShape);
   } catch {}
 }
 
@@ -195,33 +223,23 @@ function hitPet(x, y, wide) {
 function overPet(x, y) { return hitPet(x, y, false); }   // 严格：猫本体
 function nearPet(x, y) { return hitPet(x, y, true); }    // 宽松：含 8px 外扩（交互判定用）
 
-/* 交互态双通道驱动：渲染层 mousemove（事件正常时）+ 主进程光标轮询
-   （钩子被摘时）都会调用 setClickable——
-   near=true  → 窗口转可交互（猫本体 + 8px 外扩区可点，其余吸收）
-   near=false → 窗口转点击穿透（透明区真正透传给下层应用） */
-let interactive = false;
-function setClickable(c) {
-  if (c === interactive) return;
-  interactive = c;
-  bridge?.setClickable(c);
-}
+/* 交互模型（setShape 版）：窗口常交互，形状外由 OS 原生穿透。
+   不再用 setClickable 切换 ignoreMouseEvents——切换式模型存在
+   「入场竞态」（光标从窗外直进透明区时第一击被残留的可交互态吞掉）。
+   mousemove/cursor-pos 仅作诊断记录。 */
 let lastMove = { x: -1, y: -1, over: null };
 document.addEventListener("mousemove", (e) => {
   lastInteraction = Date.now();
   lastMove = { x: e.clientX, y: e.clientY, over: overPet(e.clientX, e.clientY) };
-  setClickable(nearPet(e.clientX, e.clientY));
 });
 
 /* 拖拽姿态：主进程判定真实拖动后推送（被拎走的猫） */
 bridge?.onDrag?.((v) => Pet?.setDrag?.(v));
 bridge?.onDragPhys?.((v) => Pet?.setSwing?.(v.vx));   // 拖拽速度 → 拎起摆动激励
 
-/* 主进程光标轮询（100ms）——进入窗内时主进程已把整窗切为可交互，
-     这里的 overPet 判定仅供诊断与后续增强，不再驱动穿透切换。 */
+/* 主进程光标轮询（诊断）：观察 overPet 在真实光标位置的表现 */
 bridge?.onCursorPos?.(({ inside, x, y }) => {
-  if (pressInfo) return;
   if (inside) lastCursor = { x, y, over: overPet(x, y) };
-  setClickable(inside ? nearPet(x, y) : false);   // 光标轮询兜底（钩子被摘时）
 });
 
 /* ── 启动 ── */
