@@ -172,9 +172,10 @@ async function refresh() {
       return { x: x - 30, y: y - 30, w: 60, h: 60 };
     });
     window.petBridge?.sendChipRects?.(rects);
-    // 芯片矩形即窗口形状（win.setShape）：环的透明区原生穿透到下层（猫窗），
-    // 抓猫头拖动不再被图标环的透明区吞掉
-    window.petBridge?.sendDockShape?.(rects.map((r) => ({ x: r.x + 10, y: r.y + 10, width: r.w - 20, height: r.h - 20 })));
+    // 芯片矩形即窗口形状（win.setShape）：环的透明区原生穿透到下层（猫窗）。
+    // 注意 setShape 同时会裁剪绘制区域——形状必须 ≥ 芯片+光晕外沿（±36px），
+    // 否则光晕被方形裁剪（用户看到的「方形光效」即此）。
+    window.petBridge?.sendDockShape?.(rects.map((r) => ({ x: r.x - 6, y: r.y - 6, width: r.w + 12, height: r.h + 12 })));
   } catch {}
 }
 
