@@ -1,0 +1,222 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "条目生命周期 · 想法/要点/缺口",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "main-lifecycle",
+        "label": "主生命周期",
+        "focus": [
+          "created",
+          "updated",
+          "decided",
+          "resolved"
+        ],
+        "note": "从新建到收敛的正向路径。"
+      },
+      {
+        "id": "supersede-view",
+        "label": "替代退场",
+        "focus": [
+          "decided",
+          "updated",
+          "superseded"
+        ],
+        "note": "新结论推翻旧结论：数据保留，统计与渲染退场。"
+      },
+      {
+        "id": "decay-removal",
+        "label": "衰减与删除",
+        "focus": [
+          "stale",
+          "removed",
+          "resolved"
+        ],
+        "note": "14 天缺口显示层衰减；拖拽红区是唯一物理删除。"
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "id": "main",
+      "label": "主生命周期"
+    },
+    {
+      "id": "terminal",
+      "label": "退出"
+    },
+    {
+      "id": "decay",
+      "label": "显示层衰减"
+    }
+  ],
+  "states": [
+    {
+      "id": "created",
+      "type": "start",
+      "label": "新建 active",
+      "sublabel": "organize 入库",
+      "lane": "main",
+      "col": 0,
+      "step": "01",
+      "tag": "entry"
+    },
+    {
+      "id": "updated",
+      "type": "active",
+      "label": "被更新",
+      "sublabel": "bigram≥0.7 命中合并",
+      "lane": "main",
+      "col": 1,
+      "step": "02",
+      "tag": "merge"
+    },
+    {
+      "id": "decided",
+      "type": "success",
+      "label": "已敲定 ✔",
+      "sublabel": "要点层 · 计入进度",
+      "lane": "main",
+      "col": 2,
+      "step": "03",
+      "tag": "points"
+    },
+    {
+      "id": "resolved",
+      "type": "success",
+      "label": "已解决 ✓",
+      "sublabel": "缺口层 · 闭环完成",
+      "lane": "main",
+      "col": 3,
+      "step": "04",
+      "tag": "gaps"
+    },
+    {
+      "id": "superseded",
+      "type": "failure",
+      "label": "已替代",
+      "sublabel": "supersedes · 数据保留",
+      "lane": "terminal",
+      "col": 2,
+      "tag": "exit"
+    },
+    {
+      "id": "removed",
+      "type": "neutral",
+      "label": "已删除",
+      "sublabel": "拖拽红区 · 二次确认",
+      "lane": "terminal",
+      "col": 1,
+      "tag": "physical"
+    },
+    {
+      "id": "stale",
+      "type": "waiting",
+      "label": "陈旧",
+      "sublabel": ">14 天未动 · 划线降调",
+      "lane": "decay",
+      "col": 0,
+      "tag": "display"
+    }
+  ],
+  "transitions": [
+    {
+      "id": "merge-hit",
+      "from": "created",
+      "to": "updated",
+      "variant": "default",
+      "route": "straight"
+    },
+    {
+      "id": "point-decide",
+      "from": "updated",
+      "to": "decided",
+      "variant": "emphasis",
+      "route": "straight"
+    },
+    {
+      "id": "superseded-by-new",
+      "from": "updated",
+      "to": "superseded",
+      "variant": "security",
+      "fromSide": "top",
+      "toSide": "top",
+      "label": "新结论 supersedes",
+      "via": [
+        [
+          248,
+          60
+        ],
+        [
+          750,
+          60
+        ]
+      ]
+    },
+    {
+      "id": "gap-resolve",
+      "from": "updated",
+      "to": "resolved",
+      "variant": "emphasis",
+      "fromSide": "top",
+      "toSide": "top",
+      "via": [
+        [
+          307,
+          90
+        ],
+        [
+          687,
+          90
+        ]
+      ]
+    },
+    {
+      "id": "drag-remove",
+      "from": "resolved",
+      "to": "removed",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "via": [
+        [
+          556,
+          300
+        ]
+      ],
+      "label": "拖拽红区 + 二次确认"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "正向路径",
+      "items": [
+        "新建即 active，合并命中回到 updated",
+        "要点收敛于 decided，缺口收敛于 resolved",
+        "统计与渲染只认有效状态"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "退场纪律",
+      "items": [
+        "supersedes 让旧认知退场，数据保留可审计",
+        "物理删除仅经拖拽红区 + 二次确认",
+        "退场条目不渲染、不计入统计"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "显示层衰减",
+      "items": [
+        "14 天未动的缺口划线降调",
+        "衰减只改观感，不改数据",
+        "重新激活即恢复正常显示"
+      ]
+    }
+  ]
+}

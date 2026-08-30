@@ -27,7 +27,7 @@ let bubblePinned = false;   // 面板图钉：钉住时失焦/拖拽不收起
 let bubbleShowAt = 0;       // 最近一次 show 的时间（blur 宽限期基准）
 let dockShownAt = 0;        // 图标环最近一次弹出的时间（toggle 防抖基准）
 
-const PET_W = 190, PET_H = 220;
+const PET_W = 280, PET_H = 250;
 const SWING_W = 320;                // 拖拽期间临时加宽：摆动的猫不被窗口左/右缘裁掉
 const DOCK_W = 300, DOCK_H = 232;   // 图标环：120° 正圆扇形（R=75，圆心=标定十字）
 const SET_W = 274, SET_H = 420;
@@ -137,8 +137,7 @@ function createPet() {
     try {
       petWin.showInactive();
       petWin.moveTop();
-      // 动态穿透初始态：默认穿透+转发，主进程光标轮询（下方 100ms 循环）接管切换
-      try { petWin.setIgnoreMouseEvents(true, { forward: true }); } catch {}
+      // 穿透由 win.setShape（渲染层上报猫轮廓）负责；窗口本体保持可交互
     } catch (e) { log("[pet] show failed:", String(e)); }
   });
   petWin.webContents.on("did-fail-load", (_e, code, desc, url) =>

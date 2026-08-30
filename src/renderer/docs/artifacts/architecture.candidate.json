@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "思维板小黑猫 · 系统架构",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "ai-channel", "label": "AI 通道", "focus": ["claude_code", "hooks", "mcp", "store"], "note": "AI 如何被动注入状态、主动调用工具。" },
+      { "id": "data-closed-loop", "label": "数据闭环", "focus": ["mcp", "store", "mindboard", "panel"], "note": "从 organize 到原子落盘再到面板呈现。" },
+      { "id": "pet-shell", "label": "桌宠壳", "focus": ["electron", "pet", "dock", "panel"], "note": "可抛弃的展示层：猫、图标环、面板。" }
+    ]
+  },
+  "components": [
+    { "id": "claude_code", "type": "external", "label": "AI 工具 · Claude Code", "sublabel": "Codex / Gemini 同协议", "pos": [60, 260], "size": [180, 66] },
+    { "id": "hooks", "type": "backend", "label": "Hooks 钩子注入", "sublabel": "每轮一行状态提醒", "pos": [330, 130], "size": [170, 62] },
+    { "id": "mcp", "type": "backend", "label": "MCP Server", "sublabel": "organize/query/control", "pos": [330, 300], "size": [170, 62] },
+    { "id": "store", "type": "database", "label": "store.mjs 数据中枢", "sublabel": "合并去重 · 漂移防护 · supersedes", "pos": [590, 215], "size": [190, 70] },
+    { "id": "mindboard", "type": "database", "label": "~/.mind-board/", "sublabel": "projects · skeletons · journal", "pos": [850, 215], "size": [170, 70] },
+    { "id": "electron", "type": "frontend", "label": "Electron main.cjs", "sublabel": "窗口编排 · 托盘 · 热键", "pos": [330, 470], "size": [170, 62] },
+    { "id": "http", "type": "backend", "label": "本地 HTTP 13134", "sublabel": "REST API + 静态托管", "pos": [590, 470], "size": [190, 62] },
+    { "id": "pet", "type": "frontend", "label": "猫窗", "sublabel": "逐像素命中 · 呼吸", "pos": [850, 400], "size": [150, 56] },
+    { "id": "dock", "type": "frontend", "label": "图标环", "sublabel": "扇形 · 恒驻+光晕", "pos": [850, 470], "size": [150, 56] },
+    { "id": "panel", "type": "frontend", "label": "思维板面板", "sublabel": "四层骨架 · 默认钉住", "pos": [850, 540], "size": [150, 56] },
+    { "id": "dash", "type": "frontend", "label": "仪表盘", "sublabel": "全部项目一屏管理", "pos": [850, 610], "size": [150, 56] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Electron 应用（可抛弃展示层）", "wraps": ["electron", "http", "pet", "dock", "panel", "dash"], "pad": 18 }
+  ],
+  "connections": [
+    { "from": "claude_code", "to": "hooks", "label": "每轮注入状态行", "variant": "dashed", "fromSide": "top", "toSide": "left" },
+    { "from": "claude_code", "to": "mcp", "label": "三工具调用", "variant": "emphasis", "labelAt": [285, 340] },
+    { "from": "mcp", "to": "store", "label": "合并去重 · 原子写入", "variant": "emphasis", "labelAt": [545, 376] },
+    { "from": "store", "to": "hooks", "label": "总览 · tick 计数", "variant": "dashed", "fromSide": "left", "toSide": "bottom" },
+    { "from": "store", "to": "mindboard", "label": "JSON 落盘 + journal", "variant": "emphasis", "labelAt": [795, 300] },
+    { "from": "electron", "to": "http", "label": "内嵌启动" },
+    { "from": "http", "to": "store", "label": "REST 读写" }
+  ],
+  "cards": [
+    { "dot": "amber", "title": "AI 通道", "items": ["钩子每轮只注入一行状态（省 95% 上下文）", "MCP 三个工具是 AI 主动调用的硬入口", "漂移防护：疑似换目标拒写并强制先问用户"] },
+    { "dot": "emerald", "title": "数据闭环", "items": ["store.mjs 是唯一事实源，被三方 import", "原子写盘保证崩溃安全", "supersedes 让旧认知退场、数据保留可审计"] },
+    { "dot": "cyan", "title": "可抛弃展示层", "items": ["猫/图标环/面板/仪表盘全部可随时重写", "四窗经 fetch/IPC 与本地 HTTP 及主进程通讯", "渲染层坏掉不影响 AI 通道与数据"] }
+  ]
+}

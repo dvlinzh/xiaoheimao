@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "一轮整理闭环 · 时序",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "viewBox": [820, 780],
+    "views": [
+      { "id": "main-loop", "label": "主路径", "focus": ["user", "ai", "hooks", "mcp", "store"], "note": "从用户开口到原子落盘的完整闭环。" },
+      { "id": "panel-sync", "label": "面板同步", "focus": ["store", "panel"], "note": "面板 2.5s 轮询自动呈现，无需操作。" },
+      { "id": "drift-guard", "label": "漂移防护", "focus": ["mcp", "ai", "user"], "note": "疑似换目标时拒写并强制先问用户。" }
+    ]
+  },
+  "participants": [
+    { "id": "user", "type": "external", "label": "用户", "sublabel": "对话发起" },
+    { "id": "ai", "type": "backend", "label": "AI", "sublabel": "回答 + 顺手整理" },
+    { "id": "hooks", "type": "backend", "label": "钩子", "sublabel": "每轮一行状态" },
+    { "id": "mcp", "type": "backend", "label": "MCP", "sublabel": "organize" },
+    { "id": "store", "type": "database", "label": "数据中枢", "sublabel": "合并去重 · 原子落盘" },
+    { "id": "panel", "type": "frontend", "label": "思维板面板", "sublabel": "2.5s 轮询" }
+  ],
+  "segments": [
+    { "from": 150, "to": 320, "label": "整理触发" },
+    { "from": 340, "to": 560, "label": "合并落盘" },
+    { "from": 580, "to": 720, "label": "呈现与漂移防护" }
+  ],
+  "messages": [
+    { "id": "speak", "from": "user", "to": "ai", "y": 170, "label": "说出想法/结论/疑问", "variant": "default" },
+    { "id": "status-inject", "from": "hooks", "to": "ai", "y": 205, "label": "注入一行状态（目标·计数·缺口）", "variant": "default" },
+    { "id": "answer", "from": "ai", "to": "user", "y": 240, "label": "先正常回答", "variant": "return" },
+    { "id": "organize-call", "from": "ai", "to": "mcp", "y": 285, "label": "mind_board_organize（归纳改写后打包）", "variant": "emphasis" },
+    { "id": "merge", "from": "mcp", "to": "store", "y": 330, "label": "bigram≥0.7 去重 · supersedes · 原子写", "variant": "emphasis" },
+    { "id": "applied", "from": "store", "to": "mcp", "y": 368, "label": "{ok, applied:{ideas:1, gaps_updated:2}}", "variant": "return" },
+    { "id": "receipt", "from": "mcp", "to": "ai", "y": 404, "label": "已记入思维板", "variant": "return" },
+    { "id": "panel-refresh", "from": "store", "to": "panel", "y": 448, "label": "轮询 /api/overview · skeleton", "variant": "dashed" },
+    { "id": "drift-guard", "from": "mcp", "to": "ai", "y": 496, "label": "isError: 疑似换目标 → 先问用户", "variant": "security" },
+    { "id": "ask-user", "from": "ai", "to": "user", "y": 534, "label": "要新建一块思维板吗？", "variant": "security" }
+  ],
+  "activations": [
+    { "participant": "ai", "from": 165, "to": 545, "type": "backend" },
+    { "participant": "hooks", "from": 200, "to": 215, "type": "backend" },
+    { "participant": "mcp", "from": 280, "to": 415, "type": "backend" },
+    { "participant": "store", "from": 325, "to": 375, "type": "database" },
+    { "participant": "panel", "from": 443, "to": 455, "type": "frontend" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "闭环要点", "items": ["整理是副业：AI 先正常回答", "归纳改写后打包提交，一轮一次", "原子落盘：崩溃也不留半截文件"] },
+    { "dot": "rose", "title": "漂移防护", "items": ["isError 是 AI 必须处理的硬信号", "用户同意后才 new-goal", "未经确认绝不擅自换板"] },
+    { "dot": "cyan", "title": "面板同步", "items": ["面板轮询自动呈现，无需操作", "superseded 条目不渲染不计数", "默认钉住：点别处也不消失"] }
+  ]
+}
