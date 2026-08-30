@@ -20,5 +20,12 @@
         ]
       }
     ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(node --check src/dsh/index.js)",
+      "Bash(node --check src/core/store.mjs)",
+      "Bash(node --check src/mcp/server.mjs)"
+    ]
   }
 }

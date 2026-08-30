@@ -28,6 +28,37 @@ npm test           # 冒烟测试
    - **UserPromptSubmit**：每轮注入一行状态（目标 · 各层计数 · 未解缺口）
 3. 钩子和 MCP 受「整理模式」开关控制——右键猫 → 设置窗可切换
 
+## 接入 DSH（多入口设计：一份数据核心，四个接入壳）
+
+```
+入口 A  MCP stdio（任何 harness）       src/mcp/server.mjs
+入口 B  Claude Code 钩子               src/hooks/*.mjs
+入口 C  Electron 壳（猫+面板）          src/main/main.cjs
+入口 D  DSH Cordis 插件壳              src/dsh/index.js   ← DSH 生态用这个
+```
+
+四个入口共用同一份 `~/.mind-board` 数据与同一套 store 原子写盘；DSH 会话自动建 `t_` 任务，
+与 Claude Code 侧的目录项目（`p_`）在同一数据根互不冲突。
+
+**方式一：Cordis 插件壳（推荐，DSH 原生体验）**
+
+```powershell
+.\scripts\install-dsh.ps1        # junction ×2 + cordis.patch.yml 注册，然后完全重启 DSH
+```
+
+装完在 DSH 输入框右侧点**脑图标**开启整理模式（entry D 的开关门禁）。喊「喵喵喵」可唤起桌面猫。
+
+> ⚠️ 与原有 `dsh-mind-board` 插件**二选一**：两者行为都是整理注入，双装会双份提醒。
+> 安装脚本会检查并提示。
+
+**方式二：MCP 注册**（DSH 若支持外部 MCP server 配置）
+
+```jsonc
+{ "command": "node", "args": ["<本仓库>/src/mcp/server.mjs"], "env": { "MIND_BOARD_HARNESS": "dsh" } }
+```
+
+agent 引导需在 DSH 侧补充（没有 CC 那样现成的钩子）；数据写入与面板展示照常可用。
+
 ## 目录结构
 
 ```

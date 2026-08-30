@@ -99,6 +99,9 @@ const TOOLS = [
   },
 ];
 
+// 工具 schema 导出：DSH Cordis 壳复用同一契约（跨入口统一）
+export { TOOLS };
+
 /* ─────────────── 工具实现 ─────────────── */
 
 function fmtResult(obj) {

@@ -208,6 +208,55 @@ function loadProject(projectId) {
   return rec || null;
 }
 
+/* ────────────────────────── DSH 会话任务（多入口：DSH Cordis 壳专用） ────────────────────────── */
+
+/** 按显式 id 建立一条会话任务记录（DSH 的 t_xxx；不推导 cwd）。
+ *  与 resolveProject 的区别：服务「话题归属由会话/任务决定」的 harness（DSH），
+ *  而非「项目归属由目录决定」的 harness（如 Claude Code）。数据结构同构，互不冲突。 */
+export function createSessionRecord(id, init = {}) {
+  ensureDirs();
+  if (readJson(join(PROJECTS_DIR, id + ".json"))) return { id, existing: true };
+  const rec = {
+    id,
+    title: normText(init.title || "新任务"),
+    sessionId: init.sessionId || null,
+    harness: init.harness || "dsh",
+    harnesses: [init.harness || "dsh"],
+    state: "draft",
+    createdAt: now(),
+    updatedAt: now(),
+    pendingNewTask: false,
+    msgCounter: 0,
+    ...init.extra,
+  };
+  writeJson(join(PROJECTS_DIR, id + ".json"), rec);
+  journalEvent({ type: "project-new", projectId: id, harness: rec.harness, title: rec.title });
+  return rec;
+}
+
+/** 读-改-写一条项目记录（DSH 壳更新计数器/状态位用；原子写盘） */
+export function touchRecord(id, patch) {
+  const rec = loadProject(id);
+  if (!rec) return null;
+  Object.assign(rec, patch || {});
+  rec.updatedAt = now();
+  writeJson(join(PROJECTS_DIR, id + ".json"), rec);
+  return rec;
+}
+
+/** 全部项目记录（含 sessionId 等原始字段；DSH 壳按会话查任务用） */
+export function allRecords() {
+  ensureDirs();
+  const out = [];
+  for (const f of readdirSync(PROJECTS_DIR).filter((x) => x.endsWith(".json"))) {
+    try {
+      const rec = JSON.parse(readFileSync(join(PROJECTS_DIR, f), "utf8"));
+      if (rec?.id) out.push(rec);
+    } catch {}
+  }
+  return out;
+}
+
 /* ────────────────────────── 骨架 ────────────────────────── */
 
 function emptyGoal(title = "默认目标", goal = "") {
