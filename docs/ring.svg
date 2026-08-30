@@ -1,0 +1,72 @@
+<svg viewBox="0 0 900 480" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,Microsoft YaHei,sans-serif">
+  <rect width="900" height="480" fill="#0d0d0f"/>
+  <style>
+    .t1{fill:#ececec;font-size:13.5px;font-weight:700}
+    .t2{fill:#9a9aa2;font-size:11px}
+    .t3{fill:#66666e;font-size:10.5px;letter-spacing:2px;font-weight:700}
+    .code{fill:#5eead4;font-family:Consolas,monospace;font-size:10.5px}
+    .chipc{fill:#16161e;stroke:#34343c;stroke-width:1.5}
+    .fan{fill:none;stroke:#28282e;stroke-width:1.4;stroke-dasharray:5 5}
+    .edge{stroke:#66666e;stroke-width:1.2;stroke-dasharray:3 4}
+    .deg{fill:#9a9aa2;font-size:10.5px}
+  </style>
+
+  <text x="24" y="34" class="t3">RING LAYOUT · harness 图标环</text>
+  <text x="24" y="58" class="t1">120° 正圆扇形，圆心 = 猫头中心</text>
+  <text x="24" y="80" class="t2">一条边垂直（-90° 正头顶）→ 另一条边斜向左下（-210°）；芯片沿扇形等距分布</text>
+
+  <!-- 猫窗模型 -->
+  <g transform="translate(60,40)">
+    <rect x="0" y="0" width="280" height="250" fill="#101013" stroke="#34343c" stroke-width="1.3"/>
+    <text x="8" y="16" class="t3">pet 窗 280×250</text>
+    <image href="../src/renderer/assets/cat/cat-idle.png" x="45" y="35" width="190" height="232"/>
+    <!-- 圆心十字 = 猫头中心 -->
+    <line x1="132" y1="108" x2="148" y2="108" stroke="#f0716c" stroke-width="1.6"/>
+    <line x1="140" y1="100" x2="140" y2="116" stroke="#f0716c" stroke-width="1.6"/>
+    <text x="154" y="104" fill="#f0716c" font-size="10.5">圆心 = 猫头中心</text>
+    <!-- 扇形两条边 -->
+    <line x1="140" y1="108" x2="140" y2="28" class="edge"/>
+    <text x="146" y="36" class="deg">-90° 垂直边</text>
+    <line x1="140" y1="108" x2="70" y2="205" class="edge"/>
+    <text x="40" y="224" class="deg">-210° 斜向左下</text>
+    <!-- 弧 -->
+    <path d="M140 33 A 75 75 0 0 0 70 199" class="fan"/>
+    <!-- 芯片 claude-code -->
+    <g transform="translate(140,33)">
+      <circle r="18" class="chipc" stroke="#fbbf24"/>
+      <text y="5" text-anchor="middle" font-size="14" fill="#fbbf24">✦</text>
+      <circle r="21" fill="none" stroke="#fbbf24" stroke-opacity=".5" stroke-width="1.6"/>
+      <text y="-28" text-anchor="middle" class="deg">claude-code · 光晕</text>
+    </g>
+    <!-- 芯片 dsh -->
+    <g transform="translate(70,199)">
+      <circle r="18" class="chipc"/>
+      <text y="5" text-anchor="middle" font-size="12" fill="#5ea3f7">🐳</text>
+      <text y="-25" text-anchor="middle" class="deg">dsh · 灰显</text>
+    </g>
+  </g>
+
+  <!-- 右侧说明 -->
+  <g transform="translate(430,60)">
+    <text class="t1" x="0" y="0">排列算法（dock.js · arcPos）</text>
+    <g transform="translate(0,20)">
+      <text class="code" x="0" y="0">deg(i,n) = -90° - (120°/(n-1))·i</text>
+      <text class="code" x="0" y="24">pos  = ( CX + MIRROR·R·cosθ , CY + R·sinθ )</text>
+      <text class="code" x="0" y="48">R = 75 恒定 · 圆心 = (150,168)</text>
+    </g>
+    <text class="t1" x="0" y="110">规则</text>
+    <g transform="translate(0,130)">
+      <text class="t2" x="0" y="0">· 芯片等距分布：n=2 → -90°/-210°；n=4 → 每 40°</text>
+      <text class="t2" x="0" y="24">· 排序首位的 harness 恒在垂直边（光晕位）</text>
+      <text class="t2" x="0" y="48">· 吸附左缘：MIRROR=-1 水平镜像（斜边转向右下）</text>
+      <text class="t2" x="0" y="72">· 正在运行 = 10min 内有写盘 → 主题色恒定光晕</text>
+      <text class="t2" x="0" y="96">· 装过插件的 harness 恒驻显示，不活跃灰显</text>
+    </g>
+    <text class="t1" x="0" y="268">穿透模型</text>
+    <g transform="translate(0,288)">
+      <text class="t2" x="0" y="0">· win.setShape：形状外 OS 原生点击穿透</text>
+      <text class="t2" x="0" y="24">· 形状 = 猫轮廓 + 8px 外扩（耳尖/尾巴不漏）</text>
+      <text class="t2" x="0" y="48">· 猫周围空白点击直达下层应用，无切换竞态</text>
+    </g>
+  </g>
+</svg>
