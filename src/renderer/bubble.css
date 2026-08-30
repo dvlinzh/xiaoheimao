@@ -63,15 +63,6 @@ html.in-browser body { background: var(--bg); }
   from { transform: scale(.97); opacity: .5; }
   to   { transform: scale(1); opacity: 1; }
 }
-/* 面板尾巴：小圆点，贴内侧指向猫 */
-.comic::after {
-  content: "";
-  position: absolute; right: 5px; top: 42%;
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--faint);
-  opacity: .9;
-}
-html.side-left .comic::after { right: auto; left: 5px; }
 
 /* ── 头部：harness 图标 + 项目选择器 + 图钉 ── */
 header {
