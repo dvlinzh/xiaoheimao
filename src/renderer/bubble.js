@@ -533,6 +533,7 @@ function bindItemDrag(el, payload, text, opts = {}) {
       payload, text, li: el, sx: e.clientX, sy: e.clientY, active: false,
       action: opts.action || "remove-item",
       canToggle: !!opts.canToggle,
+      project: opts.project || null,   // 总览视图：拖的是整个项目（落删除区 → 二次确认）
     };
   });
 }
@@ -595,10 +596,15 @@ document.addEventListener("mouseup", async (e) => {
   const d = drag;
   drag = null;
   if (!d.active) return;
+  // 任何完成的拖拽都抑制紧随其后的 click：drop 已生效的动作不被条目
+  // 自身的 click 处理器二次触发（项目删除尤其不能删完又切进去）
+  ovSuppress = true;
+  setTimeout(() => { ovSuppress = false; }, 0);
   const zone = zoneAt(e);
   endDrag();
   if (!zone) return;
   if (zone === "del") {
+    if (d.project) { confirmDeleteProject(d.project); return; }   // 项目拖删 → 二次确认
     const r = await jfetch("/api/action", { projectId: curProjectId, action: d.action, params: d.payload });
     if (r && r.ok === false && r.message) {
       // 例如「至少要留一个目标」：轻提示，不静默失败
@@ -617,6 +623,7 @@ document.addEventListener("mouseup", async (e) => {
 let lastOv = null;
 let projSelDone = false;
 let ovMode = false;
+let ovSuppress = false;   // 拖拽松手后抑制紧随的 click（删除意图≠切换意图）
 
 function setOvMode(v) {
   ovMode = v;
@@ -654,7 +661,10 @@ function renderOv() {
     goal.className = "ov-goal";
     goal.textContent = p.currentGoal ? "🎯 " + p.currentGoal : "🎯 目标未定";
     b.append(row1, goal);
+    b.title = "点击切换项目 · 按住拖到底部删除区可删除";
+    bindItemDrag(b, null, p.title || p.id, { project: p });   // 拖到底部红区 → 二次确认删除
     b.addEventListener("click", () => {
+      if (ovSuppress) return;   // 拖拽松手后的 click：删除意图，不切换
       const h = (p.harnesses || [])[0] || p.harness || "other";
       if ((p.harnesses || []).includes(harness) || p.harness === harness) {
         selectProject(p.id);
@@ -675,6 +685,40 @@ function renderOv() {
 document.getElementById("btn-overview")?.addEventListener("click", () => setOvMode(!ovMode));
 document.getElementById("ov-dashboard")?.addEventListener("click", () =>
   window.bubbleBridge?.openDashboard());
+
+/* ── 危险操作二次确认 ── */
+let cfOpen = false, cfOk = null;
+function showConfirm(title, text, onOk) {
+  $("#cf-title").textContent = title;
+  $("#cf-text").textContent = text;
+  cfOpen = true; cfOk = onOk;
+  $("#confirm-mask").hidden = false;
+}
+function closeConfirm() { cfOpen = false; cfOk = null; $("#confirm-mask").hidden = true; }
+$("#cf-cancel")?.addEventListener("click", closeConfirm);
+$("#cf-ok")?.addEventListener("click", async () => {
+  const fn = cfOk;
+  closeConfirm();
+  if (fn) await fn();
+});
+$("#confirm-mask")?.addEventListener("click", (e) => { if (e.target.id === "confirm-mask") closeConfirm(); });
+// Esc 优先级：确认框打开时只关确认框，不关面板（捕获阶段拦在 window.close 之前）
+document.addEventListener("keydown", (e) => {
+  if (cfOpen && e.key === "Escape") {
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    closeConfirm();
+  }
+}, true);
+
+function confirmDeleteProject(p) {
+  showConfirm("删除这块思维板？",
+    `「${p.title || p.id}」连同全部目标与条目将被删除，且不可恢复。`, async () => {
+      await jfetch("/api/action", { projectId: p.id, action: "delete" });
+      await refreshAll();
+      if (ovMode) renderOv();
+    });
+}
 
 async function refreshAll() {
   try {
