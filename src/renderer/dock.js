@@ -172,6 +172,9 @@ async function refresh() {
       return { x: x - 30, y: y - 30, w: 60, h: 60 };
     });
     window.petBridge?.sendChipRects?.(rects);
+    // 芯片矩形即窗口形状（win.setShape）：环的透明区原生穿透到下层（猫窗），
+    // 抓猫头拖动不再被图标环的透明区吞掉
+    window.petBridge?.sendDockShape?.(rects.map((r) => ({ x: r.x + 10, y: r.y + 10, width: r.w - 20, height: r.h - 20 })));
   } catch {}
 }
 

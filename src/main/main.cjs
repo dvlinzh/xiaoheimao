@@ -314,11 +314,9 @@ function showDock(show) {
         if (!dockWin || dockWin.isDestroyed()) return;
         dockWin.hide();
         chipRects = [];
-        dockIgnore = null;
         if (petWin && !petWin.isDestroyed()) petWin.webContents.send("chip-rects", []);
       } catch {}
     }, 130);
-    dockIgnore = null;
   }
 }
 
@@ -542,6 +540,10 @@ ipcMain.on("set-clickable", (_e, clickable) => {
 ipcMain.on("pet-shape", (_e, rects) => {
   if (!petWin || petWin.isDestroyed() || !Array.isArray(rects) || !rects.length) return;
   try { petWin.setShape(rects); } catch (e) { log("[pet] setShape FAILED:", String(e)); }
+});
+ipcMain.on("dock-shape", (_e, rects) => {
+  if (!dockWin || dockWin.isDestroyed() || !Array.isArray(rects) || !rects.length) return;
+  try { dockWin.setShape(rects); } catch (e) { log("[dock] setShape FAILED:", String(e)); }
 });
 
 /* 悬停保活轮询：穿透窗的 hover 激活若依赖系统鼠标钩子转发，会被

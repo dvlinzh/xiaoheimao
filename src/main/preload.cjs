@@ -31,6 +31,8 @@ contextBridge.exposeInMainWorld("petBridge", {
   onDockFade: (cb) => ipcRenderer.on("dock-fade", () => cb()),
   // 猫轮廓形状（win.setShape）：OS 级原生点击穿透
   sendPetShape: (rects) => ipcRenderer.send("pet-shape", rects || []),
+  // 图标环芯片形状：同款原生穿透
+  sendDockShape: (rects) => ipcRenderer.send("dock-shape", rects || []),
   // 项目总览仪表盘窗口
   closeDashboard: () => ipcRenderer.send("dashboard-hide"),
 });
