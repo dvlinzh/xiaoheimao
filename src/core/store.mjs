@@ -131,8 +131,8 @@ export function readSettings() {
       const d = u.dock || {}, p = u.pet || {};
       return {
         dock: {
-          cx: num(d.cx, 150),
-          cy: num(d.cy, 168),
+          cx: num(d.cx, 95),      // 窗内圆心 X（petY/petX 坐标系）
+          cy: num(d.cy, 95),      // 窗内圆心 Y
           r: num(d.r, 75),
           span: num(d.span, 120),
           start: num(d.start, -90),
