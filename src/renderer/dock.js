@@ -59,11 +59,11 @@ function iconSvg(h, size) {
   return `<svg viewBox="0 0 40 40" width="${size}" height="${size}" aria-hidden="true">${body}</svg>`;
 }
 
-/* ── 环形布局：120° 正圆扇形，圆心 = 用户标定十字（窗内 72,142，两眼之间偏左）。
- * 一条边垂直（-90° 正头顶），另一条边斜向左下（-210°）；吸附左缘时水平镜像
- * （斜边转向右下，避免朝屏幕外张开）。芯片沿扇形等距分布。 ── */
+/* ── 环形布局：120° 正圆扇形。圆心 = 标定十字（窗内 95,92：水平在猫头中线、
+ * 垂直在两眼之间）。一条边垂直（-90° 正头顶），另一条边斜向左下（-210°），
+ * 芯片沿扇形等距分布；正圆恒定 R=75。吸附左缘时水平镜像。 ── */
 const R = 75;
-const CX = 127, CY = 168;     // 圆心（dock 窗 300×232，(127,168) 对准标定十字）
+const CX = 150, CY = 168;     // 圆心（dock 窗 300×232，(150,168) = 标定十字）
 let MIRROR = new URLSearchParams(location.search).get("edge") === "left" ? -1 : 1;
 window.petBridge?.onPrefs?.((p) => { if (p?.edge) MIRROR = p.edge === "left" ? -1 : 1; });
 function arcPos(i, n) {
@@ -71,6 +71,16 @@ function arcPos(i, n) {
   const rad = (deg * Math.PI) / 180;
   return { x: CX + MIRROR * R * Math.cos(rad), y: CY + R * Math.sin(rad) };
 }
+/* 圆心可视十字（红小十字画在标定处，确认无误可删本块） */
+window.addEventListener("DOMContentLoaded", () => {
+  const c = document.createElement("div");
+  c.style.cssText = "position:absolute;left:150px;top:168px;width:0;height:0;" +
+    "transform:translate(-50%,-50%);pointer-events:none;z-index:9;";
+  c.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14">
+    <line x1="7" y1="0" x2="7" y2="14" stroke="#f0716c" stroke-width="1.2"/>
+    <line x1="0" y1="7" x2="14" y2="7" stroke="#f0716c" stroke-width="1.2"/></svg>`;
+  document.body.appendChild(c);
+});
 
 /* tooltip：JS 定位 + 窗口内收拢，不会再被裁 */
 const tip = document.getElementById("tip");
@@ -130,6 +140,13 @@ async function refresh() {
         + `<span class="badge${hasNew ? " show" : ""}"></span></div>`;
     });
     console.log("[dock] rebuild, keys:", keys.join(","));
+    // 排列坐标写出：每枚芯片在 dock 客户区与屏幕上的圆心位置
+    const posLog = keys.map((h, i) => {
+      const { x, y } = arcPos(i, keys.length);
+      return `${h}:dock(${Math.round(x)},${Math.round(y)})`;
+    }).join(" ");
+    console.log("[dock] chip coords:", posLog,
+      "| 圆心屏幕坐标:", `${Math.round(window.screenX + CX)}, ${Math.round(window.screenY + CY)}`);
     dock.innerHTML = html;   // 一个 harness 都没有时才留空
     dock.querySelectorAll(".chip").forEach((el) => {
       // pointerdown 即触发：click 会等 mouseup，若恰好赶上 3 秒轮询重建 DOM，
