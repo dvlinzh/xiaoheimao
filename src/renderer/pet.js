@@ -52,9 +52,18 @@ async function adoptSkin(name) {
   if (Pet) { Pet.el.remove(); Pet = null; }
   Pet = await window.PetSkinCat.mount($("#pet-host"), () => requestAnimationFrame(buildAlphaMap));
   // 表情/姿态切换后重算逐像素命中表（rAF 顺序：渲染循环先画、这里后采样）
+  // 表情/姿态切换后重算逐像素命中表（rAF 顺序：渲染循环先画、这里后采样）。
+  // 姿态未变时跳过——applyOverview 每 2.5s 都会调 setMood，无条件重建会让
+  // petWin.setShape 被高频重设，搅乱光标下的点击命中（点芯片失灵的元凶）。
+  let lastMood = null;
   for (const k of ["setMood"]) {
     const raw = Pet[k].bind(Pet);
-    Pet[k] = (v) => { raw(v); requestAnimationFrame(buildAlphaMap); };
+    Pet[k] = (v) => {
+      if (v === lastMood) return;
+      lastMood = v;
+      raw(v);
+      requestAnimationFrame(buildAlphaMap);
+    };
   }
   // 拖拽释放：摆动衰减的旋转像素会超出静态形状——立即清空剪裁（矩形暂代），
   // 约 1.1s 摆动落定后重建。拖拽期间主进程本就清空了形状。
@@ -62,21 +71,15 @@ async function adoptSkin(name) {
     const rawDrag = Pet.setDrag.bind(Pet);
     Pet.setDrag = (v) => {
       rawDrag(v);
-      if (!v) {
-        petShape = [];
-        window.petBridge?.sendPetShape?.([]);
-        scheduleShapeRebuild(1100);
-      }
+      if (!v) suppressShape(1100);
     };
   }
   // hop/juggle：CSS 把画布上移 20px，会跳出静态剪裁区——起跳清空，落定重建
   if (Pet.hop) {
     const rawHop = Pet.hop.bind(Pet);
     Pet.hop = (...a) => {
-      petShape = [];
-      window.petBridge?.sendPetShape?.([]);
+      suppressShape(2100);
       rawHop(...a);
-      scheduleShapeRebuild(2100);
     };
   }
   window.Pet = Pet;
@@ -170,7 +173,14 @@ zone.addEventListener("contextmenu", (e) => {
 let alphaMap = null;        // 严格命中：像素不透明才算
 let alphaWide = null;       // 宽松命中：整猫外扩 ~5 屏幕px（耳尖/尾巴/耳间空隙都算猫）
 let alphaWideW = 0, alphaWideH = 0, alphaPad = 0;
-let petShape = [];          // 窗口形状矩形（win.setShape）：OS 级原生穿透
+let petShape = [];
+let shapeSuppressed = 0;    // >0 = 动画进行中，buildAlphaMap 不上报形状（跳姿/摆动的像素会超出静态形状）
+function suppressShape(ms) {
+  shapeSuppressed++;
+  window.petBridge?.sendPetShape?.([]);   // 立即清空剪裁（越界动作不受裁）
+  clearTimeout(shapeRebuildTimer);
+  shapeRebuildTimer = setTimeout(() => { shapeSuppressed = 0; buildAlphaMap(); }, ms);
+}
 
 function buildAlphaMap() {
   alphaMap = null; alphaWide = null; petShape = [];
@@ -226,8 +236,9 @@ function buildAlphaMap() {
       console.log("[pet] shape rects:", petShape.length,
         "bbox x[" + Math.min(...xs) + ".." + Math.max(...xe) + "] y[" + Math.min(...ys) + ".." + Math.max(...ye) + "]");
     }
-    if (pressInfo) return;   // 拖拽中：形状已清空（setShape([])），上报会重新套上导致裁切
-    window.petBridge?.sendPetShape?.(petShape);
+    if (pressInfo) return;           // 拖拽中不上报（主进程已清空形状）
+    if (shapeSuppressed) return;     // 动画进行中不上报：采样来自画布后备存储（静止姿态），
+                                     // 而屏幕上是跳起/摆动中的猫——上报会重新套上裁掉耳朵
   } catch {}
 }
 
