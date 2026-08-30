@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>整理方法论 · 规则与图解</title>
+<style>
+  :root {
+    --bg: #0d0d0f; --card: #141416; --card2: #1b1b1f; --line: #28282e;
+    --line2: #34343c; --text: #ececec; --dim: #9a9aa2; --faint: #66666e;
+    --amber: #fbbf24; --teal: #5eead4; --sky: #5ea3f7; --violet: #8b7cf6; --red: #f0716c; --green: #58a873;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text); padding: 40px 24px 80px;
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif; font-size: 15px; line-height: 1.75;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h1 { font-family: Georgia, "Songti SC", serif; font-size: 30px; margin: 0 0 6px; }
+  .sub { color: var(--dim); margin: 0 0 36px; font-size: 14.5px; }
+  h2 {
+    font-size: 20px; margin: 52px 0 8px; padding-left: 12px;
+    border-left: 3px solid var(--amber); line-height: 1.4;
+  }
+  .lead { color: var(--dim); font-size: 14px; margin: 0 0 20px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 20px; margin-bottom: 16px; overflow-x: auto;
+  }
+  .card svg { display: block; margin: 0 auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { color: var(--faint); font-size: 12px; letter-spacing: 1px; font-weight: 700; }
+  pre {
+    background: #0a0a0c; border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; font-size: 12.5px; line-height: 1.7; color: #c8c8d0;
+    overflow-x: auto; margin: 12px 0;
+  }
+  pre .c { color: var(--faint); }
+  .dim { color: var(--dim); }
+  .faint { color: var(--faint); font-size: 12.5px; }
+  .good { color: var(--green); }
+  .bad { color: var(--red); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>整理方法论 · 规则与图解</h1>
+<p class="sub">
+  算法页讲的是「机器怎么处理条目」，这一页讲的是「什么值得记、该进哪层、何时收敛」——
+  整理的判断规则。AI 侧的执行版在 src/core/protocol.mjs，本页是它的完整展开。
+</p>
+
+<!-- ═════════ ① 判定决策树 ═════════ -->
+<h2>① 这句话该进哪层？——判定决策树</h2>
+<p class="lead">拿到一段值得记的话，按顺序问三个问题，落到唯一的一层。判断标准是「内容的成熟度」，不是「话的长短」。</p>
+<div class="card">
+<svg viewBox="0 0 900 520" font-family="'Segoe UI','Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="q1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#66666e"/>
+    </marker>
+  </defs>
+  <style>
+    .q { fill: #1b1b1f; stroke: #34343c; stroke-width: 1.2; rx: 10; }
+    .qt { fill: #ececec; font-size: 12.5px; font-weight: 700; }
+    .qd { fill: #9a9aa2; font-size: 10.5px; }
+    .f1 { stroke: #66666e; stroke-width: 1.2; fill: none; marker-end: url(#q1); }
+    .lb { fill: #9a9aa2; font-size: 10.5px; }
+    .leaf { rx: 10; }
+    .li1 { fill: #1b1b1f; stroke: #5eead4; stroke-width: 1.4; }
+    .li2 { fill: #1b1b1f; stroke: #fbbf24; stroke-width: 1.4; }
+    .li3 { fill: #1b1b1f; stroke: #8b7cf6; stroke-width: 1.4; }
+    .li4 { fill: #1b1b1f; stroke: #f0716c; stroke-width: 1.4; }
+    .lf { fill: #ececec; font-size: 12.5px; font-weight: 700; }
+    .lfd { fill: #9a9aa2; font-size: 10.5px; }
+  </style>
+
+  <rect x="280" y="16" width="340" height="56" rx="10" class="q"/>
+  <text x="450" y="40" text-anchor="middle" class="qt">记前自查三问</text>
+  <text x="450" y="60" text-anchor="middle" class="qd">①是结论还是过程口水？②三天后还指导行动吗？③说得出边界吗？</text>
+
+  <path class="f1" d="M450 72 L450 96"/>
+  <text x="458" y="88" class="lb">三问全过 → 判层</text>
+
+  <path d="M450 96 L450 112 M240 150 L450 112 M660 150" stroke="none"/>
+  <path class="f1" d="M450 96 L180 140"/>
+  <path class="f1" d="M450 96 L450 140"/>
+  <path class="f1" d="M450 96 L720 140"/>
+
+  <rect x="90" y="140" width="180" height="64" rx="10" class="q"/>
+  <text x="180" y="164" text-anchor="middle" class="qt">有一个明确的判断？</text>
+  <text x="180" y="184" text-anchor="middle" class="qd">「X 应该这样」/「已确定 Y」</text>
+
+  <rect x="360" y="140" width="180" height="64" rx="10" class="q"/>
+  <text x="450" y="164" text-anchor="middle" class="qt">还是在「选做什么」？</text>
+  <text x="450" y="184" text-anchor="middle" class="qd">候选路线 / 待拍板的选项</text>
+
+  <rect x="630" y="140" width="180" height="64" rx="10" class="q"/>
+  <text x="720" y="164" text-anchor="middle" class="qt">还是个没验证的问号？</text>
+  <text x="720" y="184" text-anchor="middle" class="qd">说不出边界、需要回头确认</text>
+
+  <path class="f1" d="M180 204 L180 240"/>
+  <text x="188" y="228" class="lb">判断成型了吗？成型→要点，没成型→想法</text>
+
+  <g class="leaf">
+    <rect x="30" y="250" width="300" height="66" rx="12" class="li2"/>
+    <text x="180" y="276" text-anchor="middle" class="lf">✔ 要点 points</text>
+    <text x="180" y="298" text-anchor="middle" class="lfd">确定的结论 · 敲定标 decided · ≤40字</text>
+  </g>
+  <g class="leaf">
+    <rect x="30" y="330" width="300" height="66" rx="12" class="li1"/>
+    <text x="180" y="356" text-anchor="middle" class="lf">· 想法 ideas</text>
+    <text x="180" y="378" text-anchor="middle" class="lfd">无判断的念头 · 可 group 归组 · ≤30字</text>
+  </g>
+  <g class="leaf">
+    <rect x="360" y="240" width="300" height="66" rx="12" class="li3"/>
+    <text x="510" y="266" text-anchor="middle" class="lf">◆ 方案 plans</text>
+    <text x="510" y="288" text-anchor="middle" class="lfd">候选路线 · adopted 全局唯一 · ≤25字</text>
+  </g>
+  <g class="leaf">
+    <rect x="630" y="240" width="270" height="66" rx="12" class="li4"/>
+    <text x="765" y="266" text-anchor="middle" class="lf">✗ 缺口 gaps</text>
+    <text x="765" y="288" text-anchor="middle" class="lfd">写成可回答的问题 · ≤25字</text>
+  </g>
+
+  <text x="20" y="440" class="lb">判定口诀：有判断→要点 · 在选择→方案 · 是问号→缺口 · 无判断的念头→想法 · 过程口水→不记</text>
+  <text x="20" y="466" class="lb">反例：「我看了下代码」= 过程（不记）；「缓存层应该用 LRU」= 判断（要点）；「缓存用 LRU 还是 LFU 待定」= 选择（方案）；</text>
+  <text x="20" y="488" class="lb">「LRU 在写多读少场景的命中率未验证」= 问号（缺口）。</text>
+</svg>
+</div>
+
+<!-- ═════════ ② 信噪比 ═════════ -->
+<h2>② 什么值得记？——信噪比三问</h2>
+<p class="lead">
+  板子的价值 = 信息密度。每条入库的内容都要过三问，任何一问不过就不记。
+  「乱七八糟」的板子几乎都是这三问失守的结果。
+</p>
+<div class="card">
+<table>
+  <tr><th>自查</th><th>问的是</th><th>不过关的典型</th></tr>
+  <tr>
+    <td><b>①是结论还是过程？</b></td>
+    <td>过程口水（“我看了下”“试了一下”）没有信息量，只有结论才有</td>
+    <td><span class="bad">✗</span> “我检查了一遍日志” → <span class="good">✓</span> “日志确认钩子没被调用”</td>
+  </tr>
+  <tr>
+    <td><b>②三天后还指导行动吗？</b></td>
+    <td>中间态的发现一旦被后续认知取代就该退场（supersedes），不该和最新结论并排躺着</td>
+    <td><span class="bad">✗</span> “素材可能有裁剪问题” （已被定位并修复）与最终结论并排</td>
+  </tr>
+  <tr>
+    <td><b>③说得出边界吗？</b></td>
+    <td>说不清适用条件/范围的判断是半个结论——按协议进 gaps，不硬编</td>
+    <td><span class="bad">✗</span> “要加缓存”（什么粒度？什么策略？）→ <span class="good">✓</span> 进 gaps：“缓存策略待定”</td>
+  </tr>
+</table>
+</div>
+
+<!-- ═════════ ③ 时机 ═════════ -->
+<h2>③ 什么时候记？——时机与节奏</h2>
+<div class="card">
+<table>
+  <tr><th>规则</th><th>内容</th><th>理由</th></tr>
+  <tr><td><b>批量不流水</b></td><td>一轮对话最多一次 organize，把这轮产生的所有条目打包提交</td><td>逐句入库 = 流水账；对话的自然单元是「一轮」</td></tr>
+  <tr><td><b>节奏可调</b></td><td>整理频率 1/2/3 轮一档；到点钩子才提醒，平时沉默</td><td>催促本身也是上下文成本</td></tr>
+  <tr><td><b>回答优先</b></td><td>整理是副业：先正常回答用户，工具调用安静完成，不长篇旁白</td><td>打断感是这类工具的头号死因</td></tr>
+  <tr><td><b>过程与结论分离</b></td><td>调试中间发现只在构成「结论」时入库；旧结论被新认知取代时用 supersedes 退场</td><td>板子只保留当前有效认知</td></tr>
+</table>
+</div>
+
+<!-- ═════════ ④ 缺口方法论 ═════════ -->
+<h2>④ 缺口管理：会提问才会收敛</h2>
+<p class="lead">缺口是板子里唯一「主动消耗注意力」的层——写得好它驱动项目前进，写得烂它变成待办坟场。</p>
+<div class="card">
+<table>
+  <tr><th>规则</th><th>内容</th></tr>
+  <tr><td><b>写成可回答的问题</b></td><td><span class="good">✓</span> “LRU 在写多读少场景命中率未验证” · <span class="bad">✗</span> “还要优化优化”——无法回答的缺口永远关不掉</td></tr>
+  <tr><td><b>一轮最多追问一个</b></td><td>AI 补全缺口时挑最关键的一个问用户；连环追问是打扰</td></tr>
+  <tr><td><b>谁都能关</b></td><td>任何 harness 在整理中发现缺口已被解决，即可标记 resolved——不需要是提出者</td></tr>
+  <tr><td><b>14 天衰减</b></td><td>超两周未动的缺口自动划线降调（显示层）——要么真过时了，要么值得重新写成更尖锐的问法</td></tr>
+  <tr><td><b>拒绝伪缺口</b></td><td>“待优化”“待确认细节”这类没有主语的缺口不收——说不出「回答它」长什么样，就别立这条</td></tr>
+</table>
+</div>
+
+<!-- ═════════ ⑤ 收敛与替代 ═════════ -->
+<h2>⑤ 更新、替代还是新建？——收敛三选一</h2>
+<div class="card">
+<svg viewBox="0 0 900 250" font-family="'Segoe UI','Microsoft YaHei',sans-serif">
+  <style>
+    .c3 { fill: #1b1b1f; stroke: #34343c; stroke-width: 1.2; rx: 12; }
+    .c3t { fill: #ececec; font-size: 13px; font-weight: 700; }
+    .c3d { fill: #9a9aa2; font-size: 11px; }
+    .tag3 { fill: #5eead4; font-size: 11px; font-weight: 700; }
+  </style>
+  <rect x="20" y="20" width="270" height="190" rx="12" class="c3"/>
+  <text x="155" y="48" text-anchor="middle" class="c3t">语义没变，只是措辞变了</text>
+  <text x="155" y="76" text-anchor="middle" class="tag3">→ 什么都不用做</text>
+  <g font-size="11.5" fill="#9a9aa2">
+    <text x="40" y="106">直接提交新措辞，bigram ≥0.7 自动</text>
+    <text x="40" y="128">命中旧条目并更新——不产生第二条。</text>
+    <text x="40" y="162" class="c3d">例：「支持深色模式」→「深色模式支持」</text>
+  </g>
+
+  <rect x="315" y="20" width="270" height="190" rx="12" class="c3"/>
+  <text x="450" y="48" text-anchor="middle" class="c3t">结论被细化/补充</text>
+  <text x="450" y="76" text-anchor="middle" class="tag3">→ 直接提交（合并更新）</text>
+  <g font-size="11.5" fill="#9a9aa2">
+    <text x="335" y="106">新结论与旧条目 ≥0.7 相似时会合并进</text>
+    <text x="335" y="128">旧条目——细节扩充不产生新行数。</text>
+    <text x="335" y="162" class="c3d">例：「深色模式要做」→「深色模式要做，先做编辑器」</text>
+  </g>
+
+  <rect x="610" y="20" width="270" height="190" rx="12" class="c3"/>
+  <text x="745" y="48" text-anchor="middle" class="c3t">结论被推翻 / 方向变了</text>
+  <text x="745" y="76" text-anchor="middle" class="tag3">→ supersedes 替代</text>
+  <g font-size="11.5" fill="#9a9aa2">
+    <text x="630" y="106">新结论 + supersedes:[旧id/旧原文]，</text>
+    <text x="630" y="128">旧条目退场（保留可审计）。</text>
+    <text x="630" y="162" class="c3d">例：「不做动画」被推翻 →「动画要做，Lottie 方案」</text>
+  </g>
+</svg>
+</div>
+
+<!-- ═════════ ⑥ 项目生命周期 ═════════ -->
+<h2>⑥ 项目生命周期：draft → clarifying → reflected</h2>
+<div class="card">
+<table>
+  <tr><th>阶段</th><th>判定</th><th>该做什么</th></tr>
+  <tr><td><b>draft 构思</b></td><td>目标未定或骨架近空</td><td>先聊目标；AI 协助把诉求收成一句话目标（≤30字）</td></tr>
+  <tr><td><b>clarifying 推进</b></td><td>目标已定，缺口在收敛、方案在竞争</td><td>正常整理；优先追问缺口；方案竞争到唯一采用</td></tr>
+  <tr><td><b>reflected 已沉淀</b></td><td>结论齐了、缺口清了——继续做不影响，但认知已固化</td><td>点「归档」：从活跃列表折叠，数据永久保留</td></tr>
+  <tr><td><b>archived</b></td><td>30 天无活动也会自动标记</td><td>仪表盘勾「含已沉淀」可见；「恢复」随时拉回</td></tr>
+</table>
+</div>
+
+<!-- ═════════ ⑦ 多 harness ═════════ -->
+<h2>⑦ 多 harness 协作规则</h2>
+<div class="card">
+<table>
+  <tr><th>场景</th><th>规则</th></tr>
+  <tr><td><b>共享板</b></td><td>项目身份 = 目录。两个工具在同一目录工作 → 同一块板，互相可见全部沉淀</td></tr>
+  <tr><td><b>接手礼仪</b></td><td>后接手的工具先 mind_board_query 看板子再动手——钩子注入的状态行就是为此设计的</td></tr>
+  <tr><td><b>竞争收敛</b></td><td>两边对同一问题给出不同结论 → 后写的 supersedes 前写的（板子保留最新认知）；若真是并立的两案 → 都进 plans 竞争</td></tr>
+  <tr><td><b>缺口责任</b></td><td>谁发现谁立，谁都能关；跨工具的缺口（“待另一工具确认”）写明对象</td></tr>
+  <tr><td><b>参与者可见</b></td><td>项目档案 harnesses[] 记录全部参与者；图标环/面板/仪表盘按此归属显示</td></tr>
+</table>
+</div>
+
+<!-- ═════════ ⑧ 反模式 ═════════ -->
+<h2>⑧ 反模式清单（每一条都真实发生过）</h2>
+<div class="card">
+<table>
+  <tr><th>反模式</th><th>症状</th><th>解法</th></tr>
+  <tr><td><b>流水账入库</b></td><td>35 条要点里 30 条是调试过程记录</td><td>信噪比三问 + 规则 7（过程/结论分离）</td></tr>
+  <tr><td><b>缺口坟场</b></td><td>12 条缺口 0 条关闭，一半已过时</td><td>缺口可回答化 + 14 天衰减 + 谁都能关</td></tr>
+  <tr><td><b>幽灵面板</b></td><td>面板点了不出现，再点才出现</td><td>hide+show 踢幽灵态（窗口层，非整理层）</td></tr>
+  <tr><td><b>目标漂移硬写</b></td><td>换话题的条目混进旧板子</td><td>pendingNewTask 硬拦截 + 强制问用户</td></tr>
+  <tr><td><b>囤积不收敛</b></td><td>5 个方案并存、无一采用；想法 50 条无归组</td><td>chosen 唯一约束 + group 归组 + supersedes 收敛</td></tr>
+  <tr><td><b>脑补结论</b></td><td>AI 替用户下了没聊过的判断</td><td>不脑补规则 + 说不清边界进 gaps</td></tr>
+</table>
+</div>
+
+<p class="faint" style="margin-top:32px">
+  AI 执行版规则：src/core/protocol.mjs · 算法实现：src/core/store.mjs ·
+  算法图解：/docs/organize-principle.html · 组件图解：/docs/components.html
+</p>
+
+</div>
+</body>
+</html>
