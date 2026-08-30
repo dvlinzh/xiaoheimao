@@ -139,6 +139,7 @@ zone.addEventListener("mousedown", (e) => {
   if (e.button !== 0) return;
   if (!nearPet(e.clientX, e.clientY)) return;   // 宽松命中：透明且远离猫身才吸收   // 透明像素：吸收，不触发拖拽/单击
   pressInfo = { x: e.clientX, y: e.clientY, t: Date.now() };
+  console.log("[pet] mousedown ok", e.clientX, e.clientY, "near:", nearPet(e.clientX, e.clientY), "target:", e.target.id || e.target.className);
   bridge?.dragStart();
 });
 document.addEventListener("mouseup", (e) => {
@@ -150,7 +151,7 @@ document.addEventListener("mouseup", (e) => {
   if (moved < 6 && dt < 450) {
     // 单击：切换图标条；若 280ms 内来了第二击 → 双击，转为颠球
     clearTimeout(clickTimer);
-    clickTimer = setTimeout(() => bridge?.toggleDock(), 280);
+    clickTimer = setTimeout(() => { console.log("[pet] firing toggleDock"); bridge?.toggleDock(); }, 280);
   }
 });
 zone.addEventListener("dblclick", (e) => {

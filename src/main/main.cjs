@@ -16,6 +16,19 @@ function log(...a) {
 process.on("unhandledRejection", (e) => log("[unhandledRejection]", e?.stack || String(e)));
 process.on("uncaughtException", (e) => log("[uncaughtException]", e?.stack || String(e)));
 
+/* 单实例锁：多实例共用同一份 ~/.mind-board 会互相覆盖位置偏好、抢置顶、
+ * 日志交叉（曾造成「窗口在用户点击下位移、九连击全部落空」的幽灵故障）。
+ * 后启动者唤出先启动者窗口后退出。 */
+if (!app.requestSingleInstanceLock()) {
+  log("[main] second instance → quit");
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    log("[main] second-instance → show pet");
+    if (petWin && !petWin.isDestroyed()) { petWin.showInactive(); petWin.moveTop(); }
+  });
+}
+
 let port = 13134;
 let petWin = null;
 let bubbleWin = null;
