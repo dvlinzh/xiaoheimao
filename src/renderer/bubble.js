@@ -312,7 +312,6 @@ function mkIdeaLi(it) {
   if (it.raw) li.title = "原话：" + it.raw;   // 归纳前的用户原话（可追溯）
   li.appendChild(mkSpan("li-mark", it.done ? "●" : "○"));
   li.appendChild(mkSpan("li-text", it.text));
-  li.appendChild(mkDel("ideas", it.id));
   li.addEventListener("click", async () => {
     await jfetch("/api/action", { projectId: curProjectId, action: "toggle-done", params: { id: it.id } });
     loadSkeleton(true);
@@ -427,7 +426,6 @@ function renderLayer(listEl, kind, goal) {
         });
         li.appendChild(lk);
       }
-      li.appendChild(mkDel("points", it.id));
       li.addEventListener("click", async () => {
         await jfetch("/api/action", { projectId: curProjectId, action: "toggle-point", params: { id: it.id } });
         loadSkeleton(true);
@@ -451,7 +449,6 @@ function renderLayer(listEl, kind, goal) {
       const head = document.createElement("div"); head.className = "pl-head";
       head.appendChild(mkSpan("li-mark", String(num)));
       head.appendChild(mkSpan("li-text", it.title));
-      head.appendChild(mkDel("plans", it.id));
       const ops = document.createElement("div"); ops.className = "pl-ops";
       const bChosen = document.createElement("button");
       bChosen.className = "pl-btn" + (it.chosen ? " chosen" : "");
@@ -488,7 +485,6 @@ function renderLayer(listEl, kind, goal) {
       dot.className = "gp-dot";
       li.appendChild(dot);
       li.appendChild(mkSpan("li-text", it.text));
-      li.appendChild(mkDel("gaps", it.id));
       li.addEventListener("click", async () => {
         await jfetch("/api/action", { projectId: curProjectId, action: "toggle-gap", params: { id: it.id } });
         loadSkeleton(true);
