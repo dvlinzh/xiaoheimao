@@ -70,16 +70,7 @@ function arcPos(i, n) {
   const rad = (deg * Math.PI) / 180;
   return { x: CX + MIRROR * R * Math.cos(rad), y: CY + R * Math.sin(rad) };
 }
-/* 圆心可视十字（红小十字画在标定处，确认无误可删本块） */
-window.addEventListener("DOMContentLoaded", () => {
-  const c = document.createElement("div");
-  c.style.cssText = "position:absolute;left:150px;top:168px;width:0;height:0;" +
-    "transform:translate(-50%,-50%);pointer-events:none;z-index:9;";
-  c.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14">
-    <line x1="7" y1="0" x2="7" y2="14" stroke="#f0716c" stroke-width="1.2"/>
-    <line x1="0" y1="7" x2="14" y2="7" stroke="#f0716c" stroke-width="1.2"/></svg>`;
-  document.body.appendChild(c);
-});
+
 
 /* tooltip：JS 定位 + 窗口内收拢，不会再被裁 */
 const tip = document.getElementById("tip");
