@@ -180,6 +180,11 @@ async function refresh() {
 }
 
 
+/* 心跳探针：交互失联时对比增量定位断层 */
+setInterval(() => {
+  console.log("[dock] beat clickable:", clickable,
+    "mouse:", JSON.stringify(lastMouse), "chips:", dock.querySelectorAll(".chip").length);
+}, 5000);
 probeIcons().then(refresh);
 setInterval(refresh, 3000);
 /* 隐藏期间定时器会被 Chromium 强节流（实测可到几十分钟一次）——每次显示时
