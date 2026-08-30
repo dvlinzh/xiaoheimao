@@ -10,29 +10,32 @@
 - **协议注入**：CC 会话启动时自动注入整理规则；每轮对话注入一行状态提醒（缺口数、当前目标）
 - **小黑猫**：贴在屏幕右缘/任务栏待机，单击弹出 harness 图标环（以猫头为圆心的 120° 扇形），点击芯片打开思维面板；新增缺口时动效提醒
 
-## 一键安装（Windows）
+## 安装（把这段话发给你的 agent，一键完成）
 
-```bat
-双击 install.bat
+```text
+请帮我安装并启动「思维板·小黑猫」插件（https://github.com/dvlinzh/xiaoheimao）：
+
+1. git clone https://github.com/dvlinzh/xiaoheimao.git 到本机任意目录（如 ~/mind-board-pet）
+2. cd 进去后执行：npm install（注意：Node.js ≥ 18；Electron 下载失败时先设
+   环境变量 ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ 再重试）
+3. 启动桌宠：npm start（Electron 窗口：屏幕上的小黑猫 + 图标环 + 思维面板）
+   浏览器兜底：npm run pet 后打开 http://127.0.0.1:13134/pet.html
+4. 接入 Claude Code（本仓库已自带配置，零改动）：用 Claude Code 打开这个目录，
+   首次会提示批准 .mcp.json 里的 mind-board 服务器（三个工具：
+   organize/query/control），批准后 SessionStart / UserPromptSubmit 两个钩子
+   自动随 .claude/settings.local.json 生效，开始对话即自动整理
+   注意：钩子与 MCP 受「整理模式」开关控制，右键猫 → 设置窗 可切换
+5. 验证：正常聊几句话后，点屏幕上的猫 → 头顶图标环 → 点芯片打开思维面板，
+   能看到本轮对话整理出的目标/想法/要点/缺口
+6. （可选）DSH 集成：在 DSH 安装脚本 src/dsh/index.js 对应入口的 Cordis
+   挂载方式见仓库 README「接入 DSH」节；或直接把本目录交给 DSH 宿主按
+   junction + cordis.patch.yml 方式注册
+
+装完告诉我结果，有问题把报错发我。
 ```
 
-脚本自动：检查 Node.js ≥ 18 → `npm install`（Electron 走国内镜像加速）→ 启动小黑猫。
-依赖只会装一次；删除 `node_modules` 后可重装。
-
-手动等价命令：
-
-```bash
-npm install    # 仅首次
-npm start      # 桌宠（Electron 壳：透明猫窗 + 图标环 + 面板 + 设置窗）
-npm run pet    # 浏览器兜底：http://127.0.0.1:13134/pet.html
-npm test       # 冒烟测试（数据层 23 项 + DSH 壳 12 项）
-```
-
-- 需要 **Node.js ≥ 18**（[nodejs.org](https://nodejs.org) 下载 LTS）
-- 接入 Claude Code **零配置**：仓库自带的 `.mcp.json`（三工具）与
-  `.claude/settings.local.json`（两个钩子）在你用 Claude Code 打开本目录时自动生效，
-  首次使用批准 mind-board 服务器即可
-- 双击 `喵喵启动.bat` 等同 `npm start`
+> 需要 Node.js ≥ 18（[nodejs.org](https://nodejs.org) LTS）。数据存于 `~/.mind-board/`，
+> 全程本地；删掉目录即清空，拷走目录即完整迁移。
 
 ## 接入 Claude Code（已在本仓库配置）
 
@@ -72,19 +75,6 @@ npm test       # 冒烟测试（数据层 23 项 + DSH 壳 12 项）
 ```
 
 agent 引导需在 DSH 侧补充（没有 CC 那样现成的钩子）；数据写入与面板展示照常可用。
-
-## 技术图（docs/*.svg，GitHub 直接渲染）
-
-<table>
-  <tr>
-    <td align="center"><b>架构图</b><br><img src="docs/arch.svg" width="100%" alt="架构图"></td>
-    <td align="center"><b>项目地图（多入口）</b><br><img src="docs/project-map.svg" width="100%" alt="项目地图"></td>
-  </tr>
-  <tr>
-    <td align="center"><b>数据流 · 一轮整理闭环</b><br><img src="docs/dataflow.svg" width="100%" alt="数据流"></td>
-    <td align="center"><b>图标环排列</b><br><img src="docs/ring.svg" width="100%" alt="图标环"></td>
-  </tr>
-</table>
 
 ## 目录结构
 
