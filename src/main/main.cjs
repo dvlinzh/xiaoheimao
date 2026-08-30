@@ -517,22 +517,10 @@ ipcMain.on("drag-end", () => {
   if (!petWin || petWin.isDestroyed()) return;
   const b = petWin.getBounds();
   const wa = screen.getDisplayNearestPoint({ x: b.x + PET_W / 2, y: b.y + PET_H / 2 }).workArea;
-  // 三向吸附：左缘 / 右缘 / 任务栏（窗口底边离任务栏顶最近者胜）
-  const dLeft = Math.abs(b.x - wa.x);
-  const dRight = Math.abs(wa.x + wa.width - (b.x + PET_W));
-  const taskbarTop = wa.y + wa.height;
-  const dTask = Math.abs(taskbarTop - (b.y + PET_H));
-  if (dTask <= dLeft && dTask <= dRight) {
-    petEdge = "taskbar";
-    petXTB = Math.min(Math.max(b.x, wa.x + 4), wa.x + wa.width - PET_W - 4);
-    petY = null;
-  } else if (dLeft <= dRight) {
-    petEdge = "left";
-    petY = b.y;
-  } else {
-    petEdge = "right";
-    petY = b.y;
-  }
+  // 只吸附任务栏：水平自由摆放（钳制在屏内），垂直锁定任务栏落点
+  petEdge = "taskbar";
+  petXTB = Math.min(Math.max(b.x, wa.x + 4), wa.x + wa.width - PET_W - 4);
+  petY = null;
   applyPetPos();
   saveUiPrefs();
   pushPrefs();
@@ -601,8 +589,9 @@ ipcMain.on("set-pin", (_e, v) => {
   saveUiPrefs(); pushPrefs();
 });
 ipcMain.on("set-edge", (_e, v) => {
-  if (!["left", "right", "taskbar"].includes(v)) return;
-  petEdge = v;
+  // 只允许任务栏吸附：其他取值一律忽略
+  if (v !== "taskbar") return;
+  petEdge = "taskbar";
   applyPetPos();
   saveUiPrefs(); pushPrefs();
 });
