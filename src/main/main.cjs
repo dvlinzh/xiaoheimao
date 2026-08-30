@@ -21,6 +21,7 @@ let petWin = null;
 let bubbleWin = null;
 let dockWin = null;
 let settingsWin = null;
+let dashWin = null;
 let lastBubbleHarness = "";
 let bubblePinned = false;   // 面板图钉：钉住时失焦/拖拽不收起
 let bubbleShowAt = 0;       // 最近一次 show 的时间（blur 宽限期基准）
@@ -127,7 +128,7 @@ function createPet() {
     try {
       petWin.showInactive();
       petWin.moveTop();
-      petWin.setIgnoreMouseEvents(true, { forward: true });
+      petWin.setIgnoreMouseEvents(true, { forward: false });   // 初始穿透，主进程轮询 16ms 内接管
     } catch (e) { log("[pet] show failed:", String(e)); }
   });
   petWin.webContents.on("did-fail-load", (_e, code, desc, url) =>
@@ -363,6 +364,34 @@ ipcMain.on("chip-rects", (_e, rects) => {
 ipcMain.on("settings-toggle", () => showSettings(!settingsWin || settingsWin.isDestroyed() || !settingsWin.isVisible()));
 ipcMain.on("settings-hide", () => showSettings(false));
 
+/* ── 项目总览仪表盘：普通窗口（有标题栏、进任务栏），管理模式用 ── */
+function showDashboard(show) {
+  if (show) {
+    if (!dashWin || dashWin.isDestroyed()) {
+      dashWin = new BrowserWindow({
+        width: 1160, height: 800,
+        backgroundColor: "#0d0d0f",
+        autoHideMenuBar: true,
+        title: "思维板 · 项目总览",
+        webPreferences: {
+          preload: path.join(__dirname, "preload.cjs"),
+          contextIsolation: true,
+          nodeIntegration: false,
+        },
+      });
+      dashWin.loadURL(`http://127.0.0.1:${port}/dashboard.html`);
+    } else {
+      dashWin.show();
+      dashWin.focus();
+    }
+  } else if (dashWin && !dashWin.isDestroyed()) dashWin.hide();
+}
+ipcMain.on("dashboard-toggle", () => {
+  const vis = dashWin && !dashWin.isDestroyed() && dashWin.isVisible();
+  showDashboard(!vis);
+});
+ipcMain.on("dashboard-hide", () => showDashboard(false));
+
 function positionBubble() {
   if (!petWin || petWin.isDestroyed() || !bubbleWin || bubbleWin.isDestroyed()) return;
   const wa = workArea();
@@ -477,20 +506,25 @@ ipcMain.on("set-clickable", (_e, clickable) => {
   try { win.setIgnoreMouseEvents(!clickable, { forward: true }); } catch {}
 });
 
-/* 悬停保活轮询：穿透窗的 hover 激活依赖系统鼠标钩子转发，实测会被
-   全屏游戏/UAC 遮罩等环境事件摘除且永不恢复（猫变"可看不可点"）。
-   改由主进程轮询光标位置主动驱动穿透切换——getCursorScreenPoint 是
-   普通 API，不依赖任何钩子，与 OS 事件投递状态完全解耦。 */
+/* 交互保活轮询：穿透窗的 hover 激活依赖系统鼠标钩子转发，实测会被
+   全屏游戏/UAC 遮罩等环境事件摘除且永不恢复（猫变"可看不可点"，且
+   mousedown 在激活完成前被穿透吞掉——down:0/up:8 的日志即此症状）。
+   现由主进程 16ms 轮询光标、直接驱动整窗可交互态：光标进窗 = 整窗可点
+   （是否点在猫身上由渲染层 overPet 按像素判定，透明处点击吸收不动），
+   getCursorScreenPoint 是普通 API，与 OS 事件投递状态完全解耦。 */
+let petInteractive = false;
 setInterval(() => {
   if (!petWin || petWin.isDestroyed()) return;
   const c = screen.getCursorScreenPoint();
   const b = petWin.getBounds();
-  if (c.x < b.x || c.x >= b.x + b.width || c.y < b.y || c.y >= b.y + b.height) {
-    petWin.webContents.send("cursor-pos", { inside: false });
-    return;
+  const inside = c.x >= b.x && c.x < b.x + b.width && c.y >= b.y && c.y < b.y + b.height;
+  if (inside !== petInteractive) {
+    petInteractive = inside;
+    try { petWin.setIgnoreMouseEvents(!inside, { forward: false }); } catch {}
+    log("[pet] interactive →", inside);
   }
-  petWin.webContents.send("cursor-pos", { inside: true, x: c.x - b.x, y: c.y - b.y });
-}, 100);
+  if (inside) petWin.webContents.send("cursor-pos", { inside: true, x: c.x - b.x, y: c.y - b.y });
+}, 16);
 
 ipcMain.on("bubble-pinned", (_e, v) => { bubblePinned = !!v; });
 

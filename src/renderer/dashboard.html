@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>思维板 · 项目总览</title>
+<link rel="stylesheet" href="./dashboard.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M5 13 L8 3 L14 9 Q16 8 18 9 L24 3 L27 13 Q29 17 27 21 Q24 28 16 28 Q8 28 5 21 Q3 17 5 13 Z" fill="#16161e" stroke="#34343c" stroke-width="1.4"/>
+      <path d="M13 12 L16 20 L19 12" fill="none" stroke="#5eead4" stroke-width="1.6" stroke-linecap="round"/>
+      <circle cx="11.5" cy="17.5" r="2" fill="#fbbf24"/>
+      <circle cx="20.5" cy="17.5" r="2" fill="#fbbf24"/>
+    </svg>
+    <span>项目总览</span>
+  </div>
+  <div class="stats" id="stats"></div>
+  <button id="btn-close" title="关闭 (Esc)">×</button>
+</header>
+
+<div class="bar">
+  <input id="q" type="search" placeholder="搜索项目 / 目标…" spellcheck="false">
+  <div class="hchips" id="hchips"></div>
+  <select id="f-state">
+    <option value="">全部状态</option>
+    <option value="draft">draft 构思中</option>
+    <option value="clarifying">clarifying 推进中</option>
+    <option value="reflected">reflected 已沉淀</option>
+  </select>
+  <select id="f-sort">
+    <option value="recent">按最近活跃</option>
+    <option value="gaps">按缺口最多</option>
+    <option value="name">按名称</option>
+  </select>
+</div>
+
+<main id="grid" class="grid"></main>
+<div id="empty" class="empty" hidden>没有匹配的项目</div>
+
+<script src="./dashboard.js"></script>
+</body>
+</html>

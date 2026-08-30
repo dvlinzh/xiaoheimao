@@ -27,8 +27,18 @@
         </button>
         <div id="proj-menu" hidden></div>
       </div>
+      <button id="btn-overview" class="hd-btn" type="button" title="项目总览：一屏看全部项目">☰</button>
       <button id="btn-pin" class="hd-btn" type="button" title="钉住：常显不自动收起"></button>
     </header>
+
+    <!-- 总览视图：一屏看全部项目，点行切换 -->
+    <div id="overview-view" hidden>
+      <div class="ov-bar">
+        <span class="sec-label">全部项目</span>
+        <button id="ov-dashboard" class="ov-dash" type="button">⛶ 大窗口仪表盘</button>
+      </div>
+      <div id="ov-list"></div>
+    </div>
 
     <div id="pending-banner" data-i18n="pending" hidden>⚠ 疑似新目标待确认——去问问你的 AI？</div>
 

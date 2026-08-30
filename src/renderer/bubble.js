@@ -613,9 +613,73 @@ document.addEventListener("mouseup", async (e) => {
 });
 
 /* ── 主轮询 ── */
+/* ── 总览视图：一屏看全部项目，点行切换（跨 harness 经 reload 重载） ── */
+let lastOv = null;
+let projSelDone = false;
+let ovMode = false;
+
+function setOvMode(v) {
+  ovMode = v;
+  document.querySelector(".comic")?.classList.toggle("mode-ov", v);
+  const view = document.getElementById("overview-view");
+  if (view) view.hidden = !v;
+  if (v) renderOv();
+}
+
+function renderOv() {
+  const box = document.getElementById("ov-list");
+  if (!box || !lastOv) return;
+  const list = [...(lastOv.projects || [])].sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0));
+  box.replaceChildren(...list.map((p) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "ov-item" + (p.id === curProjectId ? " on" : "");
+    const c = p.counts || {};
+    const stateTxt = { draft: "构思", clarifying: "推进", reflected: "已沉淀" }[p.state] || p.state;
+    const meta = document.createElement("span");
+    meta.className = "ov-meta";
+    meta.innerHTML = `${c.gaps ? `<b>缺口 ${c.gaps}</b> · ` : ""}${stateTxt}`;
+    const row1 = document.createElement("span");
+    row1.className = "ov-row1";
+    const dot = document.createElement("i");
+    dot.className = "ov-dot " + (p.state || "");
+    const name = document.createElement("span");
+    name.className = "ov-name";
+    name.textContent = p.title || p.id;
+    const tag = document.createElement("span");
+    tag.className = "ov-tag";
+    tag.textContent = (p.harnesses || [])[0] || "";
+    row1.append(dot, name, meta, tag);
+    const goal = document.createElement("span");
+    goal.className = "ov-goal";
+    goal.textContent = p.currentGoal ? "🎯 " + p.currentGoal : "🎯 目标未定";
+    b.append(row1, goal);
+    b.addEventListener("click", () => {
+      const h = (p.harnesses || [])[0] || p.harness || "other";
+      if ((p.harnesses || []).includes(harness) || p.harness === harness) {
+        selectProject(p.id);
+        setOvMode(false);
+      } else {
+        // 跨 harness：换面板身份并重载（URL/本地存储都会带上目标项目）
+        try {
+          localStorage.setItem("mb.harness", h);
+          localStorage.setItem("mb.projSel", p.id);
+        } catch {}
+        location.reload();
+      }
+    });
+    return b;
+  }));
+}
+
+document.getElementById("btn-overview")?.addEventListener("click", () => setOvMode(!ovMode));
+document.getElementById("ov-dashboard")?.addEventListener("click", () =>
+  window.bubbleBridge?.openDashboard());
+
 async function refreshAll() {
   try {
     const ov = await jfetch("/api/overview");
+    lastOv = ov;
     document.body.dataset.font = ov.settings?.fontSize || "m";
     document.body.dataset.fontFamily = ov.settings?.fontFamily || "georgia";
     document.body.dataset.theme = ov.settings?.panelTheme || "cream";
@@ -624,6 +688,18 @@ async function refreshAll() {
     // 决定 harness 与默认项目
     const { list, name } = pickDefaultProject(ov);
     if (name && !harness) harness = name;
+    // 一次性：跨窗口/仪表盘的项目选中意图（mb.projSel 用一次即清）+ URL ?project=
+    if (!projSelDone && list.length) {
+      projSelDone = true;
+      let want = "";
+      try {
+        want = localStorage.getItem("mb.projSel") || "";
+        localStorage.removeItem("mb.projSel");
+      } catch {}
+      if (!want) want = new URLSearchParams(location.search).get("project") || "";
+      const hit = list.find((p) => p.id === want);
+      if (hit) curProjectId = hit.id;
+    }
     if (list.length && (!curProjectId || !list.some((p) => p.id === curProjectId))) {
       curProjectId = list[0].id;
     }

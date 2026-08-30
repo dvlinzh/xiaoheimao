@@ -1,0 +1,107 @@
+/* 项目总览仪表盘 — 优雅黑令牌（与 style-guide 同源） */
+:root {
+  --bg: #0d0d0f; --card: #141416; --card2: #202024; --line: #28282e;
+  --line2: #34343c; --text: #ececec; --dim: #9a9aa2; --faint: #66666e;
+  --amber: #fbbf24; --teal: #5eead4; --sky: #5ea3f7; --violet: #8b7cf6;
+  --red: #f0716c; --green: #58a873;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif; font-size: 14px;
+}
+
+.top {
+  position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 18px;
+  padding: 12px 20px; background: rgba(13,13,15,.9); backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 15px; }
+.brand svg { display: block; }
+.stats { display: flex; gap: 14px; flex: 1; flex-wrap: wrap; }
+.stat { display: flex; align-items: baseline; gap: 6px; }
+.stat b { font-size: 18px; font-family: Georgia, serif; }
+.stat span { color: var(--faint); font-size: 12px; }
+.stat.warn b { color: var(--red); }
+.stat.live b { color: var(--teal); }
+#btn-close {
+  border: 1px solid var(--line2); background: var(--card2); color: var(--dim);
+  width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-size: 16px;
+}
+#btn-close:hover { color: var(--text); }
+
+.bar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 20px; border-bottom: 1px solid var(--line);
+  position: sticky; top: 55px; z-index: 4; background: var(--bg);
+}
+#q {
+  flex: 1; min-width: 200px; max-width: 340px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 9px;
+  color: var(--text); padding: 7px 12px; outline: none; font-size: 13px;
+}
+#q:focus { border-color: var(--line2); }
+.hchips { display: flex; gap: 7px; flex-wrap: wrap; }
+.hchip {
+  border: 1px solid var(--line2); background: var(--card); color: var(--dim);
+  border-radius: 999px; padding: 4px 12px; cursor: pointer; font-size: 12.5px;
+}
+.hchip.on { color: var(--text); border-color: var(--amber); background: rgba(251,191,36,.08); }
+select {
+  background: var(--card); border: 1px solid var(--line); color: var(--dim);
+  border-radius: 9px; padding: 7px 10px; font-size: 13px; outline: none;
+}
+
+.grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px; padding: 18px 20px 40px;
+}
+.pc {
+  background: var(--card); border: 1px solid var(--line); border-radius: 13px;
+  padding: 15px 16px 13px; cursor: pointer; position: relative;
+  transition: border-color .15s ease, transform .12s ease;
+  display: flex; flex-direction: column; gap: 9px;
+}
+.pc:hover { border-color: var(--line2); transform: translateY(-2px); }
+.pc .row1 { display: flex; align-items: center; gap: 8px; }
+.pc .title {
+  font-size: 14.5px; font-weight: 600; flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.badge {
+  flex: none; font-size: 10.5px; padding: 2px 9px; border-radius: 999px;
+  border: 1px solid; letter-spacing: .5px;
+}
+.badge.draft      { color: var(--dim);   border-color: var(--line2); }
+.badge.clarifying { color: var(--amber); border-color: rgba(251,191,36,.45); }
+.badge.reflected  { color: var(--green); border-color: rgba(88,168,115,.45); }
+.pc .goal {
+  color: var(--dim); font-size: 13px; min-height: 20px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pc .goal.has { color: var(--text); }
+.counts { display: flex; gap: 6px; flex-wrap: wrap; }
+.cnt {
+  font-size: 11.5px; border-radius: 7px; padding: 2px 8px;
+  background: var(--card2); color: var(--dim); border: 1px solid var(--line);
+}
+.cnt b { color: var(--text); font-weight: 600; }
+.cnt.gaps.warn { color: var(--red); border-color: rgba(240,113,108,.35); }
+.cnt.gaps.warn b { color: var(--red); }
+.hrow { display: flex; align-items: center; gap: 6px; }
+.htag {
+  font-size: 10.5px; color: var(--faint); border: 1px solid var(--line);
+  border-radius: 6px; padding: 1px 7px;
+}
+.ago { margin-left: auto; font-size: 11px; color: var(--faint); }
+.pending {
+  font-size: 11.5px; color: var(--red); background: rgba(240,113,108,.08);
+  border: 1px solid rgba(240,113,108,.3); border-radius: 8px; padding: 3px 9px;
+}
+.open {
+  position: absolute; right: 12px; bottom: 11px;
+  border: 1px solid var(--line2); background: var(--card2); color: var(--dim);
+  border-radius: 7px; padding: 3px 10px; cursor: pointer; font-size: 11.5px;
+}
+.open:hover { color: var(--text); border-color: var(--amber); }
+.empty { text-align: center; color: var(--faint); padding: 60px 0; }
