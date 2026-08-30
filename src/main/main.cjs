@@ -28,7 +28,7 @@ let bubbleShowAt = 0;       // 最近一次 show 的时间（blur 宽限期基�
 let dockShownAt = 0;        // 图标环最近一次弹出的时间（toggle 防抖基准）
 
 const PET_W = 190, PET_H = 220;
-const DOCK_W = 300, DOCK_H = 240;   // 图标环：120° 扇形（垂直边 → 左下斜边，高度容下左下芯片）
+const DOCK_W = 300, DOCK_H = 290;   // 图标环：120° 扇形（垂直边 → 左下斜边，高度容下远处左下芯片）
 const SET_W = 274, SET_H = 420;
 
 /* 界面偏好（贴边/任务栏/置顶/位置），持久化在 settings.json 的附加键里 */
@@ -241,7 +241,7 @@ function positionDock() {
   // 圆环绕着猫：dock 窗以猫的水平中心为圆心，环心对准猫头（耳朵高度）
   // +85：环整体抬离头顶（原 +120 图标贴耳朵太近）
   const x = pb.x + Math.round(PET_W / 2 - DOCK_W / 2);
-  const y = pb.y - DOCK_H + 182;   // dock 内圆心 (150,168) 对准猫头中心：dockY+168 = pb.y+110
+  const y = pb.y - DOCK_H + 217;   // dock 内圆心 (150,168) 对准猫头中心：dockY+168 = pb.y+95
   dockWin.setPosition(Math.min(Math.max(x, wa.x + 4), wa.x + wa.width - DOCK_W - 4),
                       Math.min(Math.max(y, wa.y + 4), wa.y + wa.height - DOCK_H - 4));
   // 关键：芯片区与猫窗范围重叠，猫窗任何一次 setPosition/激活都可能反压到 dock
@@ -286,7 +286,13 @@ function showDock(show) {
       dockWin.webContents.once("did-finish-load", () => {
         try { dockWin.setIgnoreMouseEvents(true, { forward: true }); dockWin.moveTop(); } catch {}
       });
-    } else { dockWin.show(); dockWin.moveTop(); }   // 每次唤出都重新压到猫窗之上，否则重叠区的芯片点不到
+    } else {
+      // 幽灵可见态保险：Electron 记为可见但 DWM 表面可能已丢（被全屏应用覆盖过），
+      // show() 无操作 → 用户眼前什么都没有。hide→show 强制重新呈现。
+      dockWin.hide();
+      dockWin.show();
+      dockWin.moveTop();
+    }
     positionDock();
   } else if (dockWin && !dockWin.isDestroyed()) {
     dockWin.hide();
@@ -573,6 +579,12 @@ ipcMain.on("open-data-dir", () => {
   const dir = process.env.MIND_BOARD_HOME || path.join(require("node:os").homedir(), ".mind-board");
   shell.openPath(dir);
 });
+
+// 关键：禁用 Windows 原生遮挡计算。Chromium 会把被全屏应用覆盖的窗口标记为
+// 「被遮挡」并停止合成；覆盖结束后该状态不恢复——透明窗表面被 DWM 丢弃，
+// Electron 仍记为可见 → 猫/图标环/面板集体「幽灵可见」（看得见位置点不着，
+// show() 全部无操作）。这是透明置顶窗的标准解法，必须在 app ready 前设置。
+app.commandLine.appendSwitch("disable-features", "CalculateNativeWinOcclusion");
 
 app.whenReady().then(async () => {
   loadUiPrefs();
