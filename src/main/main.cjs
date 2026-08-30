@@ -219,13 +219,8 @@ async function openBubble(harness) {
   // 假失焦防护：从不可聚焦的 dock 窗/热键唤起时进程非前台，Windows 会在打开后
   // ~0.6s 强制收回焦点造成「闪开即关」——show 后 1.2s 内的 blur 直接忽略；
   // bubbleShowAt 在每次 show 事件刷新（覆盖复用窗口的再次唤起）。
-  bubbleWin.on("blur", () => {
-    const age = Date.now() - bubbleShowAt;
-    log("[bubble] blur, pinned:", bubblePinned, "age:", age, "ms");
-    if (bubblePinned) return;
-    if (age < 1200) return;
-    if (bubbleWin && !bubbleWin.isDestroyed()) bubbleWin.hide();
-  });
+  // 面板关闭只有两个途径：再点一次同一 harness 芯片（toggle）或 Esc。
+  // 不再因点击别处/失焦隐藏——「点到别处面板就没了」是此前最大诟病。
   bubbleWin.on("show", () => {
     bubbleShowAt = Date.now();
     log("[bubble] shown, bounds:", JSON.stringify(bubbleWin.getBounds()));
@@ -500,8 +495,7 @@ ipcMain.on("drag-start", () => {
       dragMoved = true;
       log("[drag] start at", JSON.stringify(b));
       try { petWin.webContents.send("drag-state", true); } catch {}
-      if (!bubblePinned) closeBubble();
-      showDock(false); showSettings(false);
+      showDock(false); showSettings(false);   // 拖猫不再收面板（关闭只经芯片 toggle / Esc）
     }
     const wa = screen.getDisplayNearestPoint(c).workArea;   // 跟随光标所在显示器
     const nx = Math.min(Math.max(c.x - dragOff.x, wa.x - PET_W + 90), wa.x + wa.width - 90);

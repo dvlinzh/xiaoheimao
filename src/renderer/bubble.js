@@ -48,26 +48,25 @@ if (new URLSearchParams(location.search).get("side") === "left") {
 // Esc 关闭面板（钉住时也有效，属明确指令）
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") window.close(); });
 
-/* ── 图钉：常显不自动收起（状态存 localStorage，重启保持） ──
-   线条 SVG 图钉：未钉=灰色倾斜45°（没插上）；已钉=琥珀实心正立（插住了） */
+/* ── 折叠/展开：面板关闭只经芯片 toggle 或 Esc；此按钮把面板折成一条头部细条 ── */
 const pinBtn = $("#btn-pin");
-let pinned = true;   // 默认钉住：面板不因点击别处消失，想常显/收起用图钉显式切换
-try { pinned = localStorage.getItem("mb.pinned") !== "0"; } catch {}
+let collapsed = false;
+try { collapsed = localStorage.getItem("mb.collapsed") === "1"; } catch {}
 
-const PIN_SVG = (filled) => `<svg viewBox="0 0 24 24" width="14" height="14" fill="${filled ? "currentColor" : "none"}" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>`;
+const FOLD_SVG = (open) => `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 11 L12 6 L7 11"/><path d="M17 18 L12 13 L7 18"${open ? ' opacity=".35"' : ""}/></svg>`;
 
-function applyPin() {
-  pinBtn.classList.toggle("on", pinned);
-  pinBtn.innerHTML = PIN_SVG(pinned);
-  pinBtn.title = pinned ? "已钉住：点此取消常显" : "钉住：常显不自动收起";
-  window.bubbleBridge?.setPinned(pinned);
+function applyCollapsed() {
+  document.body.classList.toggle("collapsed", collapsed);
+  pinBtn.classList.toggle("on", collapsed);
+  pinBtn.innerHTML = FOLD_SVG(collapsed);
+  pinBtn.title = collapsed ? "展开面板" : "折叠成一条（点此展开）";
 }
 pinBtn.addEventListener("click", () => {
-  pinned = !pinned;
-  try { localStorage.setItem("mb.pinned", pinned ? "1" : "0"); } catch {}
-  applyPin();
+  collapsed = !collapsed;
+  try { localStorage.setItem("mb.collapsed", collapsed ? "1" : "0"); } catch {}
+  applyCollapsed();
 });
-applyPin();
+applyCollapsed();
 
 let curProjectId = null;
 let curSkeleton = null;
@@ -324,6 +323,7 @@ const expGroup = {};   // { "ideas:组名": true } 展开态（内存保持，�
 
 function mkIdeaLi(it) {
   const li = mkLi(it.done ? "ideas-done" : "", { layer: "ideas", id: it.id });
+  if (it.raw) li.title = "原话：" + it.raw;   // 归纳前的用户原话（可追溯）
   li.appendChild(mkSpan("li-mark", it.done ? "●" : "○"));
   li.appendChild(mkSpan("li-text", it.text));
   li.appendChild(mkDel("ideas", it.id));
@@ -705,7 +705,14 @@ function renderOv() {
   }));
 }
 
-document.getElementById("btn-overview")?.addEventListener("click", () => setOvMode(!ovMode));
+document.getElementById("btn-overview")?.addEventListener("click", () => {
+  if (collapsed) {   // 折叠状态先展开，再看总览
+    collapsed = false;
+    try { localStorage.setItem("mb.collapsed", "0"); } catch {}
+    applyCollapsed();
+  }
+  setOvMode(!ovMode);
+});
 document.getElementById("ov-dashboard")?.addEventListener("click", () =>
   window.bubbleBridge?.openDashboard());
 $("#pt-toggle")?.addEventListener("click", (e) => {

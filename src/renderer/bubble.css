@@ -396,3 +396,15 @@ body[data-font="l"] { zoom: 1.23; }
 #list-points li .li-link:hover {
   color: #0d0d0f; background: var(--teal); border-color: var(--teal);
 }
+
+/* ── 折叠模式：面板只留头部细条（点芯片 toggle 之外的第二种收起方式） ── */
+body.collapsed #goal-bar,
+body.collapsed #layers,
+body.collapsed #pending-banner,
+body.collapsed #overview-view,
+body.collapsed .rz { display: none !important; }
+body.collapsed .comic { border-radius: 10px; }
+
+/* 折叠按钮（原图钉位）：新图标不旋转，折叠态琥珀提示 */
+#btn-pin svg { transform: none; transition: transform .18s ease; }
+#btn-pin.on svg { transform: rotate(180deg); }
