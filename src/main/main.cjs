@@ -147,12 +147,19 @@ function createPet() {
   petWin.on("closed", () => { petWin = null; });
 }
 
-/** 唤起面板：刷新 blur 宽限期基准（每次 show 都算一次「刚打开」），并尝试抢焦点 */
+/** 唤起面板：强制重呈现（moveTop + 透明度轻推逼 DWM 重建表面）并刷新宽限基准 */
 function summonBubble() {
   bubbleShowAt = Date.now();
   if (bubbleWin && !bubbleWin.isDestroyed()) {
     bubbleWin.show();
+    bubbleWin.moveTop();
     bubbleWin.focus();
+    // 透明窗「Electron 认为可见、屏幕上什么都没有」的幽灵态：
+    // 轻推透明度强制 DWM 丢弃并重建表面，比 hide+show 平滑（无闪烁）
+    try {
+      bubbleWin.setOpacity(0.99);
+      setTimeout(() => { try { bubbleWin && !bubbleWin.isDestroyed() && bubbleWin.setOpacity(1); } catch {} }, 60);
+    } catch {}
   }
 }
 
