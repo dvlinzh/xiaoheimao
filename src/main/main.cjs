@@ -142,7 +142,16 @@ function createPet() {
 function summonBubble() {
   bubbleShowAt = Date.now();
   if (bubbleWin && !bubbleWin.isDestroyed()) {
-    bubbleWin.show();
+    if (bubbleWin.isVisible()) {
+      // 幽灵可见态：透明窗 blur 后 DWM 丢弃渲染表面，但 Electron 仍记为可见——
+      // 此时 show() 是无操作，面板永远不再出现（须点两次才恢复）。
+      // 强制 hide→show 踢掉幽灵态，顺便触发 show 事件刷新宽限基准。
+      bubbleWin.hide();
+      bubbleWin.show();
+      log("[bubble] summon: hide+show（幽灵可见态修复）");
+    } else {
+      bubbleWin.show();
+    }
     bubbleWin.focus();
   }
 }
@@ -159,9 +168,10 @@ async function openBubble(harness) {
   }
   lastBubbleHarness = harness;
   if (reuse) {
-    bubbleWin.loadURL(url);
+    // 先显示再切内容：导航与显示同时发起时，透明窗可能在导航完成前保持不可见
     summonBubble();
     positionBubble();
+    bubbleWin.loadURL(url);
     return;
   }
   bubbleShowAt = Date.now();   // show 事件会再刷一次，这里兜底防事件早于监听
