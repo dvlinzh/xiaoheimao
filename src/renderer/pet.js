@@ -36,7 +36,8 @@ setInterval(() => {
   } catch {}
   console.log("[pet] beat evts:", JSON.stringify(window.__mbEvts),
     "press:", pressInfo ? "locked" : "none",
-    "alpha:", alphaMap ? "ok" : "null", "alphaC:", ac, "chipRects:", chipRects.length);
+    "alpha:", alphaMap ? "ok" : "null", "alphaC:", ac, "chipRects:", chipRects.length,
+    "lastMove:", JSON.stringify(lastMove));
 }, 5000);
 
 /* ── 皮肤装载 ── */
@@ -177,14 +178,22 @@ function overPet(x, y) {
 
 /* 交互态双通道驱动：渲染层 mousemove（事件正常时）+ 主进程光标轮询
    （钩子被摘时）都会调用 setClickable，由 overPet 做逐像素判定。 */
+let lastMove = { x: -1, y: -1, over: null };
 document.addEventListener("mousemove", (e) => {
   lastInteraction = Date.now();
-  setClickable(overPet(e.clientX, e.clientY));
+  lastMove = { x: e.clientX, y: e.clientY, over: overPet(e.clientX, e.clientY) };
+  setClickable(lastMove.over);
 });
 
 /* 拖拽姿态：主进程判定真实拖动后推送（被拎走的猫） */
 bridge?.onDrag?.((v) => Pet?.setDrag?.(v));
 bridge?.onDragPhys?.((v) => Pet?.setSwing?.(v.vx));   // 拖拽速度 → 拎起摆动激励
+
+/* 主进程光标轮询（100ms）——进入窗内时主进程已把整窗切为可交互，
+     这里的 overPet 判定仅供诊断与后续增强，不再驱动穿透切换。 */
+bridge?.onCursorPos?.(({ inside, x, y }) => {
+  if (inside) lastCursor = { x, y, over: overPet(x, y) };
+});
 
 /* ── 启动 ── */
 poll();
