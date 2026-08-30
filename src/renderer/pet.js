@@ -282,6 +282,7 @@ let lastMove = { x: -1, y: -1, over: null };
 document.addEventListener("mousemove", (e) => {
   lastInteraction = Date.now();
   lastMove = { x: e.clientX, y: e.clientY, over: overPet(e.clientX, e.clientY) };
+  setClickable(nearPet(e.clientX, e.clientY));
 });
 
 /* 拖拽姿态：主进程判定真实拖动后推送（被拎走的猫） */
@@ -290,7 +291,9 @@ bridge?.onDragPhys?.((v) => Pet?.setSwing?.(v.vx));   // 拖拽速度 → 拎起
 
 /* 主进程光标轮询（诊断）：观察 overPet 在真实光标位置的表现 */
 bridge?.onCursorPos?.(({ inside, x, y }) => {
+  if (pressInfo) return;
   if (inside) lastCursor = { x, y, over: overPet(x, y) };
+  setClickable(inside ? nearPet(x, y) : false);
 });
 
 /* ── 启动 ── */
