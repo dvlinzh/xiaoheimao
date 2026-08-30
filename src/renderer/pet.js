@@ -24,7 +24,7 @@ document.addEventListener("mouseup", () => window.__mbEvts.up++, true);
    electron.log 里对比两次心跳的增量即可判断交互断在 OS 投递层还是渲染逻辑层 */
 setInterval(() => {
   console.log("[pet] beat evts:", JSON.stringify(window.__mbEvts),
-    "clickable:", clickable, "press:", pressInfo ? "locked" : "none",
+    "press:", pressInfo ? "locked" : "none",
     "alpha:", alphaMap ? "ok" : "null", "chipRects:", chipRects.length);
 }, 5000);
 
@@ -83,11 +83,15 @@ function speak(text) {
   speechTimer = setTimeout(() => { el.hidden = true; }, 4200);
 }
 
-/* ── 拖拽 + 单击切图标条 + 双击颠球 ── */
+/* ── 拖拽 + 单击切图标条 + 双击颠球 ──
+   交互态由主进程轮询驱动（光标进窗=整窗可点），这里只按像素判定
+   「点没点在猫身上」：透明像素的点击吸收不动（代价：悬停猫窗时其
+   矩形范围内的下层应用收不到点击——桌面宠的标准取舍）。 */
 let pressInfo = null;
 let clickTimer = null;
 zone.addEventListener("mousedown", (e) => {
   if (e.button !== 0) return;
+  if (!overPet(e.clientX, e.clientY)) return;   // 透明像素：吸收，不触发拖拽/单击
   pressInfo = { x: e.clientX, y: e.clientY, t: Date.now() };
   bridge?.dragStart();
 });
@@ -103,13 +107,15 @@ document.addEventListener("mouseup", (e) => {
     clickTimer = setTimeout(() => bridge?.toggleDock(), 280);
   }
 });
-zone.addEventListener("dblclick", () => {
+zone.addEventListener("dblclick", (e) => {
+  if (!overPet(e.clientX, e.clientY)) return;
   clearTimeout(clickTimer);
   if (modules.juggle) Pet?.juggle();
 });
 
 /* 右键 → 设置窗 */
 zone.addEventListener("contextmenu", (e) => {
+  if (!overPet(e.clientX, e.clientY)) return;
   e.preventDefault();
   bridge?.toggleSettings();
 });
@@ -117,7 +123,7 @@ zone.addEventListener("contextmenu", (e) => {
 /* ── 逐像素命中 + 动态穿透 ──
    窗口默认点击穿透（main 启动时 ignoreMouseEvents(true,{forward:true})），
    悬停到角色不透明像素才切可点击——拼豆间隙照常透传，不挡底下界面。 */
-let clickable = false;
+
 let alphaMap = null;
 
 function buildAlphaMap() {
@@ -158,30 +164,15 @@ function overPet(x, y) {
   return alphaMap[py * cvs.width + px] > 8;
 }
 
-function setClickable(c) {
-  if (pressInfo) return;        // 拖拽中锁定可点，防中途穿透丢 mouseup
-  if (c === clickable) return;
-  clickable = c;
-  bridge?.setClickable(c);
-}
-
-/* ── 鼠标活动 ── */
+/* 交互态由主进程轮询驱动（光标进窗=整窗可点），渲染层不再切换穿透；
+   这里只保留像素判定供点击门控使用。 */
 document.addEventListener("mousemove", (e) => {
   lastInteraction = Date.now();
-  setClickable(overPet(e.clientX, e.clientY));
 });
-document.addEventListener("mouseout", (e) => { if (!e.relatedTarget) setClickable(false); });
 
 /* 拖拽姿态：主进程判定真实拖动后推送（被拎走的猫） */
 bridge?.onDrag?.((v) => Pet?.setDrag?.(v));
 bridge?.onDragPhys?.((v) => Pet?.setSwing?.(v.vx));   // 拖拽速度 → 拎起摆动激励
-
-/* 悬停激活兜底：主进程光标轮询（见 main.cjs cursor-pos）。
-   鼠标钩子转发被系统摘除时，穿透切换靠这条通道继续工作。 */
-bridge?.onCursorPos?.(({ inside, x, y }) => {
-  if (pressInfo) return;                       // 拖拽中锁定，防中途穿透丢 mouseup
-  setClickable(inside ? overPet(x, y) : false);
-});
 
 /* ── 启动 ── */
 poll();
