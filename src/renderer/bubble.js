@@ -312,11 +312,8 @@ function mkIdeaLi(it) {
   if (it.raw) li.title = "原话：" + it.raw;   // 归纳前的用户原话（可追溯）
   li.appendChild(mkSpan("li-mark", it.done ? "●" : "○"));
   li.appendChild(mkSpan("li-text", it.text));
-  li.addEventListener("click", async () => {
-    await jfetch("/api/action", { projectId: curProjectId, action: "toggle-done", params: { id: it.id } });
-    loadSkeleton(true);
-  });
-  bindItemDrag(li, { layer: "ideas", id: it.id }, it.text, { canToggle: true });   // 想法可拖到绿区标记已实现
+  // 已实现标记走「拖到绿区」的显式动作——点击行不再误触翻转
+  bindItemDrag(li, { layer: "ideas", id: it.id }, it.text, { canToggle: true });
   return li;
 }
 
@@ -416,20 +413,36 @@ function renderLayer(listEl, kind, goal) {
       const li = mkLi((it.decided ? "pt-decided" : "pt-open") + (it.link ? " has-link" : ""), { layer: "points", id: it.id });
       li.appendChild(mkSpan("li-mark", it.decided ? "✔" : "▸"));
       li.appendChild(mkSpan("li-text", it.text));
+      const acts = document.createElement("span");
+      acts.className = "li-acts";
       if (it.link) {
-        // 重点预览：点击 ↗ 打开完整版（系统浏览器）
-        const lk = mkSpan("li-link", "↗ 完整版");
-        lk.title = it.link;
+        // 理解物索引：点击整行 → 面板内预览完整版；↗ 走系统浏览器
+        li.classList.add("clickable");
+        li.title = "点击预览完整版";
+        const lk = mkSpan("li-act", "↗");
+        lk.title = "浏览器打开完整版";
         lk.addEventListener("click", (e) => {
           e.stopPropagation();
           window.bubbleBridge?.openExternal(it.link);
         });
-        li.appendChild(lk);
+        acts.appendChild(lk);
+        li.addEventListener("click", (e) => {
+          if (ovSuppress) return;
+          if (e.target.closest(".li-del") || e.target.closest(".li-act")) return;
+          showPreview(it.text, it.link);
+        });
+      } else {
+        const dk = mkSpan("li-act", it.decided ? "↩" : "✔");
+        dk.title = it.decided ? "取消敲定" : "敲定";
+        dk.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          await jfetch("/api/action", { projectId: curProjectId, action: "toggle-point", params: { id: it.id } });
+          loadSkeleton(true);
+        });
+        acts.appendChild(dk);
       }
-      li.addEventListener("click", async () => {
-        await jfetch("/api/action", { projectId: curProjectId, action: "toggle-point", params: { id: it.id } });
-        loadSkeleton(true);
-      });
+      li.appendChild(acts);
+      li.appendChild(mkDel("points", it.id));
       bindItemDrag(li, { layer: "points", id: it.id }, it.text);
       listEl.appendChild(li);
     }
@@ -485,10 +498,16 @@ function renderLayer(listEl, kind, goal) {
       dot.className = "gp-dot";
       li.appendChild(dot);
       li.appendChild(mkSpan("li-text", it.text));
-      li.addEventListener("click", async () => {
+      // 已解决标记改为显式 ✓ 按钮——点击行不再误触翻转
+      const ok = mkSpan("li-act", "✓");
+      ok.title = it.resolved ? "重新打开" : "标记已解决";
+      ok.addEventListener("click", async (e) => {
+        e.stopPropagation();
         await jfetch("/api/action", { projectId: curProjectId, action: "toggle-gap", params: { id: it.id } });
         loadSkeleton(true);
       });
+      li.appendChild(ok);
+      li.appendChild(mkDel("gaps", it.id));
       bindItemDrag(li, { layer: "gaps", id: it.id }, it.text);
       listEl.appendChild(li);
     }
@@ -729,6 +748,32 @@ function confirmDeleteProject(p) {
       if (ovMode) renderOv();
     });
 }
+
+/* ── 要点预览：面板内 iframe 加载完整版（项目地图/图解页…） ── */
+let pvOpen = false;
+function showPreview(title, url) {
+  $("#pv-title").textContent = title;
+  $("#pv-frame").src = url;
+  $("#preview-mask").hidden = false;
+  pvOpen = true;
+}
+function closePreview() {
+  pvOpen = false;
+  $("#preview-mask").hidden = true;
+  $("#pv-frame").src = "about:blank";   // 停掉预览页的轮询/动画
+}
+$("#pv-close")?.addEventListener("click", closePreview);
+$("#pv-open")?.addEventListener("click", () => {
+  const u = $("#pv-frame").src;
+  if (u && u !== "about:blank") window.bubbleBridge?.openExternal(u);
+});
+document.addEventListener("keydown", (e) => {
+  if (pvOpen && e.key === "Escape") {
+    e.stopImmediatePropagation();   // 预览打开时 Esc 只关预览，不关面板
+    e.preventDefault();
+    closePreview();
+  }
+}, true);
 
 async function refreshAll() {
   try {

@@ -53,7 +53,7 @@
     </section>
 
     <main id="layers">
-      <details open class="layer" title="第1层 · 想法：自然语言的初步设想，归纳成短句（悬停可看原话）">
+      <details open class="layer" title="第1层 · 想法：对项目的设想、蓝图与目标（愿景层）——过程、事实、任务不进这里">
         <summary><span data-i18n="layer.ideas">想法</span> <em id="c-ideas"></em></summary>
         <ul class="items" id="list-ideas"></ul>
       </details>
@@ -99,6 +99,18 @@
       <button id="cf-cancel" type="button">取消</button>
       <button id="cf-ok" type="button">确认删除</button>
     </div>
+  </div>
+</div>
+
+<!-- 要点预览：面板内 iframe 加载完整版 -->
+<div id="preview-mask" hidden>
+  <div id="preview-box">
+    <div class="pv-head">
+      <span id="pv-title"></span>
+      <button id="pv-open" type="button" title="在系统浏览器打开完整版">↗ 浏览器</button>
+      <button id="pv-close" type="button" title="关闭预览 (Esc)">×</button>
+    </div>
+    <iframe id="pv-frame" src="about:blank"></iframe>
   </div>
 </div>
 
