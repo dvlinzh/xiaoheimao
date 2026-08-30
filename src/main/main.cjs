@@ -251,15 +251,15 @@ function closeBubble() {
 
 function positionDock() {
   if (!petWin || petWin.isDestroyed() || !dockWin || dockWin.isDestroyed() || !dockWin.isVisible()) return;
-  const wa = workArea();
   const pb = petWin.getBounds();
   // 圆心(ui.dock.cx/cy)是窗内坐标：dock 窗摆放使得 dock 内 (CX,CY)=(150,168)
   // 恰好落在窗内圆心上。ui 变化 → 标定工具实时生效。
+  // 不做屏幕内钳制：一旦钳制，dock 窗相对猫滑动，芯片跟着漂（猫靠屏幕边缘时
+  // 尤其明显）。窗口边框伸出屏外无碍——可见的只有芯片本身，它们始终钉在猫头。
   const ui = readUi().dock || {};
   const x = pb.x + Math.round((ui.cx ?? 95) - 150);
   const y = pb.y + Math.round((ui.cy ?? 95) - 168);
-  dockWin.setPosition(Math.min(Math.max(x, wa.x + 4), wa.x + wa.width - DOCK_W - 4),
-                      Math.min(Math.max(y, wa.y + 4), wa.y + wa.height - DOCK_H - 4));
+  dockWin.setPosition(x, y);
   // 关键：芯片区与猫窗范围重叠，猫窗任何一次 setPosition/激活都可能反压到 dock
   // 之上（表现为「点芯片点到的却是猫」）。dock 可见期间每次定位都重新压顶。
   dockWin.moveTop();
