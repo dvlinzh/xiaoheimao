@@ -63,6 +63,10 @@ async function poll() {
     const ov = await r.json();
     lastDataAt = Date.now();
     applyOverview(ov);
+    // 蒙版/形状周期重建：素材替换或姿态切换若未触发 setMood/setDrag，
+    // 旧的 alphaMap/setShape 会把新画面裁掉（"每个状态都被截"的根因）。
+    // 2.5s 一次的全量重建成本 ~几毫秒，换来自动对齐。
+    if (Pet) buildAlphaMap();
   } catch {}
 }
 
@@ -152,6 +156,7 @@ function buildAlphaMap() {
     alphaMap = m;
     // 宽松版：素材向 8 方向各偏移 pad 后取并集（形态学膨胀），耳尖细部不再漏点
     const pad = 12;   // canvas px ≈ 5 屏幕px（×0.42）：贴边可点但不吞远处点击
+    const rc = cvs.getBoundingClientRect();   // 画布在窗口内的位置/尺寸（setShape 用窗口坐标）
     const wc = document.createElement("canvas");
     wc.width = cvs.width + pad * 2; wc.height = cvs.height + pad * 2;
     const wctx = wc.getContext("2d", { willReadFrequently: true });
@@ -177,15 +182,22 @@ function buildAlphaMap() {
         }
         if (filled && run < 0) run = rx;
         if (run >= 0 && (!filled || rx === cols)) {
+          const sx = rc.width / cvs.width, sy = rc.height / cvs.height;   // canvas px → 窗口 px
           petShape.push({
-            x: Math.round((run * CELL - pad) * scale) - 1,
-            y: Math.round((ry * CELL - pad) * scale) - 1,
-            width: Math.round((rx - run) * CELL * scale) + 2,
-            height: Math.round(CELL * scale) + 2,
+            x: Math.round(rc.left + (run * CELL - pad) * sx) - 1,
+            y: Math.round(rc.top + (ry * CELL - pad) * sy) - 1,
+            width: Math.ceil((rx - run) * CELL * sx) + 2,
+            height: Math.ceil(CELL * sy) + 2,
           });
           run = -1;
         }
       }
+    }
+    if (petShape.length) {
+      const xs = petShape.map((r) => r.x), xe = petShape.map((r) => r.x + r.width);
+      const ys = petShape.map((r) => r.y), ye = petShape.map((r) => r.y + r.height);
+      console.log("[pet] shape rects:", petShape.length,
+        "bbox x[" + Math.min(...xs) + ".." + Math.max(...xe) + "] y[" + Math.min(...ys) + ".." + Math.max(...ye) + "]");
     }
     window.petBridge?.sendPetShape?.(petShape);
   } catch {}
