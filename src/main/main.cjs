@@ -28,6 +28,7 @@ let bubbleShowAt = 0;       // 最近一次 show 的时间（blur 宽限期基�
 let dockShownAt = 0;        // 图标环最近一次弹出的时间（toggle 防抖基准）
 
 const PET_W = 190, PET_H = 220;
+const SWING_W = 320;                // 拖拽期间临时加宽：摆动的猫不被窗口左/右缘裁掉
 const DOCK_W = 300, DOCK_H = 232;   // 图标环：120° 正圆扇形（R=75，圆心=标定十字）
 const SET_W = 274, SET_H = 420;
 
@@ -506,6 +507,13 @@ ipcMain.on("drag-start", () => {
       log("[drag] start at", JSON.stringify(b));
       try { petWin.webContents.send("drag-state", true); } catch {}
       showDock(false); showSettings(false);   // 拖猫不再收面板（关闭只经芯片 toggle / Esc）
+      // 拖拽期间加宽窗口：摆动的尾巴/身体不再被 190px 窗口左缘裁掉。
+      // 保持中心不动（视觉猫位置不变），并把 dragOff 补偿到新的窗口原点。
+      const grow = SWING_W - b.width;
+      if (grow > 0) {
+        petWin.setBounds({ x: b.x - (grow >> 1), y: b.y, width: SWING_W, height: b.height });
+        dragOff.x += grow >> 1;
+      }
     }
     const wa = screen.getDisplayNearestPoint(c).workArea;   // 跟随光标所在显示器
     const nx = Math.min(Math.max(c.x - dragOff.x, wa.x - PET_W + 90), wa.x + wa.width - 90);
@@ -521,6 +529,11 @@ ipcMain.on("drag-end", () => {
   if (!dragMoved) return;      // 单击：不吸附不落盘
   try { petWin.webContents.send("drag-state", false); } catch {}
   if (!petWin || petWin.isDestroyed()) return;
+  // 先把窗口复原到 190 宽（保持猫的中心不动），吸附数学按标准宽度进行
+  const wb = petWin.getBounds();
+  if (wb.width !== PET_W) {
+    petWin.setBounds({ x: Math.round(wb.x + (wb.width - PET_W) / 2), y: wb.y, width: PET_W, height: wb.height });
+  }
   const b = petWin.getBounds();
   const wa = screen.getDisplayNearestPoint({ x: b.x + PET_W / 2, y: b.y + PET_H / 2 }).workArea;
   // 只吸附任务栏：水平自由摆放（钳制在屏内），垂直锁定任务栏落点
