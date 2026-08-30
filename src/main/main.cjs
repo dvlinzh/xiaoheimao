@@ -513,6 +513,9 @@ ipcMain.on("drag-start", () => {
         petWin.setBounds({ x: b.x - (grow >> 1), y: b.y, width: SWING_W, height: b.height });
         dragOff.x += grow >> 1;
       }
+      // 清空 setShape 轮廓：静态形状按拖拽前姿态计算，加宽+CSS 摆动会把
+      // 甩出的部分全部裁掉。松手后渲染层重报新姿态的轮廓自动恢复。
+      try { petWin.setShape([]); } catch {}
     }
     const wa = screen.getDisplayNearestPoint(c).workArea;   // 跟随光标所在显示器
     const nx = Math.min(Math.max(c.x - dragOff.x, wa.x - PET_W + 90), wa.x + wa.width - 90);
