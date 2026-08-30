@@ -3,215 +3,179 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>思维板 · 小黑猫 — 你的 AI 对话，从此有一块共享思维板</title>
-<meta name="description" content="一只蹲在屏幕边上的小黑猫，把 Claude Code / Codex / Gemini CLI 对话里冒出的想法，实时整理成跨工具共享的结构化思维板。全程本地，无云端。">
+<title>思维板 · 小黑猫 — 主页 · 使用方法 · 方法论 · 技术路线</title>
+<meta name="description" content="一只蹲在屏幕边上的小黑猫，把 Claude Code / Codex / Gemini CLI 对话里的想法实时整理成跨工具共享的思维板。全程本地，无云端。">
 <style>
   :root {
-    --bg: #0d0d0f;
-    --card: #141416;
-    --card2: #1b1b1f;
-    --line: #28282e;
-    --line2: #34343c;
-    --text: #ececec;
-    --dim: #9a9aa2;
-    --faint: #66666e;
-    --amber: #fbbf24;      /* 猫眼琥珀 */
-    --teal: #5eead4;       /* 额纹青 */
-    --violet: #8b7cf6;     /* 尾紫 */
-    --sky: #5ea3f7;        /* DSH 蓝 */
-    --red: #f0716c;
+    --bg: #0d0d0f; --card: #141416; --card2: #1b1b1f; --line: #28282e;
+    --line2: #34343c; --text: #ececec; --dim: #9a9aa2; --faint: #66666e;
+    --amber: #fbbf24; --teal: #5eead4; --sky: #5ea3f7; --violet: #8b7cf6;
+    --red: #f0716c; --green: #58a873;
     --grad-tail: linear-gradient(135deg, #8b7cf6, #5ea3f7, #5eead4);
   }
   * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; scroll-padding-top: 70px; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
-    font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", -apple-system, sans-serif;
-    font-size: 16px; line-height: 1.75;
-    -webkit-font-smoothing: antialiased;
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    font-size: 15.5px; line-height: 1.8;
   }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
   a { color: var(--teal); text-decoration: none; }
   a:hover { text-decoration: underline; }
+  code {
+    color: var(--teal); background: var(--card2); border-radius: 5px;
+    padding: 1px 7px; font-size: 13px; font-family: Consolas, monospace;
+  }
+  .layout { display: flex; justify-content: center; gap: 8px; }
+  main { flex: 1; min-width: 0; max-width: 880px; padding: 0 28px 90px; }
 
   /* ── 顶部导航 ── */
-  nav {
-    position: sticky; top: 0; z-index: 10;
-    background: rgba(13,13,15,.82); backdrop-filter: blur(10px);
+  .topnav {
+    position: sticky; top: 0; z-index: 30;
+    background: rgba(13,13,15,.85); backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--line);
   }
-  nav .wrap { display: flex; align-items: center; gap: 24px; height: 56px; }
-  nav .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--text); }
-  nav .brand svg { display: block; }
-  nav a.item { color: var(--dim); font-size: 14px; }
-  nav a.item:hover { color: var(--text); text-decoration: none; }
-  nav .cta {
-    margin-left: auto; font-size: 14px; color: #111 !important;
-    background: var(--amber); padding: 6px 14px; border-radius: 8px; font-weight: 600;
+  .topnav .inner {
+    max-width: 1240px; margin: 0 auto; display: flex; align-items: center;
+    gap: 22px; height: 56px; padding: 0 24px;
   }
-  nav .cta:hover { text-decoration: none; filter: brightness(1.08); }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+  .brand svg { display: block; }
+  .topnav a.item { color: var(--dim); font-size: 14px; }
+  .topnav a.item:hover { color: var(--text); text-decoration: none; }
+  .topnav .cta {
+    margin-left: auto; background: var(--amber); color: #111 !important;
+    padding: 6px 16px; border-radius: 8px; font-weight: 600;
+  }
+  .topnav .cta:hover { text-decoration: none; filter: brightness(1.08); }
+
+  /* ── 右侧快速目录 ── */
+  .toc {
+    width: 208px; flex: none; position: sticky; top: 70px;
+    align-self: flex-start; max-height: calc(100vh - 100px); overflow-y: auto;
+    padding: 18px 4px 40px 14px; font-size: 13px;
+  }
+  .toc .t { color: var(--faint); font-size: 11px; letter-spacing: 2px; font-weight: 700; margin: 18px 0 6px; }
+  .toc .t:first-child { margin-top: 0; }
+  .toc a { display: block; color: var(--dim); padding: 3px 10px; border-radius: 7px; }
+  .toc a:hover { color: var(--text); background: var(--card2); text-decoration: none; }
+  .toc a.sub { padding-left: 22px; font-size: 12.5px; color: var(--faint); }
+  @media (max-width: 1240px) { .toc { display: none; } }
 
   /* ── Hero ── */
-  .hero { padding: 88px 0 72px; text-align: center; position: relative; overflow: hidden; }
-  .hero::before {
-    content: ""; position: absolute; inset: -40% -20% auto;
-    height: 130%; background:
-      radial-gradient(600px 300px at 30% 20%, rgba(139,124,246,.10), transparent 70%),
-      radial-gradient(600px 300px at 70% 30%, rgba(94,163,247,.08), transparent 70%);
-    pointer-events: none;
-  }
-  .hero .wrap { position: relative; }
-  .hero .cat { margin: 0 auto 28px; display: block; }
-  .hero h1 {
-    margin: 0 0 8px; font-size: 44px; letter-spacing: 1px; line-height: 1.25;
-    font-family: Georgia, "Songti SC", "SimSun", serif;
-  }
-  .hero h1 .accent { background: var(--grad-tail); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .hero .sub { color: var(--dim); font-size: 18px; max-width: 640px; margin: 0 auto 10px; }
-  .hero .platforms { color: var(--faint); font-size: 14px; margin-bottom: 30px; }
-  .hero .platforms b { color: var(--dim); font-weight: 600; }
-  .hero .btns { display: flex; gap: 14px; justify-content: center; }
-  .btn {
-    display: inline-block; padding: 11px 26px; border-radius: 10px;
-    font-weight: 600; font-size: 15px; border: 1px solid var(--line2);
-  }
+  .hero { text-align: center; padding: 70px 0 60px; position: relative; }
+  .hero .cat { margin: 0 auto 24px; display: block; }
+  h1 { font-family: Georgia, "Songti SC", serif; font-size: 42px; margin: 0 0 10px; line-height: 1.3; }
+  h1 .accent { background: var(--grad-tail); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero .sub { color: var(--dim); font-size: 17px; max-width: 620px; margin: 0 auto 8px; }
+  .hero .platforms { color: var(--faint); font-size: 13.5px; margin-bottom: 26px; }
+  .btns { display: flex; gap: 14px; justify-content: center; }
+  .btn { padding: 10px 24px; border-radius: 10px; font-weight: 600; font-size: 14.5px; border: 1px solid var(--line2); }
   .btn:hover { text-decoration: none; }
   .btn.primary { background: var(--amber); color: #111; border: none; }
   .btn.primary:hover { filter: brightness(1.08); }
   .btn.ghost { color: var(--text); }
   .btn.ghost:hover { background: var(--card2); }
 
-  /* ── 通用 section ── */
-  section { padding: 64px 0; border-top: 1px solid var(--line); }
-  .kicker {
-    color: var(--faint); font-size: 12px; letter-spacing: 3px; font-weight: 700;
-    margin-bottom: 10px;
-  }
-  h2 { margin: 0 0 14px; font-size: 30px; letter-spacing: .5px; }
-  .lead { color: var(--dim); max-width: 720px; margin: 0 0 34px; }
+  section { padding: 46px 0; border-top: 1px solid var(--line); }
+  .kicker { color: var(--faint); font-size: 12px; letter-spacing: 3px; font-weight: 700; margin-bottom: 8px; }
+  h2 { font-size: 27px; margin: 0 0 12px; }
+  .lead { color: var(--dim); max-width: 720px; margin: 0 0 30px; font-size: 15px; }
+  h3 { font-size: 17px; margin: 34px 0 10px; color: var(--teal); }
 
-  /* ── 痛点 ── */
-  .pain-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .pain {
-    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-    padding: 22px 22px 20px;
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px;
   }
-  .pain .ico { font-size: 26px; margin-bottom: 10px; }
-  .pain h3 { margin: 0 0 8px; font-size: 17px; }
-  .pain p { margin: 0; color: var(--dim); font-size: 14.5px; }
+  .card h3 { margin: 0 0 8px; }
+  .card p { margin: 0; color: var(--dim); font-size: 14px; }
+  .card .ico { font-size: 26px; margin-bottom: 10px; }
 
-  /* ── 三身份 ── */
-  .role-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .role {
-    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-    padding: 24px; position: relative; overflow: hidden;
-  }
-  .role::before {
-    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: var(--grad-tail); opacity: .8;
-  }
-  .role h3 { margin: 4px 0 10px; font-size: 18px; }
-  .role p { margin: 0; color: var(--dim); font-size: 14.5px; }
-  .role code {
-    background: var(--card2); border: 1px solid var(--line);
-    border-radius: 6px; padding: 1px 7px; font-size: 13px; color: var(--teal);
-  }
-
-  /* ── 四层骨架 ── */
-  .skeleton { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-  .sk {
-    border: 1px solid var(--line); border-radius: 12px; padding: 18px;
-    background: var(--card);
-  }
-  .sk .tag {
-    display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 10px;
-    border-radius: 999px; margin-bottom: 10px; border: 1px solid;
-  }
-  .sk h3 { margin: 0 0 6px; font-size: 16px; }
-  .sk p { margin: 0; color: var(--dim); font-size: 13.5px; }
+  .skel { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 18px; }
+  .sk { border: 1px solid var(--line); border-radius: 12px; padding: 15px; background: var(--card); }
+  .sk .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 999px; margin-bottom: 8px; border: 1px solid; }
+  .sk h4 { margin: 0 0 5px; font-size: 15px; }
+  .sk p { margin: 0; color: var(--dim); font-size: 13px; }
+  .sk .ex { margin-top: 10px; font-size: 12.5px; color: var(--faint); border-left: 2px solid var(--line2); padding-left: 9px; font-style: italic; }
   .sk.ideas .tag { color: var(--teal); border-color: var(--teal); }
-  .sk.points .tag { color: var(--sky); border-color: var(--sky); }
+  .sk.gaps .tag { color: var(--red); border-color: var(--red); }
   .sk.plans .tag { color: var(--violet); border-color: var(--violet); }
-  .sk.gaps  .tag { color: var(--red);  border-color: var(--red); }
-  .sk .ex {
-    margin-top: 12px; font-size: 13px; color: var(--faint);
-    border-left: 2px solid var(--line2); padding-left: 10px; font-style: italic;
-  }
+  .sk.points .tag { color: var(--amber); border-color: var(--amber); }
 
-  /* ── 架构图 ── */
-  .arch-card {
-    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-    padding: 26px 22px 18px; overflow-x: auto;
+  /* ── 使用方法：操作表 ── */
+  .u-block { display: grid; grid-template-columns: 150px 1fr; gap: 18px; margin-bottom: 22px; align-items: start; }
+  .u-block .u-name { font-weight: 700; font-size: 16px; padding-top: 2px; }
+  .u-block .u-name .e { display: block; font-size: 22px; margin-bottom: 4px; }
+  .u-block .u-name .d { display: block; color: var(--faint); font-size: 12px; font-weight: 400; margin-top: 4px; line-height: 1.6; }
+  .op { display: flex; gap: 10px; margin-bottom: 7px; align-items: baseline; font-size: 14px; }
+  .op .k {
+    flex: none; min-width: 96px; text-align: center; font-size: 12px; font-weight: 600;
+    background: var(--card2); border: 1px solid var(--line2); border-radius: 6px; padding: 1px 8px;
   }
-  .arch-card svg { display: block; margin: 0 auto; min-width: 860px; }
-  .arch-note { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 28px; margin-top: 26px; }
-  .arch-note .n { display: flex; gap: 12px; align-items: flex-start; }
+  .op .v { color: var(--dim); }
+  .op .v b { color: var(--text); font-weight: 600; }
+
+  /* ── 方法论 ── */
+  .m-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; margin-bottom: 16px; }
+  .m-card h3 { margin: 0 0 10px; }
+  .m-card table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .m-card th, .m-card td { border: 1px solid var(--line); padding: 7px 11px; text-align: left; vertical-align: top; }
+  .m-card th { color: var(--faint); font-size: 11.5px; letter-spacing: 1px; }
+  .ok { color: var(--green); }
+  .no { color: var(--red); }
+  .tri { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 14px 0; }
+  .tri .q { background: var(--card2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 13.5px; }
+  .tri .q b { display: block; margin-bottom: 4px; color: var(--text); }
+
+  /* ── 技术路线 ── */
+  .arch-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px 20px 16px; overflow-x: auto; margin: 16px 0; }
+  .arch-card svg { display: block; margin: 0 auto; min-width: 840px; }
+  .arch-note { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 26px; margin-top: 22px; }
+  .arch-note .n { display: flex; gap: 12px; }
   .arch-note .num {
-    flex: none; width: 26px; height: 26px; border-radius: 50%;
-    background: var(--card2); border: 1px solid var(--line2);
-    color: var(--amber); font-size: 13px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center; margin-top: 3px;
+    flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--card2);
+    border: 1px solid var(--line2); color: var(--amber); font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin-top: 2px;
   }
-  .arch-note p { margin: 0; color: var(--dim); font-size: 14px; }
+  .arch-note p { margin: 0; color: var(--dim); font-size: 13.5px; }
   .arch-note p b { color: var(--text); }
-
-  /* ── 隐私横幅 ── */
-  .privacy {
-    margin-top: 34px; background: var(--card); border: 1px solid var(--line);
-    border-radius: 14px; padding: 20px 24px; display: flex; gap: 16px; align-items: center;
+  .links { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 18px; }
+  .links a {
+    display: block; background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 14px; font-size: 13.5px; color: var(--dim);
   }
-  .privacy .lock { font-size: 28px; }
-  .privacy p { margin: 0; color: var(--dim); font-size: 14.5px; }
+  .links a:hover { color: var(--text); border-color: var(--line2); text-decoration: none; }
+  .links a b { color: var(--text); display: block; margin-bottom: 2px; }
+
+  .privacy {
+    margin-top: 30px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 18px 22px; display: flex; gap: 16px; align-items: center;
+  }
+  .privacy .lock { font-size: 26px; }
+  .privacy p { margin: 0; color: var(--dim); font-size: 14px; }
   .privacy p b { color: var(--text); }
 
-  /* ── 快速开始 ── */
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; counter-reset: step; }
-  .step {
-    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-    padding: 22px; counter-increment: step; position: relative;
-  }
-  .step::before {
-    content: counter(step, decimal-leading-zero);
-    position: absolute; top: 16px; right: 18px;
-    font-family: Georgia, serif; font-size: 26px; color: var(--line2);
-  }
-  .step h3 { margin: 0 0 8px; font-size: 16px; }
-  .step p { margin: 0 0 12px; color: var(--dim); font-size: 14px; }
-  .step pre {
-    margin: 0; background: #0a0a0c; border: 1px solid var(--line);
-    border-radius: 8px; padding: 10px 12px; font-size: 12.5px;
-    color: var(--teal); overflow-x: auto; line-height: 1.6;
-  }
-  .step pre .c { color: var(--faint); }
+  details { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 20px; margin-bottom: 12px; }
+  summary { cursor: pointer; font-weight: 600; font-size: 14.5px; }
+  details p { margin: 10px 0 0; color: var(--dim); font-size: 14px; }
 
-  /* ── FAQ ── */
-  .faq { max-width: 780px; }
-  .faq details {
-    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
-    padding: 16px 20px; margin-bottom: 12px;
-  }
-  .faq summary { cursor: pointer; font-weight: 600; font-size: 15px; }
-  .faq p { margin: 12px 0 0; color: var(--dim); font-size: 14.5px; }
-  .faq code { color: var(--teal); background: var(--card2); border-radius: 5px; padding: 1px 6px; font-size: 13px; }
-
-  /* ── Footer ── */
-  footer { border-top: 1px solid var(--line); padding: 36px 0 48px; text-align: center; }
-  footer .cat-mini { margin-bottom: 12px; }
+  footer { border-top: 1px solid var(--line); padding: 34px 0 46px; text-align: center; }
   footer p { margin: 4px 0; color: var(--faint); font-size: 13px; }
   footer p b { color: var(--dim); }
 
   @media (max-width: 900px) {
-    .pain-grid, .role-grid, .steps { grid-template-columns: 1fr; }
-    .skeleton { grid-template-columns: repeat(2, 1fr); }
-    .arch-note { grid-template-columns: 1fr; }
-    .hero h1 { font-size: 32px; }
+    .grid3, .grid2, .skel, .steps, .tri, .arch-note, .links { grid-template-columns: 1fr !important; }
+    .skel { grid-template-columns: repeat(2, 1fr); }
+    h1 { font-size: 32px; }
+    .u-block { grid-template-columns: 1fr; gap: 6px; }
   }
 </style>
 </head>
 <body>
 
-<nav>
-  <div class="wrap">
+<div class="topnav">
+  <div class="inner">
     <span class="brand">
       <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
         <path d="M5 13 L8 3 L14 9 Q16 8 18 9 L24 3 L27 13 Q29 17 27 21 Q24 28 16 28 Q8 28 5 21 Q3 17 5 13 Z" fill="#16161e" stroke="#34343c" stroke-width="1.4"/>
@@ -221,338 +185,501 @@
       </svg>
       思维板 · 小黑猫
     </span>
-    <a class="item" href="#pain">为什么</a>
-    <a class="item" href="#what">它是什么</a>
-    <a class="item" href="#how">怎么做到的</a>
-    <a class="item" href="#start">快速开始</a>
+    <a class="item" href="#usage">使用方法</a>
+    <a class="item" href="#method">整理方法论</a>
+    <a class="item" href="#tech">技术路线</a>
+    <a class="item" href="#faq">FAQ</a>
     <a class="cta" href="#start">开始使用</a>
   </div>
-</nav>
+</div>
 
-<!-- ══════════ Hero ══════════ -->
-<header class="hero">
-  <div class="wrap">
-    <svg class="cat" width="150" height="128" viewBox="0 0 150 128" aria-label="小黑猫">
-      <!-- 尾巴（蓝紫青渐变） -->
-      <path d="M112 96 Q140 88 136 62 Q133 44 118 46 Q106 48 110 60 Q113 68 122 64"
-            fill="none" stroke="url(#tail)" stroke-width="13" stroke-linecap="round"/>
-      <defs>
-        <linearGradient id="tail" x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0" stop-color="#8b7cf6"/>
-          <stop offset=".55" stop-color="#5ea3f7"/>
-          <stop offset="1" stop-color="#5eead4"/>
-        </linearGradient>
-      </defs>
-      <!-- 身体 -->
-      <path d="M42 108 Q40 78 68 72 L96 72 Q122 76 120 104 Q120 114 108 114 L52 114 Q42 114 42 108 Z" fill="#16161e" stroke="#2a2a32" stroke-width="1.5"/>
-      <!-- 头 + 耳朵 -->
-      <path d="M52 30 L58 6 L76 20 Q82 18 88 20 L104 6 L112 30 Q118 40 114 52 Q108 68 82 68 Q56 68 50 52 Q46 40 52 30 Z"
-            fill="#16161e" stroke="#2a2a32" stroke-width="1.5"/>
-      <!-- 额纹 -->
-      <path d="M80 26 L84 44 L88 26" fill="none" stroke="#5eead4" stroke-width="2.2" stroke-linecap="round"/>
-      <!-- 眼睛 -->
-      <ellipse cx="68" cy="46" rx="6.5" ry="7.5" fill="#fbbf24"/>
-      <ellipse cx="96" cy="46" rx="6.5" ry="7.5" fill="#fbbf24"/>
-      <ellipse cx="68" cy="46" rx="2.2" ry="6" fill="#111"/>
-      <ellipse cx="96" cy="46" rx="2.2" ry="6" fill="#111"/>
-      <!-- 呼吸光晕 -->
-      <circle cx="75" cy="46" r="30" fill="none" stroke="#fbbf24" stroke-opacity=".14" stroke-width="1.5"/>
-    </svg>
+<div class="layout">
+<main>
 
-    <h1>你的 AI 对话，<br>值得一块<span class="accent">共享思维板</span></h1>
-    <p class="sub">
-      一只蹲在屏幕边上的小黑猫，把你和 AI 聊出来的每个念头、结论、方案、疑虑，
-      <b>实时</b>整理成一块结构化的思维板——不打断对话，不丢上下文。
-    </p>
-    <p class="platforms">
-      <b>Claude Code</b> 已支持 &nbsp;·&nbsp; <b>Codex / Gemini CLI</b> 同协议直接接入 &nbsp;·&nbsp; 全程本地运行
-    </p>
-    <div class="btns">
-      <a class="btn primary" href="#start">三步开始使用</a>
-      <a class="btn ghost" href="#how">看看它是怎么做到的</a>
-    </div>
+<!-- ═════ Hero ═════ -->
+<header class="hero" id="top">
+  <svg class="cat" width="150" height="128" viewBox="0 0 150 128" aria-label="小黑猫">
+    <path d="M112 96 Q140 88 136 62 Q133 44 118 46 Q106 48 110 60 Q113 68 122 64" fill="none" stroke="url(#tail)" stroke-width="13" stroke-linecap="round"/>
+    <defs><linearGradient id="tail" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#8b7cf6"/><stop offset=".55" stop-color="#5ea3f7"/><stop offset="1" stop-color="#5eead4"/>
+    </linearGradient></defs>
+    <path d="M42 108 Q40 78 68 72 L96 72 Q122 76 120 104 Q120 114 108 114 L52 114 Q42 114 42 108 Z" fill="#16161e" stroke="#2a2a32" stroke-width="1.5"/>
+    <path d="M52 30 L58 6 L76 20 Q82 18 88 20 L104 6 L112 30 Q118 40 114 52 Q108 68 82 68 Q56 68 50 52 Q46 40 52 30 Z" fill="#16161e" stroke="#2a2a32" stroke-width="1.5"/>
+    <path d="M80 26 L84 44 L88 26" fill="none" stroke="#5eead4" stroke-width="2.2" stroke-linecap="round"/>
+    <ellipse cx="68" cy="46" rx="6.5" ry="7.5" fill="#fbbf24"/>
+    <ellipse cx="96" cy="46" rx="6.5" ry="7.5" fill="#fbbf24"/>
+    <ellipse cx="68" cy="46" rx="2.2" ry="6" fill="#111"/>
+    <ellipse cx="96" cy="46" rx="2.2" ry="6" fill="#111"/>
+    <circle cx="75" cy="46" r="30" fill="none" stroke="#fbbf24" stroke-opacity=".14" stroke-width="1.5"/>
+  </svg>
+  <h1>你的 AI 对话，<br>值得一块<span class="accent">共享思维板</span></h1>
+  <p class="sub">
+    一只蹲在屏幕边上的小黑猫，把你和 AI 聊出来的每个念头、结论、方案、疑虑，
+    <b>实时</b>整理成一块结构化的思维板——不打断对话，不丢上下文。
+  </p>
+  <p class="platforms"><b>Claude Code</b> 已支持 · <b>Codex / Gemini CLI</b> 同协议直接接入 · 全程本地运行</p>
+  <div class="btns">
+    <a class="btn primary" href="#start">三步开始使用</a>
+    <a class="btn ghost" href="#usage">查看完整使用方法</a>
   </div>
 </header>
 
-<!-- ══════════ 痛点 ══════════ -->
-<section id="pain">
-  <div class="wrap">
-    <div class="kicker">WHY</div>
-    <h2>和 AI 聊得越久，丢得越多</h2>
-    <p class="lead">如果你每天和高强度对话的 AI 编程工具打交道，这三件事一定似曾相识。</p>
-    <div class="pain-grid">
-      <div class="pain">
-        <div class="ico">🌪️</div>
-        <h3>想法随滚动条消失</h3>
-        <p>聊天里明明聊出了不错的结论和方案，三天后想找——在几百屏的对话里翻记录，像考古。</p>
-      </div>
-      <div class="pain">
-        <div class="ico">🚪</div>
-        <h3>换个会话就失忆</h3>
-        <p>新开一个会话，之前的决策、否决过的方案、踩过的坑，全都要从头再讲一遍。</p>
-      </div>
-      <div class="pain">
-        <div class="ico">💸</div>
-        <h3>让 AI「自己记」太贵</h3>
-        <p>靠重复粘贴背景维持记忆？每轮多烧几千 token，噪音和费用一起涨，还经常记错。</p>
-      </div>
-    </div>
+<!-- ═════ 为什么 ═════ -->
+<section id="why">
+  <div class="kicker">WHY</div>
+  <h2>和 AI 聊得越久，丢得越多</h2>
+  <p class="lead">如果你每天和高强度对话的 AI 编程工具打交道，这三件事一定似曾相识。</p>
+  <div class="grid3">
+    <div class="card"><div class="ico">🌪️</div><h3>想法随滚动条消失</h3><p>聊天里明明聊出了不错的结论和方案，三天后想找——在几百屏的对话里翻记录，像考古。</p></div>
+    <div class="card"><div class="ico">🚪</div><h3>换个会话就失忆</h3><p>新开一个会话，之前的决策、否决过的方案、踩过的坑，全都要从头再讲一遍。</p></div>
+    <div class="card"><div class="ico">💸</div><h3>让 AI「自己记」太贵</h3><p>靠重复粘贴背景维持记忆？每轮多烧几千 token，噪音和费用一起涨，还经常记错。</p></div>
   </div>
 </section>
 
-<!-- ══════════ 它是什么 ══════════ -->
+<!-- ═════ 它是什么 ═════ -->
 <section id="what">
-  <div class="wrap">
-    <div class="kicker">WHAT</div>
-    <h2>一个插件，三种身份</h2>
-    <p class="lead">它是数据中枢、是 AI 能调用的工具、也是一只看得见的猫——三层互相独立，坏掉任何一层都不影响另外两层。</p>
-    <div class="role-grid">
-      <div class="role">
-        <h3>🗂️ 数据中枢</h3>
-        <p>所有 AI 工具把想法写进同一个地方：<code>~/.mind-board/</code>。纯 JSON 文件 + 原子写盘，没有数据库、没有云端、没有账号。</p>
-      </div>
-      <div class="role">
-        <h3>🔌 MCP 工具</h3>
-        <p>三个标准工具——<code>organize</code> 整理、<code>query</code> 回看、<code>control</code> 管理。任何支持 MCP 的 AI 工具都能直接调用，一次接入到处可用。</p>
-      </div>
-      <div class="role">
-        <h3>🐱 桌宠壳</h3>
-        <p>小黑猫蹲在任务栏，头顶的图标环告诉你哪些 AI 正在干活；点开漫画风面板，四层骨架一目了然，还能拖拽整理。</p>
-      </div>
-    </div>
+  <div class="kicker">WHAT</div>
+  <h2>一个插件，三种身份</h2>
+  <p class="lead">数据中枢、AI 能调用的工具、看得见的猫——三层互相独立，坏掉任何一层都不影响另外两层。</p>
+  <div class="grid3">
+    <div class="card"><h3>🗂️ 数据中枢</h3><p>所有 AI 工具把想法写进同一个地方 <code>~/.mind-board/</code>。纯 JSON 文件 + 原子写盘，没有数据库、没有云端、没有账号。</p></div>
+    <div class="card"><h3>🔌 MCP 工具</h3><p>三个标准工具——<code>organize</code> 整理、<code>query</code> 回看、<code>control</code> 管理。任何支持 MCP 的 AI 工具都能调用。</p></div>
+    <div class="card"><h3>🐱 桌宠壳</h3><p>小黑猫蹲在任务栏，头顶图标环显示哪些 AI 在干活；点开漫画风面板，四层骨架一目了然。</p></div>
+  </div>
 
-    <h2 style="margin-top:56px">核心玩法：四层骨架</h2>
-    <p class="lead">AI 把对话内容随手归入四层，聊天照常进行，沉淀悄悄发生。</p>
-    <div class="skeleton">
-      <div class="sk ideas">
-        <span class="tag">ideas</span>
-        <h3>想法</h3>
-        <p>用户随口提到的念头、方向、需求</p>
-        <div class="ex">「要不要支持深色模式」</div>
-      </div>
-      <div class="sk points">
-        <span class="tag">points</span>
-        <h3>要点</h3>
-        <p>聊明确的结论，可标记「已敲定」</p>
-        <div class="ex">「性能优先，先不做动画」✔</div>
-      </div>
-      <div class="sk plans">
-        <span class="tag">plans</span>
-        <h3>方案</h3>
-        <p>候选做法与当前采用（全局唯一）</p>
-        <div class="ex">「方案 A：本地缓存【采用中】」</div>
-      </div>
-      <div class="sk gaps">
-        <span class="tag">gaps</span>
-        <h3>缺口</h3>
-        <p>没想清、没验证的点，AI 会主动追问</p>
-        <div class="ex">「并发写冲突怎么办？」</div>
-      </div>
+  <h3>核心玩法：四层骨架</h3>
+  <p class="lead" style="margin-bottom:16px">AI 把对话内容随手归入四层——每层有明确的判定标准，聊天照常进行，沉淀悄悄发生。</p>
+  <div class="skel">
+    <div class="sk ideas"><span class="tag">ideas 想法</span><h4>愿景层</h4><p>对项目的设想、蓝图与目标。归纳改写成 ≤30 字短句。</p><div class="ex">「要不要做成跨平台」</div></div>
+    <div class="sk gaps"><span class="tag">gaps 缺口</span><h4>闭环缺失</h4><p>「要做 X，还缺 Y」——逻辑闭环上可回答的缺失。</p><div class="ex">「LRU 命中率未验证」</div></div>
+    <div class="sk plans"><span class="tag">plans 方案</span><h4>承诺层</h4><p>填充缺口的候选路线，采用全局唯一。</p><div class="ex">「方案 A：本地缓存【采用中】」</div></div>
+    <div class="sk points"><span class="tag">points 要点</span><h4>重点预览</h4><p>结论/表格/分析图的提炼，可带链接打开完整版。</p><div class="ex">「性能优先，先不做动画」✔</div></div>
+  </div>
+</section>
+
+<!-- ═════ 使用方法 ═════ -->
+<section id="usage">
+  <div class="kicker">USAGE</div>
+  <h2>使用方法（完整版）</h2>
+  <p class="lead">不需要学任何指令——正常聊天，AI 自动整理。下面是全部可交互的部件。</p>
+
+  <div class="u-block">
+    <div class="u-name"><span class="e">🐱</span>小黑猫<span class="d">蹲在任务栏或屏幕边缘</span></div>
+    <div>
+      <div class="op"><span class="k">单击</span><span class="v"><b>弹出图标环</b>（harness 芯片环绕猫头扇形展开）</span></div>
+      <div class="op"><span class="k">再点环外猫身</span><span class="v">收起图标环</span></div>
+      <div class="op"><span class="k">双击</span><span class="v">猫猫原地连跳三下（卖萌）</span></div>
+      <div class="op"><span class="k">按住拖动</span><span class="v">挪位——松手自动吸附<b>左缘 / 右缘 / 任务栏</b>最近的一边</span></div>
+      <div class="op"><span class="k">右键</span><span class="v">设置窗贴猫弹出</span></div>
+      <div class="op"><span class="k">Ctrl+Alt+H</span><span class="v">躲猫猫 / 唤回</span></div>
+    </div>
+  </div>
+
+  <div class="u-block">
+    <div class="u-name"><span class="e">☸️</span>图标环<span class="d">以猫头为圆心的扇形芯片</span></div>
+    <div>
+      <div class="op"><span class="k">恒驻</span><span class="v">所有装过插件的 harness 常驻显示，不会消失</span></div>
+      <div class="op"><span class="k">光晕</span><span class="v">主题色恒定光晕 = <b>该工具 10 分钟内有活动</b>；灰显 = 待命</span></div>
+      <div class="op"><span class="k">悬停</span><span class="v">显示该工具的缺口数与状态</span></div>
+      <div class="op"><span class="k">点击</span><span class="v">打开 / 收起该工具的思维板面板</span></div>
+      <div class="op"><span class="k">红点</span><span class="v">有新沉淀未查看</span></div>
+    </div>
+  </div>
+
+  <div class="u-block">
+    <div class="u-name"><span class="e">📋</span>思维板面板<span class="d">四层骨架 · 默认钉住常显</span></div>
+    <div>
+      <div class="op"><span class="k">目标</span><span class="v">点击改名；下方虚线新建；点其他目标行切换当前目标</span></div>
+      <div class="op"><span class="k">进度条</span><span class="v">已敲定要点 / 全部要点（10 格血条）</span></div>
+      <div class="op"><span class="k">想法</span><span class="v">点击整条 = 标记已实现</span></div>
+      <div class="op"><span class="k">缺口</span><span class="v">点击 = 标记已解决</span></div>
+      <div class="op"><span class="k">要点</span><span class="v">↗ 打开完整版预览（面板内嵌）</span></div>
+      <div class="op"><span class="k">方案</span><span class="v">采用 / 否决按钮（采用全局唯一）</span></div>
+      <div class="op"><span class="k">拖拽条目</span><span class="v">到底部<b>红区 = 删除</b>；想法拖<b>绿区 = 标记已实现</b></span></div>
+      <div class="op"><span class="k">☰</span><span class="v">总览视图——一屏看全部项目，点行切换</span></div>
+      <div class="op"><span class="k">×</span><span class="v">关闭面板（等同再点一次芯片）</span></div>
+      <div class="op"><span class="k">Esc</span><span class="v">关闭面板 / 关闭弹窗</span></div>
+    </div>
+  </div>
+
+  <div class="u-block">
+    <div class="u-name"><span class="e">📊</span>总览仪表盘<span class="d">⛶ 大窗口 · 项目管理</span></div>
+    <div>
+      <div class="op"><span class="k">统计条</span><span class="v">项目数 / 活跃 / 未解缺口 / 待确认新目标 / 运行中工具</span></div>
+      <div class="op"><span class="k">筛选排序</span><span class="v">搜索、harness 筛选、状态筛选、按活跃/缺口/名称排序</span></div>
+      <div class="op"><span class="k">卡片</span><span class="v">打开面板 →；归档（折叠出活跃列表，数据保留）</span></div>
+      <div class="op"><span class="k">刷新</span><span class="v">5 秒自动轮询，无需手动</span></div>
+    </div>
+  </div>
+
+  <div class="u-block">
+    <div class="u-name"><span class="e">🔔</span>系统托盘<span class="d">运行时常驻</span></div>
+    <div>
+      <div class="op"><span class="k">左键 / 双击</span><span class="v">唤出猫猫（隐藏时即打开）</span></div>
+      <div class="op"><span class="k">右键菜单</span><span class="v">显示猫猫 / 躲猫猫 / 设置 / 项目总览 / 退出</span></div>
+    </div>
+  </div>
+
+  <div class="u-block">
+    <div class="u-name"><span class="e">⌨️</span>全局热键</div>
+    <div>
+      <div class="op"><span class="k">Ctrl+Alt+B</span><span class="v">打开 / 收起思维板面板</span></div>
+      <div class="op"><span class="k">Ctrl+Alt+H</span><span class="v">躲猫猫 / 唤回猫猫</span></div>
+    </div>
+  </div>
+
+  <div class="u-block">
+    <div class="u-name"><span class="e">⚙️</span>设置窗<span class="d">右键猫弹出</span></div>
+    <div>
+      <div class="op"><span class="k">整理频率</span><span class="v">每 1/2/3 轮对话整理一次</span></div>
+      <div class="op"><span class="k">面板字号 / 字体</span><span class="v">三档字号，衬线/黑体/楷体</span></div>
+      <div class="op"><span class="k">语言 / 开机自启</span><span class="v">中英切换 · 登录项</span></div>
+      <div class="op"><span class="k">数据目录</span><span class="v">一键打开 ~/.mind-board/</span></div>
     </div>
   </div>
 </section>
 
-<!-- ══════════ 怎么做到的 ══════════ -->
-<section id="how">
-  <div class="wrap">
-    <div class="kicker">HOW</div>
-    <h2>怎么做到的</h2>
-    <p class="lead">
-      核心思路一句话：<b style="color:var(--text)">把「聪明」放进数据协议，把「脆弱」隔离在可抛弃的壳里。</b>
-      文件系统是唯一事实源，三条标准通道接入，AI 工具、钩子、桌宠互不依赖。
-    </p>
+<!-- ═════ 整理方法论 ═════ -->
+<section id="method">
+  <div class="kicker">METHODOLOGY</div>
+  <h2>整理方法论</h2>
+  <p class="lead">板子的价值 = 信息密度。这一章是 AI 整理时遵循的全部规则——也是你自己手动整理时的参考。</p>
 
-    <div class="arch-card">
-      <svg viewBox="0 0 1040 620" font-family="'Segoe UI','Microsoft YaHei',sans-serif" role="img" aria-label="技术架构图">
-        <defs>
-          <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0 0 L10 5 L0 10 Z" fill="#66666e"/>
-          </marker>
-          <marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0 0 L10 5 L0 10 Z" fill="#fbbf24"/>
-          </marker>
-        </defs>
-        <style>
-          .box { fill: #141416; stroke: #34343c; stroke-width: 1.2; rx: 12; }
-          .box-hot { fill: #141416; stroke: #fbbf24; stroke-width: 1.4; }
-          .t1 { fill: #ececec; font-size: 15px; font-weight: 700; }
-          .t2 { fill: #9a9aa2; font-size: 11.5px; }
-          .t3 { fill: #66666e; font-size: 10.5px; letter-spacing: 2px; font-weight: 700; }
-          .ln { stroke: #66666e; stroke-width: 1.3; fill: none; marker-end: url(#arr); }
-          .lnA { stroke: #fbbf24; stroke-width: 1.3; fill: none; marker-end: url(#arrA); }
-          .lbl { fill: #9a9aa2; font-size: 11px; }
-          .code { fill: #5eead4; font-size: 11px; font-family: Consolas, monospace; }
-        </style>
-
-        <!-- 第①层：AI 工具 -->
-        <text x="20" y="34" class="t3">① AI 工具层</text>
-        <rect x="20" y="44" width="230" height="64" rx="12" class="box-hot"/>
-        <text x="135" y="70" text-anchor="middle" class="t1">Claude Code</text>
-        <text x="135" y="90" text-anchor="middle" class="t2">已接入 · 钩子 + MCP</text>
-        <rect x="290" y="44" width="200" height="64" rx="12" class="box"/>
-        <text x="390" y="70" text-anchor="middle" class="t1">Codex CLI</text>
-        <text x="390" y="90" text-anchor="middle" class="t2">同协议直接接入</text>
-        <rect x="530" y="44" width="200" height="64" rx="12" class="box"/>
-        <text x="630" y="70" text-anchor="middle" class="t1">Gemini CLI</text>
-        <text x="630" y="90" text-anchor="middle" class="t2">同协议直接接入</text>
-        <rect x="770" y="44" width="230" height="64" rx="12" class="box" stroke-dasharray="5 4"/>
-        <text x="885" y="70" text-anchor="middle" class="t1">DSH / 其他</text>
-        <text x="885" y="90" text-anchor="middle" class="t2">注册一条命令即可</text>
-
-        <!-- 第②层：接入 -->
-        <text x="20" y="164" class="t3">② 接入层（标准协议）</text>
-        <rect x="20" y="174" width="300" height="96" rx="12" class="box"/>
-        <text x="170" y="200" text-anchor="middle" class="t1">Hooks 钩子注入</text>
-        <text x="170" y="222" text-anchor="middle" class="t2">SessionStart：注入完整整理协议</text>
-        <text x="170" y="242" text-anchor="middle" class="t2">UserPromptSubmit：每轮一行状态提醒</text>
-        <text x="170" y="260" text-anchor="middle" class="code">省 95% 上下文的软约束</text>
-        <rect x="370" y="174" width="280" height="96" rx="12" class="box"/>
-        <text x="510" y="200" text-anchor="middle" class="t1">MCP Server（stdio）</text>
-        <text x="510" y="222" text-anchor="middle" class="t2">mind_board_organize 整理</text>
-        <text x="510" y="240" text-anchor="middle" class="t2">mind_board_query 回看 · mind_board_control 管理</text>
-        <text x="510" y="258" text-anchor="middle" class="code">AI 主动调用的硬入口</text>
-        <rect x="700" y="174" width="300" height="96" rx="12" class="box"/>
-        <text x="850" y="200" text-anchor="middle" class="t1">本地 HTTP 服务</text>
-        <text x="850" y="222" text-anchor="middle" class="t2">127.0.0.1:13134 · REST + 静态页</text>
-        <text x="850" y="242" text-anchor="middle" class="t2">桌宠唯一的数据通道 · 浏览器兜底</text>
-        <text x="850" y="260" text-anchor="middle" class="code">壳与数据解耦面</text>
-
-        <!-- 第③层：数据中枢 -->
-        <text x="20" y="330" class="t3">③ 数据中枢（唯一事实源）</text>
-        <rect x="240" y="344" width="420" height="104" rx="12" class="box-hot"/>
-        <text x="450" y="372" text-anchor="middle" class="t1">store.mjs — 纯 Node · 零依赖</text>
-        <text x="450" y="394" text-anchor="middle" class="t2">同层去重（字符 bigram 相似度 ≥0.7 视为同条）</text>
-        <text x="450" y="412" text-anchor="middle" class="t2">目标漂移检测：疑似换目标 → 拒写并要求 AI 先问你</text>
-        <text x="450" y="430" text-anchor="middle" class="t2">临时文件 + rename 原子写盘 · journal.jsonl 事件流</text>
-        <rect x="710" y="344" width="290" height="104" rx="12" class="box"/>
-        <text x="855" y="372" text-anchor="middle" class="t1">~/.mind-board/</text>
-        <text x="855" y="394" text-anchor="middle" class="code">projects/  skeletons/</text>
-        <text x="855" y="412" text-anchor="middle" class="code">journal.jsonl  settings.json</text>
-        <text x="855" y="432" text-anchor="middle" class="t2">可备份 · 可导出 · 可手改</text>
-
-        <!-- 第④层：桌宠壳 -->
-        <text x="20" y="506" class="t3">④ 桌宠壳（可抛弃的展示层）</text>
-        <rect x="20" y="516" width="230" height="80" rx="12" class="box"/>
-        <text x="135" y="544" text-anchor="middle" class="t1">小黑猫窗</text>
-        <text x="135" y="564" text-anchor="middle" class="t2">透明 · 逐像素命中 · 呼吸动画</text>
-        <text x="135" y="580" text-anchor="middle" class="t2">单击弹图标环</text>
-        <rect x="290" y="516" width="230" height="80" rx="12" class="box"/>
-        <text x="405" y="544" text-anchor="middle" class="t1">图标环</text>
-        <text x="405" y="564" text-anchor="middle" class="t2">以猫头为圆心扇形分布</text>
-        <text x="405" y="580" text-anchor="middle" class="t2">运行中亮光晕 · 点芯片开面板</text>
-        <rect x="560" y="516" width="230" height="80" rx="12" class="box"/>
-        <text x="675" y="544" text-anchor="middle" class="t1">思维板面板</text>
-        <text x="675" y="564" text-anchor="middle" class="t2">四层骨架可视化 · 拖拽删除/归档</text>
-        <text x="675" y="580" text-anchor="middle" class="t2">默认钉住 · Esc/图钉关闭</text>
-        <rect x="830" y="516" width="180" height="80" rx="12" class="box"/>
-        <text x="920" y="544" text-anchor="middle" class="t1">设置窗</text>
-        <text x="920" y="564" text-anchor="middle" class="t2">贴猫弹出 · 深色菜单</text>
-        <text x="920" y="580" text-anchor="middle" class="t2">整理频率 / 字号 / 语言</text>
-
-        <!-- 连线 -->
-        <path class="lnA" d="M135 108 L135 174"/>
-        <text x="143" y="128" class="lbl">每轮注入状态行</text>
-        <text x="143" y="144" class="lbl">会话开始注入协议</text>
-        <path class="lnA" d="M250 76 L370 174"/>
-        <text x="268" y="128" class="lbl">工具调用</text>
-        <path class="lnA" d="M390 108 L390 174" stroke-dasharray="4 3"/>
-        <text x="398" y="146" class="lbl">同为 MCP 协议</text>
-        <path class="ln" d="M510 270 L470 344"/>
-        <text x="494" y="308" class="lbl">读写</text>
-        <path class="ln" d="M850 270 L660 344"/>
-        <text x="762" y="308" class="lbl">轮询 · 整理 · 动作</text>
-        <path class="ln" d="M660 400 L710 396"/>
-        <text x="666" y="388" class="lbl">原子读写</text>
-        <path class="ln" d="M100 516 L100 290 L240 344" stroke-dasharray="4 3"/>
-        <text x="60" y="420" class="lbl">journal 事件</text>
-        <text x="60" y="436" class="lbl">mtime 存活</text>
-        <path class="ln" d="M250 556 L290 556"/>
-        <path class="ln" d="M520 556 L560 556"/>
-      </svg>
+  <div class="m-card">
+    <h3>① 这句话该进哪层？——判定决策树</h3>
+    <p style="margin:0 0 10px" class="dim">拿到一段值得记的话，按顺序问三个问题，落到唯一的一层。判断标准是<b style="color:var(--text)">内容的成熟度</b>，不是话的长短。</p>
+    <div class="tri">
+      <div class="q"><b>有明确判断？</b>「X 应该这样」/「已确定 Y」</div>
+      <div class="q"><b>还是在选做什么？</b>候选路线 / 待拍板的选项</div>
+      <div class="q"><b>还是没验证的问号？</b>说不出边界、需要回头确认</div>
     </div>
+    <table>
+      <tr><th>回答</th><th>去层</th><th>含义</th></tr>
+      <tr><td>判断成型了</td><td><b style="color:var(--amber)">要点 points</b></td><td>重点预览，可带 link 指向完整版</td></tr>
+      <tr><td>还没成型</td><td><b style="color:var(--teal)">想法 ideas</b></td><td>愿景层——过程与任务不进这里</td></tr>
+      <tr><td>在选做什么</td><td><b style="color:var(--violet)">方案 plans</b></td><td>候选路线，采用全局唯一</td></tr>
+      <tr><td>没验证的问号</td><td><b style="color:var(--red)">缺口 gaps</b></td><td>写成可回答的问题</td></tr>
+    </table>
+  </div>
 
-    <div class="arch-note">
-      <div class="n"><span class="num">1</span><p><b>软约束注入，不烧上下文。</b>会话开始注入一次完整协议；之后每轮只注一行「目标 · 各层计数 · 缺口」，比反复塞全文省约 95% 上下文。</p></div>
-      <div class="n"><span class="num">2</span><p><b>目标漂移防护是硬的。</b>AI 写入的目标与现状相似度过低时，中枢拒绝写入并要求 AI 先问你「要不要新建一块板」——prompt 管不住的，用协议机制管。</p></div>
-      <div class="n"><span class="num">3</span><p><b>文件即数据库。</b>没有服务、没有锁、没有迁移：原子替换保证崩溃安全，任何编辑器都能直接修数据，拷走目录就是完整备份。</p></div>
-      <div class="n"><span class="num">4</span><p><b>壳坏了不伤数据。</b>渲染层的猫、图标环、面板全部可以随时重写；AI 通道（MCP + 钩子）独立工作——这条经验来自上百次真实重启。</p></div>
+  <div class="m-card">
+    <h3>② 什么值得记？——信噪比三问</h3>
+    <p class="dim" style="margin:0 0 10px">每条入库内容都要过三问，任何一问不过就不记。「乱七八糟」的板子几乎都是三问失守的结果。</p>
+    <div class="tri">
+      <div class="q"><b>① 是结论还是过程？</b>过程口水没有信息量。<br><span class="no">✗ "我检查了一遍日志"</span><br><span class="ok">✓ "日志确认钩子没被调用"</span></div>
+      <div class="q"><b>② 三天后还指导行动吗？</b>被取代的中间态该退场（supersedes）。<br><span class="no">✗ 已修复的猜测与最终结论并排</span></div>
+      <div class="q"><b>③ 说得出边界吗？</b>说不清适用条件 = 半个结论。<br><span class="no">✗ "要加缓存"</span><br><span class="ok">✓ 进缺口："缓存策略待定"</span></div>
     </div>
+  </div>
 
-    <div class="privacy">
-      <div class="lock">🔒</div>
-      <p><b>隐私：全程本地。</b>想法、骨架、对话沉淀只存在于你电脑的 <b>~/.mind-board/</b> 目录里，不联网、不上传、没有遥测。删掉目录 = 数据彻底消失；拷走目录 = 完整迁移。</p>
-    </div>
+  <div class="m-card">
+    <h3>③ 什么时候记？——时机与节奏</h3>
+    <table>
+      <tr><th>规则</th><th>内容</th><th>理由</th></tr>
+      <tr><td><b>批量不流水</b></td><td>一轮对话最多一次 organize，打包提交本轮全部条目</td><td>逐句入库 = 流水账；对话的自然单元是「一轮」</td></tr>
+      <tr><td><b>节奏可调</b></td><td>整理频率 1/2/3 轮一档，到点钩子才提醒</td><td>催促本身也是上下文成本</td></tr>
+      <tr><td><b>回答优先</b></td><td>整理是副业：先正常回答，工具调用安静完成</td><td>打断感是这类工具的头号死因</td></tr>
+      <tr><td><b>过程与结论分离</b></td><td>调试发现只在构成结论时入库；旧结论被取代时用 supersedes 退场</td><td>板子只保留当前有效认知</td></tr>
+    </table>
+  </div>
+
+  <div class="m-card">
+    <h3>④ 缺口管理：会提问才会收敛</h3>
+    <p class="dim" style="margin:0 0 10px">缺口是唯一「主动消耗注意力」的层——写得好驱动项目前进，写得烂变成待办坟场。</p>
+    <table>
+      <tr><th>规则</th><th>说明</th></tr>
+      <tr><td><b>写成可回答的问题</b></td><td><span class="ok">✓ "LRU 在写多读少场景命中率未验证"</span> · <span class="no">✗ "还要优化优化"</span>——无法回答的缺口永远关不掉</td></tr>
+      <tr><td><b>一轮最多追问一个</b></td><td>AI 补缺口时挑最关键的问用户；连环追问是打扰</td></tr>
+      <tr><td><b>谁都能关</b></td><td>任何 harness 发现缺口已解决即可标记——不需要是提出者</td></tr>
+      <tr><td><b>14 天衰减</b></td><td>超两周未动的缺口自动划线降调——要么过时了，要么值得重写</td></tr>
+      <tr><td><b>拒绝伪缺口</b></td><td>"待优化""待确认"这类没有主语的不收</td></tr>
+    </table>
+  </div>
+
+  <div class="m-card">
+    <h3>⑤ 更新、替代还是新建？——收敛三选一</h3>
+    <table>
+      <tr><th>情形</th><th>动作</th><th>例</th></tr>
+      <tr><td>语义没变，措辞变了</td><td>直接提交——bigram ≥0.7 自动命中旧条目更新</td><td>「支持深色模式」→「深色模式支持」</td></tr>
+      <tr><td>结论被细化</td><td>直接提交——细节合并进旧条目</td><td>「深色模式要做」→「…先做编辑器」</td></tr>
+      <tr><td>结论被推翻</td><td><b>supersedes 替代</b>——旧条目退场（保留可审计）</td><td>「不做动画」→「动画要做，Lottie 方案」</td></tr>
+    </table>
+    <p class="dim" style="margin:10px 0 0;font-size:13px">方案层的定位是「承诺层」：落地确认后毕业——认知沉淀为要点、关闭它填充的缺口，方案保留为决策档案。</p>
+  </div>
+
+  <div class="m-card">
+    <h3>⑥ 项目生命周期</h3>
+    <table>
+      <tr><th>阶段</th><th>判定</th><th>该做什么</th></tr>
+      <tr><td><b>draft</b> 构思</td><td>目标未定或骨架近空</td><td>先聊目标，AI 协助收成一句话目标</td></tr>
+      <tr><td><b>clarifying</b> 推进</td><td>目标已定，缺口在收敛</td><td>正常整理；优先追问缺口；方案竞争到唯一</td></tr>
+      <tr><td><b>reflected</b> 已沉淀</td><td>结论齐了、缺口清了</td><td>点「归档」折叠出活跃列表，数据永久保留</td></tr>
+      <tr><td><b>archived</b></td><td>30 天无活动自动标记</td><td>仪表盘勾「含已沉淀」可见，「恢复」随时拉回</td></tr>
+    </table>
+  </div>
+
+  <div class="m-card">
+    <h3>⑦ 多 harness 协作规则</h3>
+    <table>
+      <tr><th>场景</th><th>规则</th></tr>
+      <tr><td><b>共享板</b></td><td>项目身份 = 目录。两个工具在同一目录工作 → 同一块板，互相可见全部沉淀</td></tr>
+      <tr><td><b>接手礼仪</b></td><td>后接手的工具先 <code>mind_board_query</code> 看板子再动手——钩子状态行就是为此设计的</td></tr>
+      <tr><td><b>竞争收敛</b></td><td>不同结论 → 后写的 supersedes 前写的；真是并立的两案 → 都进方案竞争</td></tr>
+      <tr><td><b>缺口责任</b></td><td>谁发现谁立，谁都能关；跨工具缺口写明对象</td></tr>
+      <tr><td><b>参与者可见</b></td><td>项目档案 harnesses[] 记录全部参与者；图标环 / 面板 / 仪表盘按此归属显示</td></tr>
+    </table>
+  </div>
+
+  <div class="m-card">
+    <h3>⑧ 反模式清单（每一条都真实发生过）</h3>
+    <table>
+      <tr><th>反模式</th><th>后果</th></tr>
+      <tr><td>逐句流水账入库</td><td>板子变成对话备份，信息密度归零</td></tr>
+      <tr><td>已解决的猜测和最终结论并排</td><td>三天后分不清哪个是对的</td></tr>
+      <tr><td>伪缺口堆积</td><td>缺口层失去驱动力，变成待办坟场</td></tr>
+      <tr><td>方案层多个「采用」并存</td><td>「当前押注」语义失效（系统强制全局唯一）</td></tr>
+      <tr><td>过程性任务进想法层</td><td>愿景层被稀释，蓝图看不见了</td></tr>
+    </table>
   </div>
 </section>
 
-<!-- ══════════ 快速开始 ══════════ -->
+<!-- ═════ 技术路线 ═════ -->
+<section id="tech">
+  <div class="kicker">TECH</div>
+  <h2>技术路线图</h2>
+  <p class="lead">
+    核心思路一句话：<b style="color:var(--text)">把「聪明」放进数据协议，把「脆弱」隔离在可抛弃的壳里。</b>
+    文件系统是唯一事实源，三条标准通道接入，AI 工具、钩子、桌宠互不依赖。
+  </p>
+
+  <div class="arch-card">
+    <svg viewBox="0 0 1040 620" font-family="'Segoe UI','Microsoft YaHei',sans-serif" role="img" aria-label="技术架构图">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 Z" fill="#66666e"/>
+        </marker>
+        <marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 Z" fill="#fbbf24"/>
+        </marker>
+      </defs>
+      <style>
+        .box { fill: #141416; stroke: #34343c; stroke-width: 1.2; }
+        .box-hot { fill: #141416; stroke: #fbbf24; stroke-width: 1.4; }
+        .t1 { fill: #ececec; font-size: 15px; font-weight: 700; }
+        .t2 { fill: #9a9aa2; font-size: 11.5px; }
+        .t3 { fill: #66666e; font-size: 10.5px; letter-spacing: 2px; font-weight: 700; }
+        .ln { stroke: #66666e; stroke-width: 1.3; fill: none; marker-end: url(#arr); }
+        .lnA { stroke: #fbbf24; stroke-width: 1.3; fill: none; marker-end: url(#arrA); }
+        .lbl { fill: #9a9aa2; font-size: 11px; }
+        .code { fill: #5eead4; font-size: 11px; font-family: Consolas, monospace; }
+      </style>
+      <text x="20" y="34" class="t3">① AI 工具层</text>
+      <rect x="20" y="44" width="230" height="64" rx="12" class="box-hot"/>
+      <text x="135" y="70" text-anchor="middle" class="t1">Claude Code</text>
+      <text x="135" y="90" text-anchor="middle" class="t2">已接入 · 钩子 + MCP</text>
+      <rect x="290" y="44" width="200" height="64" rx="12" class="box"/>
+      <text x="390" y="70" text-anchor="middle" class="t1">Codex CLI</text>
+      <text x="390" y="90" text-anchor="middle" class="t2">同协议直接接入</text>
+      <rect x="530" y="44" width="200" height="64" rx="12" class="box"/>
+      <text x="630" y="70" text-anchor="middle" class="t1">Gemini CLI</text>
+      <text x="630" y="90" text-anchor="middle" class="t2">同协议直接接入</text>
+      <rect x="770" y="44" width="230" height="64" rx="12" class="box" stroke-dasharray="5 4"/>
+      <text x="885" y="70" text-anchor="middle" class="t1">DSH / 其他</text>
+      <text x="885" y="90" text-anchor="middle" class="t2">注册一条命令即可</text>
+
+      <text x="20" y="164" class="t3">② 接入层（标准协议）</text>
+      <rect x="20" y="174" width="300" height="96" rx="12" class="box"/>
+      <text x="170" y="200" text-anchor="middle" class="t1">Hooks 钩子注入</text>
+      <text x="170" y="222" text-anchor="middle" class="t2">SessionStart：注入完整整理协议</text>
+      <text x="170" y="242" text-anchor="middle" class="t2">UserPromptSubmit：每轮一行状态提醒</text>
+      <text x="170" y="260" text-anchor="middle" class="code">省 95% 上下文的软约束</text>
+      <rect x="370" y="174" width="280" height="96" rx="12" class="box"/>
+      <text x="510" y="200" text-anchor="middle" class="t1">MCP Server（stdio）</text>
+      <text x="510" y="222" text-anchor="middle" class="t2">mind_board_organize 整理</text>
+      <text x="510" y="240" text-anchor="middle" class="t2">mind_board_query 回看 · control 管理</text>
+      <text x="510" y="258" text-anchor="middle" class="code">AI 主动调用的硬入口</text>
+      <rect x="700" y="174" width="300" height="96" rx="12" class="box"/>
+      <text x="850" y="200" text-anchor="middle" class="t1">本地 HTTP 服务</text>
+      <text x="850" y="222" text-anchor="middle" class="t2">127.0.0.1:13134 · REST + 静态页</text>
+      <text x="850" y="242" text-anchor="middle" class="t2">桌宠唯一的数据通道 · 浏览器兜底</text>
+      <text x="850" y="260" text-anchor="middle" class="code">壳与数据解耦面</text>
+
+      <text x="20" y="330" class="t3">③ 数据中枢（唯一事实源）</text>
+      <rect x="240" y="344" width="420" height="104" rx="12" class="box-hot"/>
+      <text x="450" y="372" text-anchor="middle" class="t1">store.mjs — 纯 Node · 零依赖</text>
+      <text x="450" y="394" text-anchor="middle" class="t2">同层去重（字符 bigram 相似度 ≥0.7 视为同条）</text>
+      <text x="450" y="412" text-anchor="middle" class="t2">目标漂移检测：疑似换目标 → 拒写并要求 AI 先问你</text>
+      <text x="450" y="430" text-anchor="middle" class="t2">临时文件 + rename 原子写盘 · journal.jsonl 事件流</text>
+      <rect x="710" y="344" width="290" height="104" rx="12" class="box"/>
+      <text x="855" y="372" text-anchor="middle" class="t1">~/.mind-board/</text>
+      <text x="855" y="394" text-anchor="middle" class="code">projects/  skeletons/</text>
+      <text x="855" y="412" text-anchor="middle" class="code">journal.jsonl  settings.json</text>
+      <text x="855" y="432" text-anchor="middle" class="t2">可备份 · 可导出 · 可手改</text>
+
+      <text x="20" y="506" class="t3">④ 桌宠壳（可抛弃的展示层）</text>
+      <rect x="20" y="516" width="230" height="80" rx="12" class="box"/>
+      <text x="135" y="544" text-anchor="middle" class="t1">小黑猫窗</text>
+      <text x="135" y="564" text-anchor="middle" class="t2">透明 · 逐像素命中 · 呼吸动画</text>
+      <rect x="290" y="516" width="230" height="80" rx="12" class="box"/>
+      <text x="405" y="544" text-anchor="middle" class="t1">图标环</text>
+      <text x="405" y="564" text-anchor="middle" class="t2">扇形芯片 · 运行光晕</text>
+      <rect x="560" y="516" width="230" height="80" rx="12" class="box"/>
+      <text x="675" y="544" text-anchor="middle" class="t1">思维板面板</text>
+      <text x="675" y="564" text-anchor="middle" class="t2">四层骨架 · 拖拽整理 · 要点预览</text>
+      <rect x="830" y="516" width="180" height="80" rx="12" class="box"/>
+      <text x="920" y="544" text-anchor="middle" class="t1">总览仪表盘</text>
+      <text x="920" y="564" text-anchor="middle" class="t2">全部项目管理</text>
+
+      <path class="lnA" d="M135 108 L135 174"/>
+      <text x="143" y="128" class="lbl">每轮注入状态行</text>
+      <path class="lnA" d="M250 76 L370 174"/>
+      <text x="268" y="128" class="lbl">工具调用</text>
+      <path class="lnA" d="M390 108 L390 174" stroke-dasharray="4 3"/>
+      <text x="398" y="146" class="lbl">同为 MCP 协议</text>
+      <path class="ln" d="M510 270 L470 344"/>
+      <text x="494" y="308" class="lbl">读写</text>
+      <path class="ln" d="M850 270 L660 344"/>
+      <text x="762" y="308" class="lbl">轮询 · 整理 · 动作</text>
+      <path class="ln" d="M660 400 L710 396"/>
+      <text x="666" y="388" class="lbl">原子读写</text>
+    </svg>
+  </div>
+
+  <div class="arch-note">
+    <div class="n"><span class="num">1</span><p><b>软约束注入，不烧上下文。</b>会话开始注入一次完整协议；之后每轮只注一行状态，比反复塞全文省约 95% 上下文。</p></div>
+    <div class="n"><span class="num">2</span><p><b>目标漂移防护是硬的。</b>AI 写入的目标与现状相似度过低时，中枢拒绝写入并要求 AI 先问你——prompt 管不住的，用协议机制管。</p></div>
+    <div class="n"><span class="num">3</span><p><b>文件即数据库。</b>原子替换保证崩溃安全，任何编辑器都能直接修数据，拷走目录就是完整备份。</p></div>
+    <div class="n"><span class="num">4</span><p><b>壳坏了不伤数据。</b>渲染层的猫、图标环、面板可以随时重写；AI 通道（MCP + 钩子）独立工作——这条经验来自上百次真实重启。</p></div>
+  </div>
+
+  <h3>整理流水线（store.mjs · organize）</h3>
+  <div class="arch-card">
+    <svg viewBox="0 0 900 240" font-family="'Segoe UI','Microsoft YaHei',sans-serif">
+      <defs><marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0 0 L10 5 L0 10 Z" fill="#66666e"/></marker></defs>
+      <style>
+        .sb { fill: #1b1b1f; stroke: #34343c; stroke-width: 1.2; rx: 10; }
+        .st { fill: #ececec; font-size: 12.5px; font-weight: 700; }
+        .sd { fill: #9a9aa2; font-size: 10.5px; }
+        .sf { stroke: #66666e; stroke-width: 1.2; fill: none; marker-end: url(#f); }
+      </style>
+      <rect x="20" y="30" width="160" height="80" rx="10" class="sb"/>
+      <text x="100" y="60" text-anchor="middle" class="st">目标漂移检测</text>
+      <text x="100" y="80" text-anchor="middle" class="sd">新goal相似度&lt;0.25 → 拒写</text>
+      <text x="100" y="96" text-anchor="middle" class="sd">要求 AI 先问用户</text>
+      <path class="sf" d="M180 70 L210 70"/>
+      <rect x="210" y="30" width="180" height="80" rx="10" class="sb"/>
+      <text x="300" y="60" text-anchor="middle" class="st">同层去重合并</text>
+      <text x="300" y="80" text-anchor="middle" class="sd">精确相同 或 bigram ≥0.7</text>
+      <text x="300" y="96" text-anchor="middle" class="sd">→ 更新原条目，不新增</text>
+      <path class="sf" d="M390 70 L420 70"/>
+      <rect x="420" y="30" width="180" height="80" rx="10" class="sb"/>
+      <text x="510" y="60" text-anchor="middle" class="st">语义规则</text>
+      <text x="510" y="80" text-anchor="middle" class="sd">chosen 全局唯一</text>
+      <text x="510" y="96" text-anchor="middle" class="sd">supersedes 旧条目退场</text>
+      <path class="sf" d="M600 70 L630 70"/>
+      <rect x="630" y="30" width="120" height="80" rx="10" class="sb"/>
+      <text x="690" y="60" text-anchor="middle" class="st">原子落盘</text>
+      <text x="690" y="80" text-anchor="middle" class="sd">tmp + rename</text>
+      <text x="690" y="96" text-anchor="middle" class="sd">崩溃安全</text>
+      <path class="sf" d="M750 70 L780 70"/>
+      <rect x="780" y="30" width="100" height="80" rx="10" class="sb"/>
+      <text x="830" y="60" text-anchor="middle" class="st">journal 事件</text>
+      <text x="830" y="80" text-anchor="middle" class="sd">桌宠动效</text>
+      <text x="830" y="96" text-anchor="middle" class="sd">数据源</text>
+    </svg>
+  </div>
+
+  <h3>窗口编排与稳定性</h3>
+  <p class="lead" style="margin-bottom:14px">五个透明置顶窗（猫 / 图标环 / 面板 / 设置 / 仪表盘）共用一套交互契约。每条规则背后都是一次真实事故——这一层是全部复杂度的所在，也是所有防御性设计的沉淀处。</p>
+  <div class="card">
+    <table style="width:100%;border-collapse:collapse;font-size:13.5px">
+      <tr><th style="border:1px solid var(--line);padding:7px 11px;color:var(--faint);font-size:11.5px;text-align:left">机制</th><th style="border:1px solid var(--line);padding:7px 11px;color:var(--faint);font-size:11.5px;text-align:left">防的事故</th></tr>
+      <tr><td><code>禁用原生遮挡计算</code></td><td style="border:1px solid var(--line);padding:7px 11px;color:var(--dim)">全屏应用覆盖后窗口「幽灵可见」——看得见位置点不着</td></tr>
+      <tr><td><code>win.setShape 原生穿透</code></td><td style="border:1px solid var(--line);padding:7px 11px;color:var(--dim)">切换式穿透的入场竞态：透明区第一击被吞</td></tr>
+      <tr><td><code>主进程光标轮询驱动交互</code></td><td style="border:1px solid var(--line);padding:7px 11px;color:var(--dim)">系统鼠标钩子被全屏应用摘除且永不恢复</td></tr>
+      <tr><td><code>拖拽阈值 10px / 弹环防抖 1.2s</code></td><td style="border:1px solid var(--line);padding:7px 11px;color:var(--dim)">手抖误判拖拽、快速连点闪没</td></tr>
+      <tr><td><code>show 时强制刷新 + 移除 blur 隐藏</code></td><td style="border:1px solid var(--line);padding:7px 11px;color:var(--dim)">隐藏期定时器节流显示旧 DOM；失焦闪没</td></tr>
+    </table>
+  </div>
+
+  <h3>深入阅读</h3>
+  <div class="links">
+    <a href="/docs/components.html"><b>五组件原理图解</b>数据中枢 / AI 接入 / 猫窗 / 面板 / 窗口编排</a>
+    <a href="/docs/dock-principle.html"><b>图标环专篇</b>窗口堆叠 · 扇形排列 · 命中路由</a>
+    <a href="/docs/methodology.html"><b>整理方法论专篇</b>判定决策树 SVG · 全部规则</a>
+    <a href="/docs/organize-principle.html"><b>organize 专篇</b>合并算法细节</a>
+    <a href="/docs/mindmap.html"><b>思维导图</b>项目知识地图</a>
+    <a href="/docs/flowcharts.html"><b>流程图集</b>关键流程图解</a>
+  </div>
+
+  <div class="privacy">
+    <div class="lock">🔒</div>
+    <p><b>隐私：全程本地。</b>想法、骨架、对话沉淀只存在于你电脑的 <b>~/.mind-board/</b> 目录里，不联网、不上传、没有遥测。删掉目录 = 数据彻底消失；拷走目录 = 完整迁移。</p>
+  </div>
+</section>
+
+<!-- ═════ 快速开始 ═════ -->
 <section id="start">
-  <div class="wrap">
-    <div class="kicker">START</div>
-    <h2>三步开始</h2>
-    <p class="lead">需要：Node.js ≥ 18、Claude Code（或其他支持 MCP 的 AI 工具）、Windows（macOS 理论可用未测试）。</p>
-    <div class="steps">
-      <div class="step">
-        <h3>获取并启动</h3>
-        <p>克隆仓库、装依赖（只有 Electron 一个大件），启动桌宠：</p>
-        <pre>git clone &lt;仓库地址&gt;
+  <div class="kicker">START</div>
+  <h2>三步开始</h2>
+  <p class="lead">需要：Node.js ≥ 18、Claude Code（或其他支持 MCP 的 AI 工具）、Windows。</p>
+  <div class="grid3">
+    <div class="card"><h3>① 获取并启动</h3><p style="margin-bottom:10px">克隆仓库、装依赖，启动桌宠：</p><pre style="margin:0;background:#0a0a0c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--teal);overflow-x:auto">git clone &lt;仓库地址&gt;
 cd mind-board-pet
 npm install
-npm start</pre>
-      </div>
-      <div class="step">
-        <h3>接入 Claude Code</h3>
-        <p>仓库已带好配置，首次使用批准 MCP 服务器即可：</p>
-        <pre>.mcp.json        <span class="c">← 三个工具</span>
-.claude/settings.local.json
-                 <span class="c">← 两个钩子</span></pre>
-      </div>
-      <div class="step">
-        <h3>正常聊天</h3>
-        <p>不用学任何指令。点一下猫，头顶图标环亮起，点芯片打开面板——之后正常对话，猫会替你记账。</p>
-        <pre>单击猫 → 图标环
-点芯片 → 思维板面板
-拖拽条目 → 删除 / 标记已实现</pre>
-      </div>
-    </div>
-
-    <h2 style="margin-top:56px">常见问题</h2>
-    <div class="faq">
-      <details>
-        <summary>会打断我和 AI 的对话吗？</summary>
-        <p>不会。整理是 AI 的「副业」：它先正常回答你，工具调用安静完成。每轮最多一行提醒，你几乎察觉不到它的存在——直到打开面板发现都记下来了。</p>
-      </details>
-      <details>
-        <summary>AI 会不会乱记、记错？</summary>
-        <p>协议要求：模棱两可的一律进「缺口」，不脑补；疑似换目标时中枢直接拒写，强制 AI 先问你。所有条目在面板里可视化，随手拖拽修正。</p>
-      </details>
-      <details>
-        <summary>我用的是 Codex / Gemini CLI 怎么办？</summary>
-        <p>它们的 MCP 配置里注册同一个服务命令即可——数据中枢按项目目录自动归档，所有工具共享同一块板子，互相看得见对方沉淀的内容。</p>
-      </details>
-      <details>
-        <summary>多项目会混在一起吗？</summary>
-        <p>不会。项目身份由工作目录推导，每个目录一块独立的板；图标环按工具分组显示，面板里可自由切换项目。</p>
-      </details>
-      <details>
-        <summary>占用多少资源？</summary>
-        <p>一个 Electron 壳（约 100–200MB 内存）+ 每轮一行文本的钩子。数据是几个小 JSON 文件，journal 超 1MB 自动轮转。</p>
-      </details>
-    </div>
+npm start</pre></div>
+    <div class="card"><h3>② 接入 Claude Code</h3><p style="margin-bottom:10px">仓库已带好配置，首次使用批准 MCP 服务器即可：</p><pre style="margin:0;background:#0a0a0c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--teal);overflow-x:auto">.mcp.json
+.claude/settings.local.json</pre></div>
+    <div class="card"><h3>③ 正常聊天</h3><p style="margin:0">不需要学任何指令。点一下猫，图标环亮起，点芯片打开面板——之后正常对话，猫会替你记账。</p></div>
   </div>
 </section>
 
+<!-- ═════ FAQ ═════ -->
+<section id="faq">
+  <div class="kicker">FAQ</div>
+  <h2>常见问题</h2>
+  <details><summary>会打断我和 AI 的对话吗？</summary><p>不会。整理是 AI 的「副业」：它先正常回答你，工具调用安静完成。每轮最多一行提醒，你几乎察觉不到它的存在——直到打开面板发现都记下来了。</p></details>
+  <details><summary>AI 会不会乱记、记错？</summary><p>协议要求：模棱两可的一律进「缺口」，不脑补；疑似换目标时中枢直接拒写，强制 AI 先问你。所有条目在面板里可视化，随手拖拽修正。</p></details>
+  <details><summary>一个任务多个 AI 工具做过怎么办？</summary><p>这正是核心设计：项目身份绑定目录而非工具。所有工具共享同一块板，互相可见对方沉淀的全部内容；条目去重保证不重复；方案采用全局唯一表达「当前押注」。详见「整理方法论 ⑦」。</p></details>
+  <details><summary>我用的是 Codex / Gemini CLI 怎么办？</summary><p>它们的 MCP 配置里注册同一个服务命令即可——数据中枢按项目目录自动归档，所有工具共享同一块板子。</p></details>
+  <details><summary>占用多少资源？</summary><p>一个 Electron 壳（约 100–200MB 内存）+ 每轮一行文本的钩子。数据是几个小 JSON 文件，journal 超 1MB 自动轮转。</p></details>
+</section>
+
+</main>
+
+<!-- ═════ 右侧快速目录 ═════ -->
+<aside class="toc">
+  <div class="t">主页</div>
+  <a href="#top">价值主张</a>
+  <a href="#why">为什么需要</a>
+  <div class="t">使用</div>
+  <a href="#what">它是什么 · 四层骨架</a>
+  <a href="#usage">使用方法</a>
+  <a class="sub" href="#usage">猫猫 · 图标环 · 面板</a>
+  <a class="sub" href="#usage">总览仪表盘 · 托盘 · 热键</a>
+  <div class="t">方法论</div>
+  <a href="#method">整理方法论</a>
+  <a class="sub" href="#method">判定决策树</a>
+  <a class="sub" href="#method">信噪比三问</a>
+  <a class="sub" href="#method">缺口管理</a>
+  <a class="sub" href="#method">收敛三选一</a>
+  <a class="sub" href="#method">生命周期 · 协作 · 反模式</a>
+  <div class="t">技术</div>
+  <a href="#tech">技术路线图</a>
+  <a class="sub" href="#tech">四层架构总图</a>
+  <a class="sub" href="#tech">整理流水线</a>
+  <a class="sub" href="#tech">窗口编排与稳定性</a>
+  <a class="sub" href="#tech">深入阅读</a>
+  <div class="t">其他</div>
+  <a href="#start">快速开始</a>
+  <a href="#faq">FAQ</a>
+</aside>
+</div>
+
 <footer>
-  <div class="wrap">
-    <svg class="cat-mini" width="34" height="30" viewBox="0 0 32 32" aria-hidden="true">
-      <path d="M5 13 L8 3 L14 9 Q16 8 18 9 L24 3 L27 13 Q29 17 27 21 Q24 28 16 28 Q8 28 5 21 Q3 17 5 13 Z" fill="#16161e" stroke="#34343c" stroke-width="1.4"/>
-      <path d="M13 12 L16 20 L19 12" fill="none" stroke="#5eead4" stroke-width="1.6" stroke-linecap="round"/>
-      <circle cx="11.5" cy="17.5" r="2" fill="#fbbf24"/>
-      <circle cx="20.5" cy="17.5" r="2" fill="#fbbf24"/>
-    </svg>
-    <p><b>思维板 · 小黑猫</b> — 跨 harness 共享的思维整理面板</p>
-    <p>数据中枢 · MCP 工具 · 桌宠壳 — 全程本地，一个目录装下所有记忆</p>
-  </div>
+  <p><b>思维板 · 小黑猫</b> — 跨 harness 共享的思维整理面板</p>
+  <p>数据中枢 · MCP 工具 · 桌宠壳 — 全程本地，一个目录装下所有记忆</p>
 </footer>
 
 </body>
