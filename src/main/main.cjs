@@ -4,7 +4,7 @@
 //   · 透明无边框兔窗（贴右缘，可点击区域动态切换）
 //   · 漫画气泡窗（点击 harness 图标弹出，单活跃）
 //   · 全局热键 Ctrl+Alt+B 呼出/收起气泡
-const { app, BrowserWindow, ipcMain, globalShortcut, screen, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, globalShortcut, screen, shell, Tray, Menu, nativeImage } = require("electron");
 const path = require("node:path");
 const { appendFileSync, readFileSync } = require("node:fs");
 
@@ -247,7 +247,7 @@ function positionDock() {
   // 圆环绕着猫：dock 窗以猫的水平中心为圆心，环心对准猫头（耳朵高度）
   // +85：环整体抬离头顶（原 +120 图标贴耳朵太近）
   const x = pb.x + Math.round(PET_W / 2 - DOCK_W / 2);   // dockX+CX=127 → 圆心屏幕横坐标 = petX+72（标定十字）
-  const y = pb.y - DOCK_H + 206;   // dock 内圆心 (127,168) 对准标定十字：dockY+168 = petY+142
+  const y = pb.y - DOCK_H + 156;   // dock 内圆心 (150,168) 对准标定十字：dockY+168 = petY+92（两眼中间）
   dockWin.setPosition(Math.min(Math.max(x, wa.x + 4), wa.x + wa.width - DOCK_W - 4),
                       Math.min(Math.max(y, wa.y + 4), wa.y + wa.height - DOCK_H - 4));
   // 关键：芯片区与猫窗范围重叠，猫窗任何一次 setPosition/激活都可能反压到 dock
@@ -408,6 +408,10 @@ function showDashboard(show) {
     }
   } else if (dashWin && !dashWin.isDestroyed()) dashWin.hide();
 }
+ipcMain.on("open-external", (_e, u) => {
+  const s = String(u || "");
+  if (/^https?:\/\//i.test(s) || s.startsWith("file:")) shell.openExternal(s.slice(0, 500));
+});
 ipcMain.on("dashboard-toggle", () => {
   const vis = dashWin && !dashWin.isDestroyed() && dashWin.isVisible();
   showDashboard(!vis);
@@ -590,6 +594,36 @@ ipcMain.on("open-data-dir", () => {
 // 「被遮挡」并停止合成；覆盖结束后该状态不恢复——透明窗表面被 DWM 丢弃，
 // Electron 仍记为可见 → 猫/图标环/面板集体「幽灵可见」（看得见位置点不着，
 // show() 全部无操作）。这是透明置顶窗的标准解法，必须在 app ready 前设置。
+/* ── 系统托盘：左键/双击唤猫，右键菜单（设置/总览/躲猫猫/退出） ── */
+let tray = null;
+function showCat() {
+  if (!petWin || petWin.isDestroyed()) { createPet(); return; }
+  petWin.showInactive();
+  petWin.moveTop();
+}
+function hideCat() {
+  if (petWin && !petWin.isDestroyed()) petWin.hide();
+}
+function createTray() {
+  const iconPath = path.join(__dirname, "../renderer/assets/tray.png");
+  const icon = nativeImage.createFromPath(iconPath);
+  tray = new Tray(icon.isEmpty() ? nativeImage.createEmpty() : icon.resize({ width: 16, height: 16 }));
+  tray.setToolTip("思维板 · 小黑猫");
+  // 左键/双击：唤猫（隐藏时即打开）
+  tray.on("click", showCat);
+  tray.on("double-click", showCat);
+  const menu = Menu.buildFromTemplate([
+    { label: "显示猫猫", click: showCat },
+    { label: "躲猫猫", click: hideCat },
+    { type: "separator" },
+    { label: "设置", click: () => showSettings(true) },
+    { label: "项目总览", click: () => showDashboard(true) },
+    { type: "separator" },
+    { label: "退出", click: () => app.quit() },
+  ]);
+  tray.setContextMenu(menu);
+}
+
 app.commandLine.appendSwitch("disable-features", "CalculateNativeWinOcclusion");
 
 app.whenReady().then(async () => {
@@ -600,6 +634,7 @@ app.whenReady().then(async () => {
     port = r.port;
     log("[main] server ready, port:", port, "reused:", !!r.isReused);
     createPet();
+    createTray();
   } catch (e) {
     log("[main] startup FAILED:", e?.stack || String(e));
     return;
