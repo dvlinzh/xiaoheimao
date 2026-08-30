@@ -152,16 +152,7 @@ function createPet() {
 function summonBubble() {
   bubbleShowAt = Date.now();
   if (bubbleWin && !bubbleWin.isDestroyed()) {
-    if (bubbleWin.isVisible()) {
-      // 幽灵可见态：透明窗 blur 后 DWM 丢弃渲染表面，但 Electron 仍记为可见——
-      // 此时 show() 是无操作，面板永远不再出现（须点两次才恢复）。
-      // 强制 hide→show 踢掉幽灵态，顺便触发 show 事件刷新宽限基准。
-      bubbleWin.hide();
-      bubbleWin.show();
-      log("[bubble] summon: hide+show（幽灵可见态修复）");
-    } else {
-      bubbleWin.show();
-    }
+    bubbleWin.show();
     bubbleWin.focus();
   }
 }
@@ -309,11 +300,19 @@ function showDock(show) {
       dockWin.moveTop();
     }
     positionDock();
-  } else if (dockWin && !dockWin.isDestroyed()) {
-    dockWin.hide();
-    chipRects = [];
+  } else if (dockWin && !dockWin.isDestroyed() && dockWin.isVisible()) {
+    // 淡出 120ms 后再隐藏，避免生硬消失（fade-out 在 dock.js）
+    try { dockWin.webContents.send("dock-fade"); } catch {}
+    setTimeout(() => {
+      try {
+        if (!dockWin || dockWin.isDestroyed()) return;
+        dockWin.hide();
+        chipRects = [];
+        dockIgnore = null;
+        if (petWin && !petWin.isDestroyed()) petWin.webContents.send("chip-rects", []);
+      } catch {}
+    }, 130);
     dockIgnore = null;
-    if (petWin && !petWin.isDestroyed()) petWin.webContents.send("chip-rects", []);
   }
 }
 

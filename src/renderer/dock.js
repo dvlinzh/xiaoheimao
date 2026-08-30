@@ -129,7 +129,7 @@ async function refresh() {
       const tipText = `${LABELS[h] || h}｜${by[h].gaps ? "缺口 " + by[h].gaps + " · " : ""}${state === "on" ? "整理中" : state === "idle" ? "待命" : "整理模式关"}`;
       const hasNew = by[h].newest > (seen[h] || 0);
       const glow = state === "on" ? `--glow:${ICON_COLOR[h] || ICON_COLOR.other};` : "";
-      html += `<div class="chip st-${state}" data-h="${encodeURIComponent(h)}" data-tip="${tipText}" data-x="${x}" data-y="${y}" style="left:${x}px;top:${y}px;${glow}">`
+      html += `<div class="chip st-${state}" data-h="${encodeURIComponent(h)}" data-tip="${tipText}" data-x="${x}" data-y="${y}" style="left:${x}px;top:${y}px;animation-delay:${i * 40}ms;${glow}">`
         + `<span class="disc">${iconSvg(h, 26)}</span>`
         + `<span class="badge${hasNew ? " show" : ""}"></span></div>`;
     });
@@ -212,7 +212,9 @@ setInterval(refresh, 3000);
  * （曾因此整个晚上环里都是「空 keys」的残留，用户看到的是没有图标的环）。 */
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) {
+    dock.classList.remove("fade-out");
     lastSig = null;
     refresh();
   }
 });
+window.petBridge?.onDockFade?.(() => dock.classList.add("fade-out"));

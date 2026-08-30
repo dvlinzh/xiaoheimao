@@ -42,3 +42,15 @@ html, body {
   font-size: 10px; padding: 3px 8px; border-radius: 6px;
   white-space: nowrap;
 }
+
+/* ── 出现动效：芯片从圆心弹开，按序延迟（扇形展开感） ── */
+.chip {
+  animation: chip-in .26s cubic-bezier(.2, .85, .3, 1.18) backwards;
+}
+@keyframes chip-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(.3); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+/* ── 退场：整环淡出（主进程延迟 130ms 再 hide） ── */
+#dock { transition: opacity .13s ease; }
+#dock.fade-out { opacity: 0; }
