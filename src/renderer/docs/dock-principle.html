@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>图标环组件 · 原理与技术图解</title>
+<style>
+  :root {
+    --bg: #0d0d0f; --card: #141416; --card2: #1b1b1f; --line: #28282e;
+    --line2: #34343c; --text: #ececec; --dim: #9a9aa2; --faint: #66666e;
+    --amber: #fbbf24; --teal: #5eead4; --sky: #5ea3f7; --violet: #8b7cf6; --red: #f0716c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text); padding: 40px 24px 80px;
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif; font-size: 15px; line-height: 1.75;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h1 { font-family: Georgia, "Songti SC", serif; font-size: 30px; margin: 0 0 6px; }
+  .sub { color: var(--dim); margin: 0 0 36px; font-size: 14.5px; }
+  h2 {
+    font-size: 20px; margin: 52px 0 8px; padding-left: 12px;
+    border-left: 3px solid var(--amber); line-height: 1.4;
+  }
+  .lead { color: var(--dim); font-size: 14px; margin: 0 0 20px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 20px; margin-bottom: 16px; overflow-x: auto;
+  }
+  .card svg { display: block; margin: 0 auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; }
+  th { color: var(--faint); font-size: 12px; letter-spacing: 1px; font-weight: 700; }
+  td code { color: var(--teal); font-size: 12.5px; }
+  .dim { color: var(--dim); }
+  .faint { color: var(--faint); font-size: 12.5px; }
+  .steps { counter-reset: s; padding: 0; list-style: none; margin: 0; }
+  .steps li { counter-increment: s; display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start; }
+  .steps li::before {
+    content: counter(s, decimal-leading-zero); flex: none;
+    width: 28px; height: 28px; border-radius: 50%; background: var(--card2);
+    border: 1px solid var(--line2); color: var(--amber); font-weight: 700; font-size: 13px;
+    display: flex; align-items: center; justify-content: center; margin-top: 2px;
+  }
+  .steps b { color: var(--text); }
+  .steps .d { color: var(--dim); font-size: 13.5px; display: block; }
+  pre {
+    background: #0a0a0c; border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; font-size: 12.5px; line-height: 1.7; color: #c8c8d0;
+    overflow-x: auto; margin: 12px 0;
+  }
+  pre .k { color: var(--amber); }
+  pre .c { color: var(--faint); }
+  pre .v { color: var(--teal); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>图标环组件 · 原理与技术图解</h1>
+<p class="sub">dock（图标环）—— 点猫弹出、以猫头为圆心扇形排布的 harness 芯片。本文拆解它的数据来源、排列算法、命中机制与防御性设计。</p>
+
+<!-- ═════════ ① 组件全景 ═════════ -->
+<h2>① 组件全景：一个透明的置顶小窗</h2>
+<p class="lead">图标环不是猫窗的一部分——它是一个独立的 Electron 窗口，叠在猫头上方。</p>
+<div class="card">
+<svg viewBox="0 0 900 330" font-family="'Segoe UI','Microsoft YaHei',sans-serif">
+  <style>
+    .w { fill: #141416; stroke: #34343c; stroke-width: 1.2; }
+    .wt { fill: #ececec; font-size: 13px; font-weight: 700; }
+    .wd { fill: #9a9aa2; font-size: 11px; }
+    .wl { fill: #66666e; font-size: 10px; letter-spacing: 2px; font-weight: 700; }
+    .ln { stroke: #66666e; stroke-width: 1.2; fill: none; marker-end: url(#a); }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#66666e"/>
+    </marker>
+  </defs>
+  <text x="20" y="26" class="wl">屏幕堆叠（俯视 z 轴）</text>
+  <!-- 窗口堆叠 -->
+  <rect x="20" y="44" width="250" height="110" rx="12" class="w"/>
+  <text x="145" y="76" text-anchor="middle" class="wt">普通应用窗口</text>
+  <text x="145" y="98" text-anchor="middle" class="wd">你的编辑器 / 浏览器 / 游戏</text>
+  <text x="145" y="130" text-anchor="middle" class="wd">z = 0</text>
+
+  <rect x="310" y="36" width="250" height="110" rx="12" class="w" stroke="#fbbf24"/>
+  <text x="435" y="66" text-anchor="middle" class="wt">猫窗 petWin（screen-saver 级）</text>
+  <text x="435" y="88" text-anchor="middle" class="wd">透明 · 不可聚焦 · 默认点击穿透</text>
+  <text x="435" y="106" text-anchor="middle" class="wd">悬停到不透明像素才切「可点」</text>
+  <text x="435" y="128" text-anchor="middle" class="wd">z = screen-saver</text>
+
+  <rect x="600" y="28" width="270" height="110" rx="12" class="w" stroke="#5eead4"/>
+  <text x="735" y="58" text-anchor="middle" class="wt">图标环 dockWin（同级别）</text>
+  <text x="735" y="80" text-anchor="middle" class="wd">透明 300×200 · 不可聚焦 · 默认穿透</text>
+  <text x="735" y="98" text-anchor="middle" class="wd">每次定位都 moveTop 压到最上</text>
+  <text x="735" y="118" text-anchor="middle" class="wd">z = screen-saver（最上层）</text>
+
+  <path class="ln" d="M275 92 L305 92"/>
+  <path class="ln" d="M565 92 L595 92"/>
+  <text x="290" y="80" class="wd">▲</text>
+  <text x="580" y="80" class="wd">▲</text>
+  <text x="20" y="180" class="wd">三层都是置顶窗；图标环每次 positionDock 都重新 moveTop——猫窗 drag-end 的 setPosition 不会把它反压下去。</text>
+  <text x="20" y="202" class="wd">两窗都可点击穿透：光标落在「非命中区」时，点击会穿过它们落到下面的普通应用，不挡任何操作。</text>
+  <text x="20" y="240" class="wl">为什么必须是独立窗口？</text>
+  <text x="20" y="262" class="wd">猫窗画布只有 190×220，而环的直径约 160px——装不下；且环需要独立于猫的命中/穿透状态（猫命中的像素 ≠ 芯片区域）。</text>
+  <text x="20" y="284" class="wd">独立窗口 + 「芯片矩形上报」机制（见 ④），让两个窗的点击路由互不干扰。</text>
+</svg>
+</div>
+
+<!-- ═════════ ② 数据循环 ═════════ -->
+<h2>② 工作循环：3 秒一次的数据流水线</h2>
+<p class="lead">dock 渲染层没有自己的数据——它每 3 秒从本地 HTTP 服务拉一次总览，聚合成「每个 harness 一枚芯片」。</p>
+<div class="card">
+<ol class="steps">
+  <li>
+    <b>拉取</b>
+    <span class="d"><code style="color:#5eead4">GET /api/overview</code> → 44 个项目记录（含 id / harnesses / counts / liveAtMs）</span>
+  </li>
+  <li>
+    <b>聚合：项目 → harness</b>
+    <span class="d">按 <b>harnesses[]</b> 分组累加：gaps 求和、newest 取最新 updatedAt、live 取最新文件 mtime。43 个 dsh 项目合并成 1 枚鲸鱼芯片。</span>
+  </li>
+  <li>
+    <b>签名比对（防重建抖动）</b>
+    <span class="d">sig = 每个harness的「存活位 + 红点位」拼接。与上次相同 → 直接 return，DOM 不动——防止 3 秒轮询把用户正按着的芯片换没。</span>
+  </li>
+  <li>
+    <b>重建 + 上报芯片矩形</b>
+    <span class="d">innerHTML 重建芯片 → 把每个芯片的客户区矩形（±30px 热区）发给主进程 → 换算屏幕坐标 → 推给猫窗做命中排除（见 ④）。</span>
+  </li>
+  <li>
+    <b>显示时强制刷新</b>
+    <span class="d">visibilitychange → 清签名 → 立即 refresh。隐藏期 Chromium 把定时器节流到几十分钟一次，靠它保证弹出来的环永远是新鲜的（曾因此整晚显示空环）。</span>
+  </li>
+</ol>
+<pre>
+<span class="c">// dock.js — 聚合与恒驻逻辑（核心 12 行）</span>
+<span class="k">const</span> keys = Object.<span class="v">keys</span>(by);            <span class="c">// 全部 harness，恒驻不过滤</span>
+<span class="k">const</span> live = now - by[h].live &lt; <span class="v">LIVE_MS</span>; <span class="c">// 10min 内有写盘 = 运行中</span>
+state = !modeOn ? <span class="v">"off"</span> : live ? <span class="v">"on"</span> : <span class="v">"idle"</span>;
+                                          <span class="c">// on=光晕 idle=灰显 off=暗化</span>
+</pre>
+</div>
+
+<!-- ═════════ ③ 排列算法 ═════════ -->
+<h2>③ 排列算法：以猫头为圆心的 120° 非对称扇形</h2>
+<p class="lead">圆心永远对准猫头中心。四个槽位按角度预算在左侧 120° 扇区（-168° → -50°），间距不等、非镜像——n=2 时两芯片一高一低，读得出「绕着头」的弧线。</p>
+<div class="card">
+<svg viewBox="0 0 900 470" font-family="'Segoe UI','Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#66666e"/>
+    </marker>
+    <linearGradient id="tail2" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#8b7cf6"/><stop offset=".5" stop-color="#5ea3f7"/><stop offset="1" stop-color="#5eead4"/>
+    </linearGradient>
+  </defs>
+  <style>
+    .arc { fill: none; stroke: #28282e; stroke-width: 1.4; stroke-dasharray: 5 5; }
+    .ang { stroke: #66666e; stroke-width: 1; stroke-dasharray: 3 4; }
+    .chip { fill: #16161e; stroke: #34343c; stroke-width: 1.5; }
+    .deg { fill: #9a9aa2; font-size: 11px; }
+    .note2 { fill: #66666e; font-size: 11px; }
+    .big { fill: #ececec; font-size: 13px; font-weight: 700; }
+  </style>
+
+  <!-- 猫头（圆心） -->
+  <g transform="translate(300,330)">
+    <!-- 半径圈 -->
+    <circle cx="0" cy="0" r="128" class="arc"/>
+    <!-- 角度虚线 -->
+    <line x1="0" y1="0" x2="125" y2="-27" class="ang"/>
+    <line x1="0" y1="0" x2="-42" y2="-122" class="ang"/>
+    <line x1="0" y1="0" x2="0" y2="-128" class="ang"/>
+    <line x1="0" y1="0" x2="-17" y2="-126" class="ang" stroke="#28282e"/>
+    <!-- 猫头 -->
+    <path d="M-34 -46 L-27 -74 L-8 -56 Q0 -58 8 -56 L27 -74 L34 -46 Q40 -32 35 -20 Q28 -2 0 -2 Q-28 -2 -35 -20 Q-40 -32 -34 -46 Z"
+          fill="#16161e" stroke="#34343c" stroke-width="1.5"/>
+    <path d="M-3 -48 L0 -32 L3 -48" fill="none" stroke="#5eead4" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="-13" cy="-24" r="4.5" fill="#fbbf24"/>
+    <circle cx="13" cy="-24" r="4.5" fill="#fbbf24"/>
+    <!-- 圆心标注 -->
+    <circle cx="0" cy="0" r="3" fill="#f0716c"/>
+    <text x="8" y="16" class="deg">圆心 = 猫头中心 (CX, CY)</text>
+    <!-- 半径标注 -->
+    <line x1="0" y1="0" x2="64" y2="-64" stroke="#f0716c" stroke-width="1.2"/>
+    <text x="30" y="-52" fill="#f0716c" font-size="11">R = 80px</text>
+    <!-- n=2 占用的两个槽位（芯片） -->
+    <g transform="translate(100,-102)">
+      <circle r="18.5" class="chip" stroke="#fbbf24"/>
+      <circle r="0" fill="none"/>
+      <text y="5" text-anchor="middle" font-size="15" fill="#fbbf24">✦</text>
+      <text y="-30" text-anchor="middle" class="deg">claude-code</text>
+      <text y="42" text-anchor="middle" fill="#fbbf24" font-size="11">-50° 右肩 · 光晕</text>
+    </g>
+    <g transform="translate(-68,-109)">
+      <circle r="18.5" class="chip"/>
+      <text y="5" text-anchor="middle" font-size="14" fill="#5ea3f7">🐳</text>
+      <text y="-30" text-anchor="middle" class="deg">dsh</text>
+      <text y="42" text-anchor="middle" class="deg">-122° 左上 · 灰显</text>
+    </g>
+    <!-- 未占用槽位（虚圈） -->
+    <g transform="translate(0,-128)">
+      <circle r="14" fill="none" stroke="#34343c" stroke-width="1.3" stroke-dasharray="4 3"/>
+      <text y="-24" text-anchor="middle" class="note2">-90°（空槽）</text>
+    </g>
+    <g transform="translate(-126,26)">
+      <circle r="14" fill="none" stroke="#34343c" stroke-width="1.3" stroke-dasharray="4 3"/>
+      <text y="46" text-anchor="middle" class="note2">-168°（空槽）</text>
+    </g>
+  </g>
+
+  <!-- 右侧：公式与规则 -->
+  <g transform="translate(560,60)">
+    <text x="0" y="0" class="big">槽位角表（dock.js · FAN_SLOTS）</text>
+    <g transform="translate(0,24)">
+      <text y="0" class="deg" font-size="12.5">FAN_SLOTS = [-168, -122, -90, -50]</text>
+      <text y="24" class="deg" font-size="12.5">FAN_FILL  = { 1:[1], 2:[1,3], 3:[0,2,3], 4:[0,1,2,3] }</text>
+      <text y="48" class="deg" font-size="12.5">arcPos(i,n) = ( CX + R·cosθ , CY + R·sinθ )</text>
+    </g>
+    <g transform="translate(0,110)">
+      <text x="0" y="0" class="big">规则</text>
+      <text y="26" class="deg" font-size="12">· 圆心 = 猫头中心：dock 窗 (150,168) 对准头部</text>
+      <text y="48" class="deg" font-size="12">· 间距 46/32/40 不等 → 非镜像，两芯片一高一低</text>
+      <text y="70" class="deg" font-size="12">· n=2 占 [1,3] 号槽（左上 + 右肩），如左图</text>
+      <text y="92" class="deg" font-size="12">· n=3 补 [0,2,3]，n=4 全占，n&gt;4 在 [-178,-38] 均布</text>
+      <text y="114" class="deg" font-size="12">· 屏幕坐标 y 向下为正，负角 = 头顶方向</text>
+    </g>
+    <g transform="translate(0,268)">
+      <text x="0" y="0" class="big">为什么非对称？</text>
+      <text y="26" class="deg" font-size="12">镜像对称的两点在圆上必然等高——</text>
+      <text y="48" class="deg" font-size="12">两枚芯片看起来就是一条横线，读不出弧度。</text>
+      <text y="70" class="deg" font-size="12">不等距 + 圆心锚定猫头，才能表达「绕着头」。</text>
+    </g>
+  </g>
+</svg>
+</div>
+
+<!-- ═════════ ④ 状态与命中 ═════════ -->
+<h2>④ 状态机与点击路由</h2>
+<p class="lead">每枚芯片有三种状态；点击能落到芯片，靠的是「穿透 + 矩形排除」双机制。</p>
+<div class="card">
+<table>
+  <tr><th>状态</th><th>条件</th><th>视觉</th></tr>
+  <tr><td><code>st-on</code> 整理中</td><td>整理模式开 且 10 分钟内有项目文件写盘</td><td>正常色 + 主题色恒定光晕（<code>--glow</code> 变量按芯片注入）</td></tr>
+  <tr><td><code>st-idle</code> 待命</td><td>装过插件但超过 10 分钟无写盘</td><td>灰度化（grayscale + 微降亮度）</td></tr>
+  <tr><td><code>st-off</code> 模式关</td><td>用户在设置里关了整理模式</td><td>深度灰化</td></tr>
+</table>
+</div>
+<div class="card">
+<svg viewBox="0 0 900 210" font-family="'Segoe UI','Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#5eead4"/>
+    </marker>
+    <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#66666e"/>
+    </marker>
+  </defs>
+  <style>
+    .lane { fill: #141416; stroke: #28282e; stroke-width: 1.2; }
+    .lt { fill: #ececec; font-size: 12.5px; font-weight: 700; }
+    .ld { fill: #9a9aa2; font-size: 11px; }
+    .fl { stroke: #5eead4; stroke-width: 1.3; fill: none; marker-end: url(#a3); }
+    .fg { stroke: #66666e; stroke-width: 1.2; fill: none; marker-end: url(#a4); }
+    .ft { fill: #5eead4; font-size: 10.5px; }
+    .gt { fill: #66666e; font-size: 10.5px; }
+  </style>
+  <text x="20" y="24" fill="#66666e" font-size="10" letter-spacing="2" font-weight="700">一次芯片点击的完整路由</text>
+  <!-- 泳道 -->
+  <rect x="20"  y="40" width="160" height="140" rx="10" class="lane"/>
+  <text x="100" y="64" text-anchor="middle" class="lt">dock 渲染层</text>
+  <text x="100" y="84" text-anchor="middle" class="ld">3s 轮询 · 芯片 DOM</text>
+  <rect x="240" y="40" width="160" height="140" rx="10" class="lane"/>
+  <text x="320" y="64" text-anchor="middle" class="lt">主进程 main.cjs</text>
+  <text x="320" y="84" text-anchor="middle" class="ld">IPC · 窗口管理</text>
+  <rect x="460" y="40" width="160" height="140" rx="10" class="lane"/>
+  <text x="540" y="64" text-anchor="middle" class="lt">猫窗渲染层</text>
+  <text x="540" y="84" text-anchor="middle" class="ld">alpha 命中 · 排除区</text>
+  <rect x="680" y="40" width="200" height="140" rx="10" class="lane"/>
+  <text x="780" y="64" text-anchor="middle" class="lt">思维板面板 bubbleWin</text>
+  <text x="780" y="84" text-anchor="middle" class="ld">透明 · 可聚焦 · 默认钉住</text>
+  <!-- 流程 -->
+  <path class="fl" d="M100 96 L100 122 L238 122"/>
+  <text x="110" y="116" class="ft">pointerdown → open-bubble IPC</text>
+  <path class="fl" d="M322 122 L368 122 L368 150 L458 150"/>
+  <text x="330" y="168" class="ft">创建/复用面板 · 上报芯片矩形</text>
+  <path class="fg" d="M400 96 L520 96"/>
+  <text x="408" y="90" class="gt">chip-rects → 屏幕坐标推给猫窗</text>
+  <path class="fg" d="M540 96 L540 122 L678 122" stroke-dasharray="4 3"/>
+  <text x="548" y="116" class="gt">命中排除：光标在芯片矩形内 → 猫一律穿透</text>
+  <path class="fl" d="M760 122 L760 150"/>
+  <text x="700" y="168" class="ft">面板 show · blur 宽限 1.2s · 默认钉住</text>
+  <text x="20" y="204" class="ld">猫窗永远不截胡芯片点击：无论两窗 z-order 如何翻转、穿透状态如何抖动，芯片矩形内的命中都归 dock。</text>
+</svg>
+</div>
+
+<!-- ═════════ ⑤ 防御性设计 ═════════ -->
+<h2>⑤ 防御性设计：每一个都是真实事故的修复</h2>
+<div class="card">
+<table>
+  <tr><th>机制</th><th>防的事故</th><th>原理</th></tr>
+  <tr><td><code>签名比对</code></td><td>3 秒轮询重建 DOM，把正按着的芯片换掉 → 点击丢失</td><td>keys+状态拼签名，不变不重建</td></tr>
+  <tr><td><code>pointerdown 触发</code></td><td>click 等 mouseup 期间恰好赶上重建</td><td>按下即触发，500ms 防重入</td></tr>
+  <tr><td><code>visibilitychange 强刷</code></td><td>隐藏期定时器被节流到几十分钟一次，显示旧 DOM（曾整晚显示空环）</td><td>show 时清签名立即刷新</td></tr>
+  <tr><td><code>mouseout 悬停恢复</code></td><td>重建合成 mouseout 误杀悬停态，静止光标第一次点击必穿透</td><td>下一帧按 .chip:hover 真实状态恢复</td></tr>
+  <tr><td><code>moveTop 随定位</code></td><td>猫窗 setPosition 反压 dock，点芯片点到猫</td><td>dock 每次定位重新压顶</td></tr>
+  <tr><td><code>芯片矩形排除</code></td><td>芯片区与猫窗重叠的 z-order 竞争</td><td>猫窗命中检测对上报矩形一律穿透</td></tr>
+  <tr><td><code>1.2s toggle 防抖</code></td><td>快速连点猫，环 show→hide 闪没</td><td>刚弹出 1.2s 内的再点忽略</td></tr>
+</table>
+</div>
+
+<p class="faint" style="margin-top:32px">源码：src/renderer/dock.js（布局与循环） · src/main/main.cjs（窗口与 IPC） · src/renderer/dock.css（状态皮肤） · 本地服务查看：http://127.0.0.1:13134/docs/dock-principle.html</p>
+
+</div>
+</body>
+</html>
