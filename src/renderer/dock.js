@@ -59,22 +59,13 @@ function iconSvg(h, size) {
   return `<svg viewBox="0 0 40 40" width="${size}" height="${size}" aria-hidden="true">${body}</svg>`;
 }
 
-/* ── 环形布局：圆心 = 猫头（dock 窗底中点对准头部高度），芯片沿头周弧线非对称散布 ── */
+/* ── 环形布局：120° 扇形，圆心 = 猫头中心。一条边垂直（-90° 正头顶），
+ * 另一条边斜向左下（-210°，落到猫身左下侧、任务栏上方），芯片沿扇形等距分布。
+ * n=1 时唯一芯片在垂直边上（正头顶）。 ── */
 const R = 80;                 // 半径：比耳廓稍远一档
-const CX = 150, CY = 168;     // 圆心（dock 窗 300×200，(150,168) 对准猫头中心）
-/* 左侧 120° 扇形（度，以猫头为圆心，-90=正头顶）：约 -170° → -50°，
- * 间距不等非镜像（46/32/40）；harness 不足 4 个按 FAN_FILL 挑槽位
- * （2 个 = 左上 -122° + 右肩 -50°），更多则先补空槽再向外插值。 */
-const FAN_SLOTS = [-168, -122, -90, -50];
-const FAN_FILL = { 1: [1], 2: [1, 3], 3: [0, 2, 3], 4: [0, 1, 2, 3] };
+const CX = 150, CY = 168;     // 圆心（dock 窗 300×240，(150,168) 对准猫头中心）
 function arcPos(i, n) {
-  if (n <= 4) {
-    const deg = FAN_SLOTS[FAN_FILL[n][i]];
-    const rad = (deg * Math.PI) / 180;
-    return { x: CX + R * Math.cos(rad), y: CY + R * Math.sin(rad) };
-  }
-  // n>4：[-178,-38] 均布兜底
-  const deg = -178 + (140 / (n - 1)) * i;
+  const deg = -90 - (120 / Math.max(1, n - 1)) * i;
   const rad = (deg * Math.PI) / 180;
   return { x: CX + R * Math.cos(rad), y: CY + R * Math.sin(rad) };
 }
