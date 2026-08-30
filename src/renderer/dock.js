@@ -104,8 +104,9 @@ async function refresh() {
     const ov = await fetch("/api/overview").then((r) => r.json());
     const now = Date.now();
     const ud = ov.settings?.ui?.dock || {};
-    R = ud.r ?? 75; CX = ud.cx ?? 150; CY = ud.cy ?? 168;
-    SPAN = ud.span ?? 120; START = ud.start ?? -90; LIVE_MS = ud.liveMs ?? 600000;
+    R = ud.r ?? 75; SPAN = ud.span ?? 120; START = ud.start ?? -90; LIVE_MS = ud.liveMs ?? 600000;
+    // 注意：CX/CY（芯片在 dock 客户区的圆心）是组件常量 150/168；
+    // ui.dock.cx/cy 是窗内圆心，由主进程 positionDock 用于摆放窗口，dock.js 不消费
     const act = (ov.projects || []).filter((p) => p.active !== false);
     const by = {};
     for (const p of act) {

@@ -129,6 +129,31 @@ async function route(req, res) {
           __path: "",
         });
       }
+      case req.method === "GET" && path === "/api/ui-params":
+        return json(res, store.readSettings().ui || {});
+      case req.method === "POST" && path === "/api/ui-params": {
+        // 标定工具实时写入：只收白名单数值键，深合并进 settings.json 的 ui
+        const body = await readBody(req);
+        const numv = (v, lo, hi, d) => (Number.isFinite(Number(v)) ? Math.min(Math.max(Number(v), lo), hi) : d);
+        const cur = store.readSettings().ui || { dock: {}, pet: {} };
+        const ui = {
+          dock: {
+            cx: numv(body.dock?.cx, -200, 400, cur.dock?.cx ?? 150),
+            cy: numv(body.dock?.cy, -200, 400, cur.dock?.cy ?? 168),
+            r: numv(body.dock?.r, 30, 200, cur.dock?.r ?? 75),
+            span: numv(body.dock?.span, 20, 180, cur.dock?.span ?? 120),
+            start: numv(body.dock?.start, -240, -30, cur.dock?.start ?? -90),
+            liveMs: numv(body.dock?.liveMs, 60000, 86400000, cur.dock?.liveMs ?? 600000),
+          },
+          pet: {
+            bury: numv(body.pet?.bury, -20, 60, cur.pet?.bury ?? 13),
+            dragThresh: numv(body.pet?.dragThresh, 6, 60, cur.pet?.dragThresh ?? 10),
+          },
+        };
+        store.writeSettings({ ui });
+        uiParamsListener?.(ui);   // 通知主进程（重定位 dock 窗口等）
+        return json(res, { ok: true, ui });
+      }
       case req.method === "POST" && path === "/api/import": {
         const body = await readBody(req);
         if (!body) return badJson(res);
@@ -155,6 +180,9 @@ async function route(req, res) {
 }
 
 /** 启动服务。若端口已被本应用占用则复用（isReused=true）。 */
+let uiParamsListener = null;
+export function onUiParams(fn) { uiParamsListener = typeof fn === "function" ? fn : null; }
+
 export function startServer(port = PORT) {
   return new Promise((resolveP) => {
     const srv = createServer((req, res) => {

@@ -42,6 +42,13 @@ function prefsFile() {
   const dir = process.env.MIND_BOARD_HOME || path.join(require("node:os").homedir(), ".mind-board");
   return path.join(dir, "settings.json");
 }
+/** 运行参数（ui 键）：每次读取最新值，标定工具改完即刻生效 */
+function readUi() {
+  try {
+    const raw = JSON.parse(readFileSync(prefsFile(), "utf8"));
+    return raw.ui || {};
+  } catch { return {}; }
+}
 function loadUiPrefs() {
   try {
     const raw = JSON.parse(readFileSync(prefsFile(), "utf8"));
@@ -82,8 +89,9 @@ function petPos(wa) {
   if (petEdge === "taskbar") {
     const x = Number.isFinite(petXTB) ? petXTB : wa.x + Math.round((wa.width - PET_W) / 2);
     // 脚底对齐方案（皮肤按素材最低不透明行对齐画布底=窗口底）：
-    // offset = 窗口底压入任务栏的深度。用户终选 ≈13px（坐实任务栏）。
-    return { x: Math.min(Math.max(x, wa.x + 4), wa.x + wa.width - PET_W - 4), y: wa.y + wa.height - PET_H + 13 };
+    // offset = 窗口底压入任务栏的深度（ui.pet.bury 可实时调）。
+    const bury = Number(readUi().pet?.bury ?? 13);
+    return { x: Math.min(Math.max(x, wa.x + 4), wa.x + wa.width - PET_W - 4), y: wa.y + wa.height - PET_H + bury };
   }
   const x = petEdge === "left" ? wa.x + 8 : wa.x + wa.width - PET_W - 8;
   const y = Number.isFinite(petY)
@@ -245,10 +253,11 @@ function positionDock() {
   if (!petWin || petWin.isDestroyed() || !dockWin || dockWin.isDestroyed() || !dockWin.isVisible()) return;
   const wa = workArea();
   const pb = petWin.getBounds();
-  // 圆环绕着猫：dock 窗以猫的水平中心为圆心，环心对准猫头（耳朵高度）
-  // +85：环整体抬离头顶（原 +120 图标贴耳朵太近）
-  const x = pb.x + Math.round(PET_W / 2 - DOCK_W / 2);   // dockX+CX=127 → 圆心屏幕横坐标 = petX+72（标定十字）
-  const y = pb.y - DOCK_H + 156;   // dock 内圆心 (150,168) 对准标定十字：dockY+168 = petY+92（两眼中间）
+  // 圆心(ui.dock.cx/cy)是窗内坐标：dock 窗摆放使得 dock 内 (CX,CY)=(150,168)
+  // 恰好落在窗内圆心上。ui 变化 → 标定工具实时生效。
+  const ui = readUi().dock || {};
+  const x = pb.x + Math.round((ui.cx ?? 95) - 150);
+  const y = pb.y + Math.round((ui.cy ?? 95) - 168);
   dockWin.setPosition(Math.min(Math.max(x, wa.x + 4), wa.x + wa.width - DOCK_W - 4),
                       Math.min(Math.max(y, wa.y + 4), wa.y + wa.height - DOCK_H - 4));
   // 关键：芯片区与猫窗范围重叠，猫窗任何一次 setPosition/激活都可能反压到 dock
@@ -482,10 +491,10 @@ ipcMain.on("drag-start", () => {
     dragPrevX = c.x;
     try { petWin.webContents.send("drag-phys", { vx }); } catch {}
     if (!dragMoved) {
-      // 阈值 10px：手抖/触摸板抖动（3~6px）以前会被误判成拖拽——图标环被藏掉、
-      // 猫被拎起吸附，用户的「单击唤环」几乎永远失败。与 pet.js 的单击判定
-      // （<6px）划清界限：<6 单击，6~10 忽略，≥10 拖拽。
-      if (Math.abs(c.x - p.x) + Math.abs(c.y - p.y) < 10) return;
+      // 阈值 ui.pet.dragThresh（默认 10）：手抖/触摸板抖动以前被误判成拖拽——
+      // 图标环被藏掉、猫被拎起吸附。与 pet.js 单击判定（<6px）划清界限。
+      const th = Number(readUi().pet?.dragThresh ?? 10);
+      if (Math.abs(c.x - p.x) + Math.abs(c.y - p.y) < th) return;
       dragMoved = true;
       log("[drag] start at", JSON.stringify(b));
       try { petWin.webContents.send("drag-state", true); } catch {}
@@ -656,7 +665,11 @@ app.commandLine.appendSwitch("disable-features", "CalculateNativeWinOcclusion");
 app.whenReady().then(async () => {
   loadUiPrefs();
   try {
-    const { startServer } = await import("../server/app.mjs");
+    const { startServer, onUiParams } = await import("../server/app.mjs");
+    onUiParams(() => {
+      positionDock();       // 圆心参数变了 → dock 窗跟着挪
+      applyPetPos();        // 埋入深度变了 → 猫的落点也更新
+    });
     const r = await startServer();
     port = r.port;
     log("[main] server ready, port:", port, "reused:", !!r.isReused);

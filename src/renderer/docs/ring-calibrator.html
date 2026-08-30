@@ -77,12 +77,19 @@
         <input type="range" id="i-start" min="-180" max="-60" step="5"></div>
       <div class="ctl"><label>芯片数量<output id="o-n"></output></label>
         <input type="range" id="i-n" min="1" max="5" step="1"></div>
+      <div class="ctl"><label>猫埋入任务栏深度<output id="o-bury"></output></label>
+        <input type="range" id="i-bury" min="-10" max="40" step="1"></div>
       <div class="ctl"><label>吸附场景</label>
         <div class="seg" id="edge-seg">
           <button data-e="taskbar" class="on">任务栏</button>
           <button data-e="right">右缘</button>
           <button data-e="left">左缘（镜像）</button>
         </div>
+      </div>
+      <div class="ctl" style="display:flex;gap:10px;align-items:center;">
+        <input type="checkbox" id="i-live" checked style="accent-color:var(--amber)">
+        <label for="i-live" style="margin:0;color:var(--text)">实时应用到运行中的猫</label>
+        <button id="i-reset" style="margin-left:auto;padding:5px 12px;background:var(--card2);color:var(--dim);border:1px solid var(--line);border-radius:7px;cursor:pointer;font-size:12px;">恢复默认</button>
       </div>
       <h3 style="margin-top:18px">实时坐标</h3>
       <div class="out" id="coords"></div>
@@ -104,7 +111,7 @@ const THEME = {
 };
 const HARNESS = ["claude-code", "dsh", "codex", "gemini", "opencode"];
 
-const S = { cx: 95, cy: 95, r: 75, span: 120, start: -90, n: 2, edge: "taskbar" };
+const S = { cx: 95, cy: 95, r: 75, span: 120, start: -90, n: 2, edge: "taskbar", bury: 13, live: true };
 const SC = 2;                      // 预览放大倍数（pet 窗 190×220 → 380×440）
 const CAT = { w: 110, h: 134, bury: 13 };   // 素材显示尺寸与埋入深度（与皮肤一致）
 
@@ -112,12 +119,12 @@ const $ = (s) => document.querySelector(s);
 const catImg = $("#catImg");
 
 function layout() {
-  // 素材摆放：水平居中、脚底贴“任务栏上沿 +13px 埋入”（与皮肤一致）
+  // 素材摆放：水平居中、脚底贴“任务栏上沿 +bury 埋入”（与皮肤一致）
   const w = CAT.w * SC, h = CAT.h * SC;
   catImg.style.width = w + "px";
   catImg.style.height = h + "px";
   catImg.style.left = ((380 - w) / 2) + "px";
-  catImg.style.top = (440 - 26 - h) + "px";
+  catImg.style.top = (440 - 2 * S.bury - h) + "px";
 }
 
 function chipPos(i, n) {
@@ -177,18 +184,44 @@ function outputs() {
     `dockX = petX - 55；dockY = petY + ${S.cy - 168}；DOCK_H ≥ ${Math.max(232, Math.ceil(S.cy + S.r + 30))}`;
 }
 
-function render() {
+function syncOutputs() {
   $("#o-cx").value = S.cx; $("#o-cy").value = S.cy; $("#o-r").value = S.r;
   $("#o-span").value = S.span; $("#o-start").value = S.start; $("#o-n").value = S.n;
-  draw(); outputs();
+}
+let applyTimer = null;
+async function liveApply() {
+  if (!$("#i-live")?.checked) return;
+  clearTimeout(applyTimer);
+  applyTimer = setTimeout(async () => {
+    try {
+      await fetch("/api/ui-params", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dock: { cx: S.cx, cy: S.cy, r: S.r, span: S.span, start: S.start },
+          pet: { bury: S.bury },
+        }),
+      });
+    } catch {}
+  }, 150);
+}
+function render() {
+  syncOutputs(); draw(); liveApply();
 }
 for (const [id, key] of [["i-cx","cx"],["i-cy","cy"],["i-r","r"],["i-span","span"],["i-start","start"],["i-n","n"]]) {
-  $( "#" + id).addEventListener("input", (e) => { S[key] = +e.target.value; render(); });
+  $("#" + id).addEventListener("input", (e) => { S[key] = +e.target.value; render(); });
 }
 $("#edge-seg").addEventListener("click", (e) => {
-  const b = e.target.closest("button"); if (!b) return;
+  const b = e.target.closest("button");
+  if (!b) return;
   $("#edge-seg .on")?.classList.remove("on"); b.classList.add("on");
-  S.edge = b.dataset.e; draw();
+  S.edge = b.dataset.e; render();
+});
+$("#i-reset").addEventListener("click", () => {
+  Object.assign(S, { cx: 95, cy: 95, r: 75, span: 120, start: -90, n: 2, bury: 13 });
+  for (const [id, key] of [["i-cx","cx"],["i-cy","cy"],["i-r","r"],["i-span","span"],["i-start","start"],["i-n","n"]]) {
+    $("#" + id).value = S[key];
+  }
+  render();
 });
 layout(); render();
 </script>
