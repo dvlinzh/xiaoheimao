@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>整理算法 · 原理与技术图解</title>
+<style>
+  :root {
+    --bg: #0d0d0f; --card: #141416; --card2: #1b1b1f; --line: #28282e;
+    --line2: #34343c; --text: #ececec; --dim: #9a9aa2; --faint: #66666e;
+    --amber: #fbbf24; --teal: #5eead4; --sky: #5ea3f7; --violet: #8b7cf6; --red: #f0716c; --green: #58a873;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text); padding: 40px 24px 80px;
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif; font-size: 15px; line-height: 1.75;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  h1 { font-family: Georgia, "Songti SC", serif; font-size: 30px; margin: 0 0 6px; }
+  .sub { color: var(--dim); margin: 0 0 36px; font-size: 14.5px; }
+  h2 {
+    font-size: 20px; margin: 52px 0 8px; padding-left: 12px;
+    border-left: 3px solid var(--amber); line-height: 1.4;
+  }
+  .lead { color: var(--dim); font-size: 14px; margin: 0 0 20px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 20px; margin-bottom: 16px; overflow-x: auto;
+  }
+  .card svg { display: block; margin: 0 auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; }
+  th { color: var(--faint); font-size: 12px; letter-spacing: 1px; font-weight: 700; }
+  pre {
+    background: #0a0a0c; border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; font-size: 12.5px; line-height: 1.7; color: #c8c8d0;
+    overflow-x: auto; margin: 12px 0;
+  }
+  pre .k { color: var(--amber); }
+  pre .c { color: var(--faint); }
+  pre .v { color: var(--teal); }
+  .dim { color: var(--dim); }
+  .faint { color: var(--faint); font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>整理算法 · 原理与技术图解</h1>
+<p class="sub">
+  AI 每轮调用 <b style="color:var(--teal)">mind_board_organize</b> 时，数据中枢内部发生了什么。
+  对应源码：src/core/store.mjs 的 organize()；协议规则见 src/core/protocol.mjs 规则 6/7。
+</p>
+
+<!-- ═════════ ① 决策流水线 ═════════ -->
+<h2>① organize() 决策流水线</h2>
+<p class="lead">五个阶段依次执行——不是所有调用都值得写入，任何一个阶段都可能「什么也不做」。</p>
+<div class="card">
+<svg viewBox="0 0 900 580" font-family="'Segoe UI','Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="m1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#66666e"/>
+    </marker>
+    <marker id="m1r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#f0716c"/>
+    </marker>
+  </defs>
+  <style>
+    .b { fill: #1b1b1f; stroke: #34343c; stroke-width: 1.2; rx: 10; }
+    .br { fill: #1b1b1f; stroke: #f0716c; stroke-width: 1.3; rx: 10; }
+    .t { fill: #ececec; font-size: 13px; font-weight: 700; }
+    .d { fill: #9a9aa2; font-size: 11px; }
+    .f { stroke: #66666e; stroke-width: 1.2; fill: none; marker-end: url(#m1); }
+    .fr { stroke: #f0716c; stroke-width: 1.2; fill: none; marker-end: url(#m1r); }
+    .dt { fill: #9a9aa2; font-size: 10.5px; }
+  </style>
+  <rect x="30" y="20" width="220" height="56" rx="10" class="b"/>
+  <text x="140" y="42" text-anchor="middle" class="t">① 项目解析</text>
+  <text x="140" y="62" text-anchor="middle" class="d">resolveProject(cwd)：目录哈希 → 项目档案</text>
+  <path class="f" d="M140 76 L140 96"/>
+
+  <path d="M140 96 L260 136 L140 176 L20 136 Z" fill="#1b1b1f" stroke="#34343c" stroke-width="1.2"/>
+  <text x="140" y="132" text-anchor="middle" class="t">② 显式新 goal？</text>
+  <text x="140" y="150" text-anchor="middle" class="d">只看 payload 里的 goal/goalTitle</text>
+  <path class="f" d="M260 136 L310 136 L310 176"/>
+  <text x="268" y="130" class="dt">否 / 骨架为空豁免</text>
+
+  <path d="M310 176 L430 220 L310 264 L190 220 Z" fill="#1b1b1f" stroke="#f0716c" stroke-width="1.3"/>
+  <text x="310" y="214" text-anchor="middle" class="t">③ 相似度 &lt; 0.25？</text>
+  <text x="310" y="234" text-anchor="middle" class="d">charJaccard(新goal, 当前goal)</text>
+  <path class="fr" d="M310 264 L310 300"/>
+  <text x="318" y="286" fill="#f0716c" font-size="10.5">是 → 疑似换目标</text>
+  <rect x="190" y="300" width="250" height="70" rx="10" class="br"/>
+  <text x="315" y="324" text-anchor="middle" class="t" fill="#f0716c">拒绝写入 + pendingNewTask</text>
+  <text x="315" y="344" text-anchor="middle" class="d">organize 返回 isError：</text>
+  <text x="315" y="362" text-anchor="middle" class="d">AI 被强制先问用户「要新建一块板吗」</text>
+  <path class="f" d="M430 220 L470 220 L470 300"/>
+  <text x="436" y="264" class="dt">否 → 同目标</text>
+
+  <rect x="470" y="300" width="380" height="150" rx="10" class="b"/>
+  <text x="660" y="326" text-anchor="middle" class="t">④ mergeList 逐层合并 ×4</text>
+  <g font-size="11" fill="#9a9aa2">
+    <text x="490" y="350">· 逐条在层内找重复：精确相同 或 bigram Jaccard ≥ 0.7</text>
+    <text x="490" y="370">· 命中 → Object.assign 更新原条目 + 刷新时间戳</text>
+    <text x="490" y="390">· 未命中 → 新条目 id = 层首字母 + uuid 片段，追加</text>
+    <text x="490" y="410">· plans：携带 chosen 的新方案清掉所有旧采用（唯一）</text>
+    <text x="490" y="430">· 返回 {added, updated} 计入 applied 回执</text>
+  </g>
+  <path class="f" d="M660 450 L660 470"/>
+
+  <rect x="470" y="470" width="380" height="80" rx="10" class="b"/>
+  <text x="660" y="494" text-anchor="middle" class="t">⑤ applySupersede 新旧替代</text>
+  <g font-size="11" fill="#9a9aa2">
+    <text x="490" y="518">· 新条目可携带 supersedes: [旧条目id 或 旧原文]</text>
+    <text x="490" y="538">· id 精确命中 / 原文 bigram ≥ 0.5 → 旧条目标 superseded</text>
+    <text x="490" y="556">· 自我替代保护：目标条目与新结论近似（≥0.7）时跳过</text>
+  </g>
+</svg>
+</div>
+
+<!-- ═════════ ② bigram ═════════ -->
+<h2>② 去重的尺子：字符 bigram Jaccard</h2>
+<p class="lead">中文不分词也能比相似度：把字符串切成「相邻两字」的集合，算交并比。无需词典、无需分词器。</p>
+<div class="card">
+<svg viewBox="0 0 900 300" font-family="Consolas, monospace">
+  <style>
+    .h { fill: #66666e; font-size: 10px; letter-spacing: 2px; font-weight: 700; font-family: 'Segoe UI', sans-serif; }
+    .c { fill: #ececec; font-size: 13px; }
+    .g { fill: #5eead4; font-size: 13px; }
+    .eq { fill: #fbbf24; font-size: 15px; font-weight: 700; font-family: 'Segoe UI', sans-serif; }
+    .d2 { fill: #9a9aa2; font-size: 11px; font-family: 'Segoe UI', sans-serif; }
+  </style>
+  <text x="20" y="26" class="h">示例</text>
+  <text x="20" y="56" class="c">A = 「支持深色模式」</text>
+  <text x="240" y="56" class="g">bigrams(A) = { 支持, 持深, 深色, 色模, 式 }</text>
+  <text x="20" y="96" class="c">B = 「深色模式支持」</text>
+  <text x="240" y="96" class="g">bigrams(B) = { 深色, 色模, 式支, 持支 }</text>
+  <text x="20" y="136" class="h">JACCARD(A,B)</text>
+  <text x="20" y="166" class="g">|A∩B| = {深色, 色模} = 2</text>
+  <text x="240" y="166" class="g">|A∪B| = 5 + 4 - 2 = 7</text>
+  <text x="480" y="166" class="eq">J = 2/7 ≈ 0.29</text>
+  <text x="20" y="200" class="d2">阈值语义：≥ 0.7 视为同一条（去重更新）· 0.25 以下视为换了话题（漂移防护）</text>
+  <text x="20" y="224" class="d2">上面的 0.29 恰好落在中间地带——同目标下按新条目处理，这正是设计意图。</text>
+  <text x="20" y="264" class="h">为什么不用分词/编辑距离？</text>
+  <text x="20" y="290" class="d2">零依赖、语言无关、O(n) 可算；对 ≤40 字的短句，bigram 的区分度足够，编辑距离反而更慢且对语序更敏感。</text>
+</svg>
+</div>
+
+<!-- ═════════ ③ 生命周期 ═════════ -->
+<h2>③ 条目生命周期状态机</h2>
+<p class="lead">每个条目一条单向生命周期。统计与渲染只认有效状态，退场条目保留在数据里可审计。</p>
+<div class="card">
+<svg viewBox="0 0 900 380" font-family="'Segoe UI','Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="m3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#66666e"/>
+    </marker>
+    <marker id="m3g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#58a873"/>
+    </marker>
+    <marker id="m3r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#f0716c"/>
+    </marker>
+    <marker id="m3a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#fbbf24"/>
+    </marker>
+  </defs>
+  <style>
+    .st { fill: #1b1b1f; stroke: #34343c; stroke-width: 1.2; rx: 12; }
+    .stt { fill: #ececec; font-size: 12.5px; font-weight: 700; }
+    .std { fill: #9a9aa2; font-size: 10.5px; }
+    .f3 { stroke: #66666e; stroke-width: 1.2; fill: none; marker-end: url(#m3); }
+    .f3g { stroke: #58a873; stroke-width: 1.3; fill: none; marker-end: url(#m3g); }
+    .f3r { stroke: #f0716c; stroke-width: 1.3; fill: none; marker-end: url(#m3r); }
+    .f3a { stroke: #fbbf24; stroke-width: 1.3; fill: none; marker-end: url(#m3a); }
+    .ft3 { fill: #9a9aa2; font-size: 10.5px; }
+  </style>
+  <rect x="30" y="40" width="170" height="70" rx="12" class="st"/>
+  <text x="115" y="70" text-anchor="middle" class="stt">active 在册</text>
+  <text x="115" y="92" text-anchor="middle" class="std">新建 / 被更新后回到此态</text>
+
+  <rect x="360" y="40" width="180" height="70" rx="12" class="st"/>
+  <text x="450" y="70" text-anchor="middle" class="stt">decided ✔ 已敲定</text>
+  <text x="450" y="92" text-anchor="middle" class="std">要点层 · 计入进度血条</text>
+
+  <rect x="700" y="40" width="170" height="70" rx="12" class="st"/>
+  <text x="785" y="70" text-anchor="middle" class="stt">resolved ✓ 已解决</text>
+  <text x="785" y="92" text-anchor="middle" class="std">缺口层 · 点击缺口切换</text>
+
+  <rect x="360" y="240" width="180" height="70" rx="12" class="st"/>
+  <text x="450" y="270" text-anchor="middle" class="stt" fill="#f0716c">superseded 已替代</text>
+  <text x="450" y="292" text-anchor="middle" class="std">不渲染 · 不计入统计</text>
+
+  <path class="f3a" d="M205 75 L358 75"/>
+  <text x="250" y="66" class="ft3">toggle-point / organize decided:true</text>
+  <path class="f3" d="M115 110 L115 275 L358 275"/>
+  <text x="122" y="266" class="ft3">新条目带 supersedes:[旧id/旧原文]（≥0.5 近似命中）</text>
+  <path class="f3" d="M115 275 L115 300 L660 300 L700 92" stroke-dasharray="4 3"/>
+  <text x="480" y="322" class="ft3">缺口层：点击缺口 = toggle-gap → resolved</text>
+  <path class="f3r" d="M545 110 L545 238"/>
+  <text x="553" y="180" class="ft3">remove-item / 拖拽删除区（物理删除，仅这条路径真删）</text>
+</svg>
+</div>
+
+<!-- ═════════ ④ 衰减与统计 ═════════ -->
+<h2>④ 衰减与统计口径</h2>
+<p class="lead">「乱七八糟」的另一半解药在显示层：退场与陈旧内容降调，数据保留可审计。</p>
+<div class="card">
+<svg viewBox="0 0 900 330" font-family="'Segoe UI','Microsoft YaHei',sans-serif">
+  <style>
+    .row { fill: #1b1b1f; stroke: #28282e; stroke-width: 1; rx: 8; }
+    .rt { fill: #ececec; font-size: 12px; }
+    .rd2 { fill: #9a9aa2; font-size: 11px; }
+    .rt2 { fill: #ececec; font-size: 12.5px; font-weight: 700; }
+  </style>
+  <rect x="20" y="20" width="520" height="56" rx="8" class="row"/>
+  <text x="36" y="44" class="rt">▸ 钩子写盘滞后根因待查（未决要点）</text>
+  <text x="36" y="64" class="rd2">正常显示 · 计入全部统计</text>
+  <rect x="20" y="88" width="520" height="56" rx="8" class="row"/>
+  <text x="36" y="112" class="rt" opacity=".55">✔ 猫卡死三因：素材+pendingNewTask+rAF 节流（已敲定）</text>
+  <text x="36" y="132" class="rd2">decided：降透明度 · 「只看未决」开关一键隐藏</text>
+  <rect x="20" y="156" width="520" height="56" rx="8" class="row"/>
+  <text x="36" y="180" class="rt" opacity=".42" text-decoration="line-through">✗ 素材质检未并入 npm test（&gt;14 天未动的缺口）</text>
+  <text x="36" y="200" class="rd2">stale：划线降调（仅显示层衰减，不改数据）</text>
+  <g transform="translate(590,40)">
+    <text x="0" y="0" class="rt2">显示层衰减规则</text>
+    <g font-size="11.5" fill="#9a9aa2">
+      <text y="28">· 已敲定要点：降透明度；「只看未决」一键隐藏</text>
+      <text y="52">· 过期缺口（&gt;14 天未动）：划线 + 降调，统计单列</text>
+      <text y="76">· superseded 条目：不渲染、不计入统计</text>
+      <text y="100">· 数据一律保留——退场条目可审计、可恢复</text>
+    </g>
+    <g transform="translate(0,150)">
+      <text x="0" y="0" class="rt2">统计口径</text>
+      <g font-size="11.5" fill="#9a9aa2">
+        <text y="28">counts() 一律排除 superseded；</text>
+        <text y="52">陈旧缺口（&gt;14 天）单独计数；</text>
+        <text y="76">stale 判定用条目自身的 at 时间戳，不改数据。</text>
+      </g>
+    </g>
+  </g>
+</svg>
+</div>
+
+<!-- ═════════ ⑤ 收敛闭环 ═════════ -->
+<h2>⑤ 收敛闭环：一次整理的完整例子</h2>
+<div class="card">
+<pre>
+<span class="c">// 轮 1：用户聊到深色模式</span>
+organize({ ideas:[{ <span class="v">text:"深色模式"</span> }] })
+→ ideas +1（active）
+
+<span class="c">// 轮 3：聊清楚了一点</span>
+organize({ points:[{ <span class="v">text:"深色模式要做，方案未定"</span> }] })
+→ points +1（active）
+
+<span class="c">// 轮 5：敲定（bigram ≥0.7 命中原条目 → 更新而非新增）</span>
+organize({ points:[{ <span class="v">text:"深色模式要做"</span>, <span class="k">decided:true</span> }] })
+→ decided = true
+
+<span class="c">// 轮 9：方案演进，旧结论被取代</span>
+organize({ points:[{
+  <span class="v">text:"深色模式：CSS 变量方案"</span>, decided:true,
+  <span class="k">supersedes:["深色模式要做"]</span>          <span class="c">← 旧原文，或旧条目 id</span>
+}] })
+→ 新条目 +1；旧条目标记 superseded（退场，数据保留）
+
+<span class="c">// 14 天后没人再动的缺口 → 显示层自动划线降调，统计移入「陈旧」</span>
+</pre>
+</div>
+
+<p class="faint" style="margin-top:32px">
+  源码：src/core/store.mjs（organize/applySupersede/summarize） · 协议：src/core/protocol.mjs 规则 6/7 ·
+  组件总览：/docs/components.html ①
+</p>
+
+</div>
+</body>
+</html>

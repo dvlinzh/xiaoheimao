@@ -1,7 +1,7 @@
 // dashboard.js — 项目总览仪表盘：聚合 /api/overview，一屏管理全部项目
 const $ = (s) => document.querySelector(s);
 const grid = $("#grid");
-const stateEl = { q: "", harness: "", state: "", sort: "recent" };
+const stateEl = { q: "", harness: "", state: "", sort: "recent", showArchived: false };
 let lastOv = null;
 
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -60,6 +60,7 @@ function render() {
   /* 过滤 + 排序 */
   const q = stateEl.q.trim().toLowerCase();
   let list = projects.filter((p) => {
+    if (!stateEl.showArchived && p.state === "reflected") return false;
     if (stateEl.harness && !(p.harnesses || []).includes(stateEl.harness)) return false;
     if (stateEl.state && p.state !== stateEl.state) return false;
     if (q) {
@@ -96,6 +97,7 @@ function render() {
       </div>
       ${p.pendingNewTask ? `<div class="pending">⚠ 有未确认的新目标</div>` : ""}
       <div class="hrow">${hs}<span class="ago">${agoS}</span></div>
+      <button class="arch">${p.state === "reflected" ? "恢复" : "归档"}</button>
       <button class="open">打开面板 →</button>
     </div>`;
   }).join("");
@@ -103,8 +105,18 @@ function render() {
 
   grid.querySelectorAll(".pc").forEach((el) => {
     el.addEventListener("click", (e) => {
+      if (e.target.closest(".arch")) return;   // 归档按钮自己处理
       const p = projects.find((x) => x.id === el.dataset.id);
       if (p) openCard(p);
+    });
+    el.querySelector(".arch")?.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const p = projects.find((x) => x.id === el.dataset.id);
+      if (!p) return;
+      const act = p.state === "reflected" ? "reopen" : "archive";
+      await fetch("/api/action", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: p.id, action: act }) });
+      poll();
     });
   });
 }
@@ -124,6 +136,7 @@ $("#hchips").addEventListener("click", (e) => {
   const h = e.target.dataset?.h;
   if (h !== undefined) { stateEl.harness = h; render(); }
 });
+$("#f-arch").addEventListener("change", (e) => { stateEl.showArchived = e.target.checked; render(); });
 $("#btn-close").addEventListener("click", () => window.petBridge?.closeDashboard());
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") window.petBridge?.closeDashboard(); });
 

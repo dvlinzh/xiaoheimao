@@ -372,3 +372,16 @@ body[data-font="l"] { zoom: 1.23; }
   background: var(--red); border-color: var(--red); color: #fff; font-weight: 600;
 }
 #cf-ok:hover { background: #d95f5a; border-color: #d95f5a; color: #fff; }
+
+/* ── 要点折叠开关 / 过期缺口降调 ── */
+#pt-toggle {
+  border: 1px solid var(--line2); background: var(--card2); color: var(--dim);
+  font-size: 10.5px; border-radius: 999px; padding: 1px 9px; cursor: pointer;
+  margin-left: 8px; font-family: inherit;
+  -webkit-app-region: no-drag;
+}
+#pt-toggle:hover { color: var(--text); border-color: var(--amber); }
+#pt-toggle.on { color: var(--amber); border-color: rgba(251, 191, 36, .4); background: rgba(251, 191, 36, .08); }
+#list-points.only-open li.pt-decided { display: none; }
+.gp-stale { opacity: .42; }
+.gp-stale .li-text { text-decoration: line-through; text-decoration-color: rgba(154, 154, 162, .5); }

@@ -335,6 +335,41 @@ export function organize(projectId, payload = {}) {
     if (s.updated > 0) applied[layer + "_updated"] = s.updated;
   }
 
+  /* 新旧替代（合并之后跑）：新结论可携带 supersedes（旧条目 id 或原文），
+   * 旧条目标记退场——保留在数据里可审计，但不再计入统计、不在面板渲染。
+   * 跳过「新结论恰好合并进了旧条目」的目标：那是自我替代，会把精炼结论藏掉。 */
+  let superseded = 0;
+  const applySupersede = (layer, incoming) => {
+    for (const it of (incoming || [])) {
+      const carrier = normText(it?.text ?? it?.title);
+      const refs = it?.supersedes ? [].concat(it.supersedes) : [];
+      for (const ref of refs) {
+        const mark = (x) => {
+          if (!x || x.superseded) return;
+          if (carrier && charJaccard(normText(x[LAYER_TEXT_KEY[layer]]), carrier) >= 0.7) return;
+          x.superseded = true; x.supersededAt = now(); superseded++;
+        };
+        const byId = (goal[layer] || []).find((x) => x.id === ref);
+        if (byId) { mark(byId); continue; }
+        const nt = normText(ref);
+        if (!nt) continue;
+        // 按原文近似匹配定位（AI 手头未必有 id，给旧原文也能标）
+        let best = null, bestSim = 0;
+        for (const x of (goal[layer] || [])) {
+          const s = charJaccard(normText(x[LAYER_TEXT_KEY[layer]]), nt);
+          if (s > bestSim) { bestSim = s; best = x; }
+        }
+        if (best && bestSim >= 0.5) mark(best);
+      }
+    }
+  };
+  applySupersede("ideas", payload.ideas);
+  applySupersede("points", payload.points);
+  if (superseded > 0) {
+    applied.superseded = superseded;
+    journalEvent({ type: "superseded", projectId, count: superseded });
+  }
+
   if (payload.goal) goal.goal = normText(payload.goal);
   if (payload.goalTitle) goal.title = normText(payload.goalTitle);
 
@@ -482,7 +517,7 @@ export function controlAction(projectId, { action, params = {} } = {}) {
 function summarize(projectId, rec) {
   const sk = readSkeleton(projectId);
   const goal = sk ? currentGoal(sk) : null;
-  const count = (l, pred = () => true) => (goal ? goal[l].filter(pred).length : 0);
+  const count = (l, pred = () => true) => (goal ? goal[l].filter((x) => !x.superseded && pred(x)).length : 0);
   return {
     id: projectId,
     title: rec.title,
@@ -574,10 +609,10 @@ export function queryMarkdown(cwd, harness = "unknown") {
   const md =
     `【思维板】${s.title}\n` +
     `目标：${s.currentGoal || "（未定）"}\n状态：${s.state}｜未想清缺口 ${s.counts.gaps}` +
-    sec("ideas", "想法", (i) => `- ${i.text}${i.group ? `（组:${i.group}）` : ""}${i.done ? " ✅已实现" : ""}`) +
-    sec("points", "要点", (p) => `- ${p.text}${p.decided ? " ✔已定" : ""}`) +
+    sec("ideas", "想法", (i) => `- [${i.id}] ${i.text}${i.group ? `（组:${i.group}）` : ""}${i.done ? " ✅已实现" : ""}`) +
+    sec("points", "要点", (p) => `- [${p.id}] ${p.text}${p.decided ? " ✔已定" : ""}`) +
     sec("plans", "方案", (p) => `- ${p.title}${p.chosen ? "【当前采用】" : p.dismissed ? "【已否决】" : ""}`) +
-    sec("gaps", "缺口", (x) => `- ${x.text}${x.resolved ? "（已解决）" : ""}`);
+    sec("gaps", "缺口", (x) => `- [${x.id}] ${x.text}${x.resolved ? "（已解决）" : ""}`);
   return { markdown: md, summary: s };
 }
 

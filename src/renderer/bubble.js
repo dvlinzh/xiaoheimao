@@ -38,6 +38,7 @@ function iconSvg(h, size) {
 }
 
 let harness = new URLSearchParams(location.search).get("harness") || localStorage.getItem("mb.harness") || "";
+let hideDecided = false;   // 「只看未决」：隐藏已敲定要点
 if (harness) try { localStorage.setItem("mb.harness", harness); } catch {}
 
 // 兔子在左时气泡在其右侧，尾巴翻向左边
@@ -423,7 +424,10 @@ function renderLayer(listEl, kind, goal) {
       if (isOpen) for (const it of doneArr) listEl.appendChild(mkIdeaLi(it));
     }
   } else if (kind === "points") {
+    let decided = 0;
     for (const it of arr) {
+      if (it.superseded) continue;                     // 被新结论替代：不再渲染
+      if (it.decided) decided++;
       const li = mkLi(it.decided ? "pt-decided" : "pt-open", { layer: "points", id: it.id });
       li.appendChild(mkSpan("li-mark", it.decided ? "✔" : "▸"));
       li.appendChild(mkSpan("li-text", it.text));
@@ -434,6 +438,14 @@ function renderLayer(listEl, kind, goal) {
       });
       bindItemDrag(li, { layer: "points", id: it.id }, it.text);
       listEl.appendChild(li);
+    }
+    listEl.classList.add("has-decided");
+    listEl.classList.toggle("only-open", hideDecided);   // 只看未决：隐藏已敲定行
+    const tg = $("#pt-toggle");
+    if (tg) {
+      tg.hidden = decided === 0;
+      tg.textContent = hideDecided ? "看全部" : "只看未决";
+      tg.classList.toggle("on", hideDecided);
     }
   } else if (kind === "plans") {
     let num = 0;
@@ -474,7 +486,8 @@ function renderLayer(listEl, kind, goal) {
     }
   } else if (kind === "gaps") {
     for (const it of arr) {
-      const li = mkLi(it.resolved ? "gp-resolved" : "", { layer: "gaps", id: it.id });
+      const stale = !it.resolved && it.at && (Date.now() - Date.parse(it.at)) > 14 * 86400000;
+      const li = mkLi((it.resolved ? "gp-resolved" : "") + (!it.resolved && stale ? " gp-stale" : ""), { layer: "gaps", id: it.id });
       const dot = document.createElement("i");
       dot.className = "gp-dot";
       li.appendChild(dot);
@@ -685,6 +698,11 @@ function renderOv() {
 document.getElementById("btn-overview")?.addEventListener("click", () => setOvMode(!ovMode));
 document.getElementById("ov-dashboard")?.addEventListener("click", () =>
   window.bubbleBridge?.openDashboard());
+$("#pt-toggle")?.addEventListener("click", (e) => {
+  e.stopPropagation(); e.preventDefault();   // 按钮在 <summary> 里，别触发 details 折叠
+  hideDecided = !hideDecided;
+  loadSkeleton(true);
+});
 
 /* ── 危险操作二次确认 ── */
 let cfOpen = false, cfOk = null;
