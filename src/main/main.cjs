@@ -26,6 +26,7 @@ let lastBubbleHarness = "";
 let bubblePinned = false;   // 面板图钉：钉住时失焦/拖拽不收起
 let bubbleShowAt = 0;       // 最近一次 show 的时间（blur 宽限期基准）
 let dockShownAt = 0;        // 图标环最近一次弹出的时间（toggle 防抖基准）
+let dockIgnore = null;      // 图标环当前穿透态（主进程轮询驱动，变化才切换）
 
 const PET_W = 190, PET_H = 220;
 const DOCK_W = 300, DOCK_H = 232;   // 图标环：120° 正圆扇形（R=75，圆心=标定十字）
@@ -316,6 +317,7 @@ function showDock(show) {
   } else if (dockWin && !dockWin.isDestroyed()) {
     dockWin.hide();
     chipRects = [];
+    dockIgnore = null;
     if (petWin && !petWin.isDestroyed()) petWin.webContents.send("chip-rects", []);
   }
 }
@@ -562,6 +564,25 @@ setInterval(() => {
     try { petWin.setIgnoreMouseEvents(!inside); } catch {}
   }
   if (inside) petWin.webContents.send("cursor-pos", { inside: true, x: c.x - b.x, y: c.y - b.y });
+
+  /* 图标环同理：主进程按「芯片矩形 + 光标坐标」直接驱动穿透切换。
+     dock 渲染层依赖的钩子转发已被系统摘除（全屏游戏后永不恢复），
+     渲染层收不到任何输入——点 harness 无反应的根因。 */
+  if (!dockWin || dockWin.isDestroyed() || !dockWin.isVisible()) return;
+  const db = dockWin.getBounds();
+  const dInside = c.x >= db.x && c.x < db.x + db.width && c.y >= db.y && c.y < db.y + db.height;
+  let over = false;
+  if (dInside) {
+    for (const r of chipRects) {
+      const x = db.x + r.x, y = db.y + r.y;
+      if (c.x >= x && c.x < x + r.w && c.y >= y && c.y < y + r.h) { over = true; break; }
+    }
+  }
+  const wantIgnore = !(dInside && over);
+  if (wantIgnore !== dockIgnore) {
+    dockIgnore = wantIgnore;
+    try { dockWin.setIgnoreMouseEvents(wantIgnore, { forward: true }); } catch {}
+  }
 }, 100);
 
 /* 交互机制（终版）：猫窗不再使用任何点击穿透/激活切换。
