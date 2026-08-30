@@ -42,14 +42,42 @@ setInterval(() => {
 
 /* ── 皮肤装载 ── */
 let curSkin = "";
+let shapeRebuildTimer = null;
+function scheduleShapeRebuild(delay) {
+  clearTimeout(shapeRebuildTimer);
+  shapeRebuildTimer = setTimeout(() => buildAlphaMap(), delay);
+}
 async function adoptSkin(name) {
   curSkin = name;
   if (Pet) { Pet.el.remove(); Pet = null; }
   Pet = await window.PetSkinCat.mount($("#pet-host"), () => requestAnimationFrame(buildAlphaMap));
-  // 表情/拖拽切换姿态后重算逐像素命中表
-  for (const k of ["setMood", "setDrag"]) {
+  // 表情/姿态切换后重算逐像素命中表（rAF 顺序：渲染循环先画、这里后采样）
+  for (const k of ["setMood"]) {
     const raw = Pet[k].bind(Pet);
     Pet[k] = (v) => { raw(v); requestAnimationFrame(buildAlphaMap); };
+  }
+  // 拖拽释放：摆动衰减的旋转像素会超出静态形状——立即清空剪裁（矩形暂代），
+  // 约 1.1s 摆动落定后重建。拖拽期间主进程本就清空了形状。
+  if (Pet.setDrag) {
+    const rawDrag = Pet.setDrag.bind(Pet);
+    Pet.setDrag = (v) => {
+      rawDrag(v);
+      if (!v) {
+        petShape = [];
+        window.petBridge?.sendPetShape?.([]);
+        scheduleShapeRebuild(1100);
+      }
+    };
+  }
+  // hop/juggle：CSS 把画布上移 20px，会跳出静态剪裁区——起跳清空，落定重建
+  if (Pet.hop) {
+    const rawHop = Pet.hop.bind(Pet);
+    Pet.hop = (...a) => {
+      petShape = [];
+      window.petBridge?.sendPetShape?.([]);
+      rawHop(...a);
+      scheduleShapeRebuild(2100);
+    };
   }
   window.Pet = Pet;
   buildAlphaMap();

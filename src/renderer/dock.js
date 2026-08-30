@@ -114,7 +114,8 @@ async function refresh() {
     keys.sort((a, b) => (a === "claude-code" ? -1 : b === "claude-code" ? 1 : a.localeCompare(b)));
     const modeOn = (ov.settings?.mode || "off") === "on";
     // 签名不变就不重建 DOM——3 秒轮询会把「正按着的芯片」换没，导致点击丢失
-    const sig = keys.map((h) => {
+    const geo = R + "," + CX + "," + CY + "," + SPAN + "," + START;   // 几何变化也触发重建
+    const sig = geo + "|" + keys.map((h) => {
       const live = now - by[h].live < LIVE_MS;
       return h + ":" + (live ? 1 : 0) + ":" + (by[h].newest > (seen[h] || 0) ? 1 : 0);
     }).join("|");
