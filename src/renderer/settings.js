@@ -119,6 +119,7 @@ $("#st-autostart").addEventListener("click", () => {
   bridge?.setAutostart(autostart);
 });
 $("#st-data").addEventListener("click", () => bridge?.openDataDir());
+$("#st-cal").addEventListener("click", () => bridge?.toggleCalibrator());
 $("#st-tutorial").addEventListener("click", () => {
   const t = $("#tutorial");
   t.hidden = !t.hidden;

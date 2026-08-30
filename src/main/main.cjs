@@ -22,6 +22,7 @@ let bubbleWin = null;
 let dockWin = null;
 let settingsWin = null;
 let dashWin = null;
+let calWin = null;
 let lastBubbleHarness = "";
 let bubblePinned = false;   // 面板图钉：钉住时失焦/拖拽不收起
 let bubbleShowAt = 0;       // 最近一次 show 的时间（blur 宽限期基准）
@@ -428,6 +429,24 @@ function showDashboard(show) {
     }
   } else if (dashWin && !dashWin.isDestroyed()) dashWin.hide();
 }
+
+function showCalibrator(show) {
+  if (show) {
+    if (!calWin || calWin.isDestroyed()) {
+      calWin = new BrowserWindow({
+        width: 680, height: 600,
+        backgroundColor: "#0d0d0f",
+        autoHideMenuBar: true,
+        title: "图标环 · 标定",
+        webPreferences: { contextIsolation: true, nodeIntegration: false },
+      });
+      calWin.loadURL(`http://127.0.0.1:${port}/docs/ring-calibrator.html`);
+    } else {
+      calWin.show();
+      calWin.focus();
+    }
+  } else if (calWin && !calWin.isDestroyed()) calWin.hide();
+}
 ipcMain.on("open-external", (_e, u) => {
   const s = String(u || "");
   if (/^https?:\/\//i.test(s) || s.startsWith("file:")) shell.openExternal(s.slice(0, 500));
@@ -437,6 +456,10 @@ ipcMain.on("dashboard-toggle", () => {
   showDashboard(!vis);
 });
 ipcMain.on("dashboard-hide", () => showDashboard(false));
+ipcMain.on("calibrator-toggle", () => {
+  const vis = calWin && !calWin.isDestroyed() && calWin.isVisible();
+  showCalibrator(!vis);
+});
 
 function positionBubble() {
   if (!petWin || petWin.isDestroyed() || !bubbleWin || bubbleWin.isDestroyed()) return;

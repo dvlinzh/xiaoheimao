@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld("petBridge", {
   setWinHeight: (h) => ipcRenderer.send("set-win-height", Number(h) || 0),
   openDataDir: () => ipcRenderer.send("open-data-dir"),
   onPrefs: (cb) => ipcRenderer.on("ui-prefs", (_e, p) => cb(p)),
+  toggleCalibrator: () => ipcRenderer.send("calibrator-toggle"),
   // dock 芯片屏幕矩形：dock 上报 → 主进程转发给猫窗做命中排除
   sendChipRects: (rects) => ipcRenderer.send("chip-rects", rects || []),
   onChipRects: (cb) => ipcRenderer.on("chip-rects", (_e, r) => cb(r)),
