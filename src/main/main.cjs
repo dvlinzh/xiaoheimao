@@ -189,14 +189,13 @@ async function openBubble(harness) {
     return;
   }
   bubbleShowAt = Date.now();   // show 事件会再刷一次，这里兜底防事件早于监听
-  const restoredX = panelX, restoredY = panelY;
-  panelX = null; panelY = null;   // 记忆用后即消费：本次启动只延续一次
   bubbleWin = new BrowserWindow({
     width: panelW, height: panelH,
-    // 记忆位置：每次启动的第一次打开延续上次摆放；用后即消费（panelX/Y 置空），
-    // 之后 positionBubble 永远锚定当前猫位——否则旧记忆会把面板放回离猫很远的地方
-    x: Number.isFinite(restoredX) ? restoredX : undefined,
-    y: Number.isFinite(restoredY) ? restoredY : undefined,
+    // 记忆位置：panelX/Y 持久保存（move 时防抖落盘），创建即延续，
+    // 不再「用后即消费」——消费式设计会让首次打开后的 positionBubble 走
+    // 「归位到猫侧」分支污染记忆，关闭按钮销毁窗口重建后回到猫侧旧位。
+    x: Number.isFinite(panelX) ? panelX : undefined,
+    y: Number.isFinite(panelY) ? panelY : undefined,
     transparent: true,
     frame: false,
     resizable: true,
