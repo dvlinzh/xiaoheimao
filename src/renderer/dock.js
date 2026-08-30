@@ -175,35 +175,6 @@ async function refresh() {
   } catch {}
 }
 
-/* 逐片命中：默认穿透，光标坐标落在任一芯片矩形内才切可点击。
-   不用 e.target 判定——穿透态下合成事件的目标不可靠，会让点击
-   落进「不可点」的抖动窗口里。 */
-let clickable = false;
-let lastMouse = { x: null, y: null };
-function setClickable(c) {
-  if (c === clickable) return;
-  clickable = c;
-  window.petBridge?.setClickable(c);
-}
-function insideChip(x, y) {
-  if (x == null || y == null) return false;
-  for (const el of dock.querySelectorAll(".chip")) {
-    const r = el.getBoundingClientRect();
-    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return true;
-  }
-  return false;
-}
-document.addEventListener("mousemove", (e) => {
-  lastMouse = { x: e.clientX, y: e.clientY };
-  setClickable(insideChip(e.clientX, e.clientY));
-});
-document.addEventListener("mouseout", (e) => {
-  if (!e.relatedTarget) {
-    // innerHTML 重建会合成 mouseout(relatedTarget=null)。光标若实际仍在
-    // 某芯片上，按最后已知坐标真实恢复——静止光标不再产生 mousemove
-    setTimeout(() => setClickable(insideChip(lastMouse.x, lastMouse.y)), 0);
-  }
-});
 
 probeIcons().then(refresh);
 setInterval(refresh, 3000);
