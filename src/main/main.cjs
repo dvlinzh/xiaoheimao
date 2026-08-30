@@ -506,15 +506,17 @@ ipcMain.on("drag-start", () => {
       log("[drag] start at", JSON.stringify(b));
       try { petWin.webContents.send("drag-state", true); } catch {}
       showDock(false); showSettings(false);   // 拖猫不再收面板（关闭只经芯片 toggle / Esc）
-      // 拖拽期间加宽窗口：摆动的尾巴/身体不再被 190px 窗口左缘裁掉。
+      // 拖拽期间加宽窗口：摆动的尾巴/身体不再被窗口左缘裁掉。
       // 保持中心不动（视觉猫位置不变），并把 dragOff 补偿到新的窗口原点。
-      const grow = SWING_W - b.width;
-      if (grow > 0) {
-        petWin.setBounds({ x: b.x - (grow >> 1), y: b.y, width: SWING_W, height: b.height });
-        dragOff.x += grow >> 1;
-      }
-      // 清空 setShape 轮廓：静态形状按拖拽前姿态计算，加宽+CSS 摆动会把
-      // 甩出的部分全部裁掉。松手后渲染层重报新姿态的轮廓自动恢复。
+      // 高度同样 +14：CSS 摆动/底部下沉的余量。清空 setShape（拖拽期间
+      // 渲染层不上报，见 pet.js），整窗可绘制无裁切。
+      const growW = SWING_W - b.width, growH = 14;
+      petWin.setBounds({
+        x: b.x - (growW >> 1), y: b.y - (growH >> 1),
+        width: SWING_W, height: b.height + growH,
+      });
+      dragOff.x += growW >> 1;
+      dragOff.y += growH >> 1;
       try { petWin.setShape([]); } catch {}
     }
     const wa = screen.getDisplayNearestPoint(c).workArea;   // 跟随光标所在显示器
@@ -531,10 +533,14 @@ ipcMain.on("drag-end", () => {
   if (!dragMoved) return;      // 单击：不吸附不落盘
   try { petWin.webContents.send("drag-state", false); } catch {}
   if (!petWin || petWin.isDestroyed()) return;
-  // 先把窗口复原到 190 宽（保持猫的中心不动），吸附数学按标准宽度进行
+  // 先把窗口复原到标准尺寸（保持猫的中心不动），吸附数学按标准尺寸进行
   const wb = petWin.getBounds();
-  if (wb.width !== PET_W) {
-    petWin.setBounds({ x: Math.round(wb.x + (wb.width - PET_W) / 2), y: wb.y, width: PET_W, height: wb.height });
+  if (wb.width !== PET_W || wb.height !== PET_H) {
+    petWin.setBounds({
+      x: Math.round(wb.x + (wb.width - PET_W) / 2),
+      y: Math.round(wb.y + (wb.height - PET_H) / 2),
+      width: PET_W, height: PET_H,
+    });
   }
   const b = petWin.getBounds();
   const wa = screen.getDisplayNearestPoint({ x: b.x + PET_W / 2, y: b.y + PET_H / 2 }).workArea;

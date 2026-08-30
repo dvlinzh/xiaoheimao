@@ -199,6 +199,7 @@ function buildAlphaMap() {
       console.log("[pet] shape rects:", petShape.length,
         "bbox x[" + Math.min(...xs) + ".." + Math.max(...xe) + "] y[" + Math.min(...ys) + ".." + Math.max(...ye) + "]");
     }
+    if (pressInfo) return;   // 拖拽中：形状已清空（setShape([])），上报会重新套上导致裁切
     window.petBridge?.sendPetShape?.(petShape);
   } catch {}
 }
