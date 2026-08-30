@@ -103,7 +103,7 @@ let pressInfo = null;
 let clickTimer = null;
 zone.addEventListener("mousedown", (e) => {
   if (e.button !== 0) return;
-  if (!overPet(e.clientX, e.clientY)) return;   // 透明像素：吸收，不触发拖拽/单击
+  if (!nearPet(e.clientX, e.clientY)) return;   // 宽松命中：透明且远离猫身才吸收   // 透明像素：吸收，不触发拖拽/单击
   pressInfo = { x: e.clientX, y: e.clientY, t: Date.now() };
   bridge?.dragStart();
 });
@@ -120,14 +120,14 @@ document.addEventListener("mouseup", (e) => {
   }
 });
 zone.addEventListener("dblclick", (e) => {
-  if (!overPet(e.clientX, e.clientY)) return;
+  if (!nearPet(e.clientX, e.clientY)) return;   // 宽松命中：透明且远离猫身才吸收
   clearTimeout(clickTimer);
   if (modules.juggle) Pet?.juggle();
 });
 
 /* 右键 → 设置窗 */
 zone.addEventListener("contextmenu", (e) => {
-  if (!overPet(e.clientX, e.clientY)) return;
+  if (!nearPet(e.clientX, e.clientY)) return;   // 宽松命中：透明且远离猫身才吸收
   e.preventDefault();
   bridge?.toggleSettings();
 });
@@ -136,10 +136,12 @@ zone.addEventListener("contextmenu", (e) => {
    窗口默认点击穿透（main 启动时 ignoreMouseEvents(true,{forward:true})），
    悬停到角色不透明像素才切可点击——拼豆间隙照常透传，不挡底下界面。 */
 
-let alphaMap = null;
+let alphaMap = null;        // 严格命中：像素不透明才算
+let alphaWide = null;       // 宽松命中：整猫外扩 ~8 屏幕px（耳尖/尾巴/耳间空隙都算猫）
+let alphaWideW = 0, alphaWideH = 0, alphaPad = 0;
 
 function buildAlphaMap() {
-  alphaMap = null;
+  alphaMap = null; alphaWide = null;
   const cvs = Pet?.el;
   if (!cvs || cvs.tagName !== "CANVAS") return;
   try {
@@ -147,6 +149,17 @@ function buildAlphaMap() {
     const m = new Uint8Array(cvs.width * cvs.height);
     for (let i = 0; i < m.length; i++) m[i] = d[i * 4 + 3];
     alphaMap = m;
+    // 宽松版：素材向 8 方向各偏移 pad 后取并集（形态学膨胀），耳尖细部不再漏点
+    const pad = 19;   // canvas px ≈ 8 屏幕px（×0.42）
+    const wc = document.createElement("canvas");
+    wc.width = cvs.width + pad * 2; wc.height = cvs.height + pad * 2;
+    const wctx = wc.getContext("2d", { willReadFrequently: true });
+    for (const [dx, dy] of [[0, 0], [pad, 0], [-pad, 0], [0, pad], [0, -pad], [pad, pad], [-pad, pad], [pad, -pad], [-pad, -pad]])
+      wctx.drawImage(cvs, pad + dx, pad + dy);
+    const wd = wctx.getImageData(0, 0, wc.width, wc.height).data;
+    alphaWide = new Uint8Array(wc.width * wc.height);
+    for (let i = 0; i < alphaWide.length; i++) alphaWide[i] = wd[i * 4 + 3];
+    alphaWideW = wc.width; alphaWideH = wc.height; alphaPad = pad;
   } catch {}
 }
 
@@ -155,7 +168,7 @@ function buildAlphaMap() {
 let chipRects = [];
 bridge?.onChipRects?.((r) => { chipRects = Array.isArray(r) ? r : []; });
 
-function overPet(x, y) {
+function hitPet(x, y, wide) {
   const sp = $("#speech");
   if (sp && !sp.hidden) {
     const r = sp.getBoundingClientRect();
@@ -169,20 +182,34 @@ function overPet(x, y) {
   const cvs = Pet?.el;
   if (!cvs) return false;
   const r = cvs.getBoundingClientRect();
-  if (x < r.left || x > r.right || y < r.top || y > r.bottom) return false;
-  if (!alphaMap) return true;   // SVG 皮肤：包围盒命中
-  const px = Math.floor((x - r.left) / r.width * cvs.width);
-  const py = Math.floor((y - r.top) / r.height * cvs.height);
-  return alphaMap[py * cvs.width + px] > 8;
+  const grow = wide ? alphaPad * (r.width / cvs.width) : 0;   // 外扩换算到屏幕 px
+  if (x < r.left - grow || x > r.right + grow || y < r.top - grow || y > r.bottom + grow) return false;
+  const map = wide ? alphaWide : alphaMap;
+  if (!map) return true;   // SVG 皮肤：包围盒命中
+  const cw = wide ? alphaWideW : cvs.width, ch = wide ? alphaWideH : cvs.height;
+  const px = Math.floor((x - r.left + grow) / (r.width + grow * 2) * cw);
+  const py = Math.floor((y - r.top + grow) / (r.height + grow * 2) * ch);
+  if (px < 0 || py < 0 || px >= cw || py >= ch) return false;
+  return map[py * cw + px] > 8;
 }
+function overPet(x, y) { return hitPet(x, y, false); }   // 严格：猫本体
+function nearPet(x, y) { return hitPet(x, y, true); }    // 宽松：含 8px 外扩（交互判定用）
 
 /* 交互态双通道驱动：渲染层 mousemove（事件正常时）+ 主进程光标轮询
-   （钩子被摘时）都会调用 setClickable，由 overPet 做逐像素判定。 */
+   （钩子被摘时）都会调用 setClickable——
+   near=true  → 窗口转可交互（猫本体 + 8px 外扩区可点，其余吸收）
+   near=false → 窗口转点击穿透（透明区真正透传给下层应用） */
+let interactive = false;
+function setClickable(c) {
+  if (c === interactive) return;
+  interactive = c;
+  bridge?.setClickable(c);
+}
 let lastMove = { x: -1, y: -1, over: null };
 document.addEventListener("mousemove", (e) => {
   lastInteraction = Date.now();
   lastMove = { x: e.clientX, y: e.clientY, over: overPet(e.clientX, e.clientY) };
-  setClickable(lastMove.over);
+  setClickable(nearPet(e.clientX, e.clientY));
 });
 
 /* 拖拽姿态：主进程判定真实拖动后推送（被拎走的猫） */
@@ -192,7 +219,9 @@ bridge?.onDragPhys?.((v) => Pet?.setSwing?.(v.vx));   // 拖拽速度 → 拎起
 /* 主进程光标轮询（100ms）——进入窗内时主进程已把整窗切为可交互，
      这里的 overPet 判定仅供诊断与后续增强，不再驱动穿透切换。 */
 bridge?.onCursorPos?.(({ inside, x, y }) => {
+  if (pressInfo) return;
   if (inside) lastCursor = { x, y, over: overPet(x, y) };
+  setClickable(inside ? nearPet(x, y) : false);   // 光标轮询兜底（钩子被摘时）
 });
 
 /* ── 启动 ── */

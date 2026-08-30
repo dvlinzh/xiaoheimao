@@ -21,7 +21,7 @@ const ICON_IMG = {
   opencode: "opencode.png",
   dsh: "dsh.png",             // 可能不存在，启动时探测
 };
-const LIVE_MS = 10 * 60 * 1000;   // 10 分钟内有写盘 = 正在运行（亮光效；否则灰显待命）
+let LIVE_MS = 600000;            // 运行判定窗口，由 ui.dock.liveMs 每次刷新覆盖
 
 const imgOk = {};   // 实物图标探测缓存
 async function probeIcons() {
@@ -62,12 +62,11 @@ function iconSvg(h, size) {
 /* ── 环形布局：120° 正圆扇形。圆心 = 标定十字（窗内 95,92：水平在猫头中线、
  * 垂直在两眼之间）。一条边垂直（-90° 正头顶），另一条边斜向左下（-210°），
  * 芯片沿扇形等距分布；正圆恒定 R=75。吸附左缘时水平镜像。 ── */
-const R = 75;
-const CX = 150, CY = 168;     // 圆心（dock 窗 300×232，(150,168) = 标定十字）
+let R = 75, CX = 150, CY = 168, SPAN = 120, START = -90;   // 由 ui.dock 实时刷新
 let MIRROR = new URLSearchParams(location.search).get("edge") === "left" ? -1 : 1;
 window.petBridge?.onPrefs?.((p) => { if (p?.edge) MIRROR = p.edge === "left" ? -1 : 1; });
 function arcPos(i, n) {
-  const deg = -90 - (120 / Math.max(1, n - 1)) * i;
+  const deg = START - (SPAN / Math.max(1, n - 1)) * i;
   const rad = (deg * Math.PI) / 180;
   return { x: CX + MIRROR * R * Math.cos(rad), y: CY + R * Math.sin(rad) };
 }
@@ -104,6 +103,9 @@ async function refresh() {
   try {
     const ov = await fetch("/api/overview").then((r) => r.json());
     const now = Date.now();
+    const ud = ov.settings?.ui?.dock || {};
+    R = ud.r ?? 75; CX = ud.cx ?? 150; CY = ud.cy ?? 168;
+    SPAN = ud.span ?? 120; START = ud.start ?? -90; LIVE_MS = ud.liveMs ?? 600000;
     const act = (ov.projects || []).filter((p) => p.active !== false);
     const by = {};
     for (const p of act) {
@@ -181,23 +183,33 @@ async function refresh() {
   } catch {}
 }
 
-/* 逐片命中：默认穿透，悬停到圆片才可点击——透明区域不挡底下界面 */
+/* 逐片命中：默认穿透，光标坐标落在任一芯片矩形内才切可点击。
+   不用 e.target 判定——穿透态下合成事件的目标不可靠，会让点击
+   落进「不可点」的抖动窗口里。 */
 let clickable = false;
+let lastMouse = { x: null, y: null };
 function setClickable(c) {
   if (c === clickable) return;
   clickable = c;
-  console.log("[dock] clickable →", c);
   window.petBridge?.setClickable(c);
 }
+function insideChip(x, y) {
+  if (x == null || y == null) return false;
+  for (const el of dock.querySelectorAll(".chip")) {
+    const r = el.getBoundingClientRect();
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return true;
+  }
+  return false;
+}
 document.addEventListener("mousemove", (e) => {
-  setClickable(!!e.target.closest?.(".chip"));
+  lastMouse = { x: e.clientX, y: e.clientY };
+  setClickable(insideChip(e.clientX, e.clientY));
 });
 document.addEventListener("mouseout", (e) => {
   if (!e.relatedTarget) {
-    // innerHTML 重建会合成 mouseout(relatedTarget=null)。若光标实际仍悬停在
-    // 某个芯片上（重建后 DOM 的 :hover 依旧匹配），下一帧按真实悬停恢复——
-    // 否则静止的光标不再产生 mousemove，悬停态被误杀后第一次点击必穿透
-    setTimeout(() => setClickable(!!document.querySelector(".chip:hover")), 0);
+    // innerHTML 重建会合成 mouseout(relatedTarget=null)。光标若实际仍在
+    // 某芯片上，按最后已知坐标真实恢复——静止光标不再产生 mousemove
+    setTimeout(() => setClickable(insideChip(lastMouse.x, lastMouse.y)), 0);
   }
 });
 
