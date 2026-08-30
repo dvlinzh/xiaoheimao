@@ -385,3 +385,14 @@ body[data-font="l"] { zoom: 1.23; }
 #list-points.only-open li.pt-decided { display: none; }
 .gp-stale { opacity: .42; }
 .gp-stale .li-text { text-decoration: line-through; text-decoration-color: rgba(154, 154, 162, .5); }
+
+/* ── 要点重点预览：↗ 完整版链接 ── */
+#list-points li.has-link { cursor: default; }
+#list-points li .li-link {
+  flex: none; font-size: 11px; color: var(--teal);
+  border: 1px solid rgba(94, 234, 212, .35); border-radius: 6px;
+  padding: 1px 7px; cursor: pointer; white-space: nowrap;
+}
+#list-points li .li-link:hover {
+  color: #0d0d0f; background: var(--teal); border-color: var(--teal);
+}

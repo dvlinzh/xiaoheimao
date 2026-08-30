@@ -38,8 +38,10 @@ const TOOLS = [
           type: "array",
           items: {
             type: "object", properties: {
-              text: { type: "string", description: "要点/结论（≤40字）" },
+              text: { type: "string", description: "要点预览（≤40字）：结论/表格/分析图/项目地图的提炼" },
               decided: { type: "boolean", description: "已敲定的结论" },
+              link: { type: "string", description: "完整版链接（http(s) 本地/远程 URL），面板点击打开" },
+              supersedes: { type: "array", items: { type: "string" }, description: "被本结论取代的旧条目（id 或原文）" },
             }, required: ["text"],
           },
         },

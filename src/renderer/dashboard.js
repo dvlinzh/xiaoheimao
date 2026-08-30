@@ -91,9 +91,9 @@ function render() {
       <div class="goal ${goal ? "has" : ""}" title="${esc(goal)}">${goal ? "🎯 " + esc(goal) : "🎯 目标未定"}</div>
       <div class="counts">
         <span class="cnt">想法 <b>${(c.ideas || 0) + (c.doneIdeas || 0)}</b></span>
-        <span class="cnt">要点 <b>${c.points || 0}</b></span>
-        <span class="cnt">方案 <b>${c.plans || 0}</b></span>
         <span class="cnt gaps ${c.gaps ? "warn" : ""}">缺口 <b>${c.gaps || 0}</b></span>
+        <span class="cnt">方案 <b>${c.plans || 0}</b></span>
+        <span class="cnt">要点 <b>${c.points || 0}</b></span>
       </div>
       ${p.pendingNewTask ? `<div class="pending">⚠ 有未确认的新目标</div>` : ""}
       <div class="hrow">${hs}<span class="ago">${agoS}</span></div>

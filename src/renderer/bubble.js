@@ -428,9 +428,19 @@ function renderLayer(listEl, kind, goal) {
     for (const it of arr) {
       if (it.superseded) continue;                     // 被新结论替代：不再渲染
       if (it.decided) decided++;
-      const li = mkLi(it.decided ? "pt-decided" : "pt-open", { layer: "points", id: it.id });
+      const li = mkLi((it.decided ? "pt-decided" : "pt-open") + (it.link ? " has-link" : ""), { layer: "points", id: it.id });
       li.appendChild(mkSpan("li-mark", it.decided ? "✔" : "▸"));
       li.appendChild(mkSpan("li-text", it.text));
+      if (it.link) {
+        // 重点预览：点击 ↗ 打开完整版（系统浏览器）
+        const lk = mkSpan("li-link", "↗ 完整版");
+        lk.title = it.link;
+        lk.addEventListener("click", (e) => {
+          e.stopPropagation();
+          window.bubbleBridge?.openExternal(it.link);
+        });
+        li.appendChild(lk);
+      }
       li.appendChild(mkDel("points", it.id));
       li.addEventListener("click", async () => {
         await jfetch("/api/action", { projectId: curProjectId, action: "toggle-point", params: { id: it.id } });

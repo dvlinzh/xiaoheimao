@@ -314,6 +314,7 @@ export function organize(projectId, payload = {}) {
     points: mergeList("points", payload.points, (it) => ({
       text: normText(it.text),
       decided: !!it.decided,
+      link: it.link ? String(it.link).slice(0, 300) : undefined,
     })),
     plans: mergeList("plans", payload.plans, (it) => {
       // 「当前采用」全局唯一：本轮采用谁，就先清掉所有旧采用
@@ -610,9 +611,9 @@ export function queryMarkdown(cwd, harness = "unknown") {
     `【思维板】${s.title}\n` +
     `目标：${s.currentGoal || "（未定）"}\n状态：${s.state}｜未想清缺口 ${s.counts.gaps}` +
     sec("ideas", "想法", (i) => `- [${i.id}] ${i.text}${i.group ? `（组:${i.group}）` : ""}${i.done ? " ✅已实现" : ""}`) +
-    sec("points", "要点", (p) => `- [${p.id}] ${p.text}${p.decided ? " ✔已定" : ""}`) +
+    sec("gaps", "缺口", (x) => `- [${x.id}] ${x.text}${x.resolved ? "（已解决）" : ""}`) +
     sec("plans", "方案", (p) => `- ${p.title}${p.chosen ? "【当前采用】" : p.dismissed ? "【已否决】" : ""}`) +
-    sec("gaps", "缺口", (x) => `- [${x.id}] ${x.text}${x.resolved ? "（已解决）" : ""}`);
+    sec("points", "要点", (p) => `- [${p.id}] ${p.text}${p.decided ? " ✔已定" : ""}${p.link ? ` ↗${p.link}` : ""}`);
   return { markdown: md, summary: s };
 }
 
