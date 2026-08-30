@@ -23,9 +23,20 @@ document.addEventListener("mouseup", () => window.__mbEvts.up++, true);
 /* 心跳探针：每 5s 经 [pet:console] 上报事件计数与穿透状态——
    electron.log 里对比两次心跳的增量即可判断交互断在 OS 投递层还是渲染逻辑层 */
 setInterval(() => {
+  // 采样猫身中心点的 alpha：alphaMap 与画面错位/过期时这里会是 0
+  let ac = -1;
+  try {
+    const cvs = Pet?.el;
+    if (cvs && alphaMap && cvs.width) {
+      const r = cvs.getBoundingClientRect();
+      const px = Math.floor((95 - r.left) / r.width * cvs.width);
+      const py = Math.floor((110 - r.top) / r.height * cvs.height);
+      ac = (px >= 0 && py >= 0 && px < cvs.width && py < cvs.height) ? alphaMap[py * cvs.width + px] : -2;
+    }
+  } catch {}
   console.log("[pet] beat evts:", JSON.stringify(window.__mbEvts),
     "press:", pressInfo ? "locked" : "none",
-    "alpha:", alphaMap ? "ok" : "null", "chipRects:", chipRects.length);
+    "alpha:", alphaMap ? "ok" : "null", "alphaC:", ac, "chipRects:", chipRects.length);
 }, 5000);
 
 /* ── 皮肤装载 ── */

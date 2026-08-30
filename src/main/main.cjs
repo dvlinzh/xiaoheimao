@@ -128,7 +128,7 @@ function createPet() {
     try {
       petWin.showInactive();
       petWin.moveTop();
-      petWin.setIgnoreMouseEvents(true, { forward: false });   // 初始穿透，主进程轮询 16ms 内接管
+      // 猫窗永久可交互（不再穿透）：透明像素的点击由渲染层 overPet 门控吸收
     } catch (e) { log("[pet] show failed:", String(e)); }
   });
   petWin.webContents.on("did-fail-load", (_e, code, desc, url) =>
@@ -503,28 +503,16 @@ ipcMain.on("drag-end", () => {
 ipcMain.on("set-clickable", (_e, clickable) => {
   const win = BrowserWindow.fromWebContents(_e.sender);
   if (!win || win.isDestroyed()) return;
+  if (win === petWin) return;   // 猫窗永久可交互，任何渲染层都不得切穿透
   try { win.setIgnoreMouseEvents(!clickable, { forward: true }); } catch {}
 });
 
-/* 交互保活轮询：穿透窗的 hover 激活依赖系统鼠标钩子转发，实测会被
-   全屏游戏/UAC 遮罩等环境事件摘除且永不恢复（猫变"可看不可点"，且
-   mousedown 在激活完成前被穿透吞掉——down:0/up:8 的日志即此症状）。
-   现由主进程 16ms 轮询光标、直接驱动整窗可交互态：光标进窗 = 整窗可点
-   （是否点在猫身上由渲染层 overPet 按像素判定，透明处点击吸收不动），
-   getCursorScreenPoint 是普通 API，与 OS 事件投递状态完全解耦。 */
-let petInteractive = false;
-setInterval(() => {
-  if (!petWin || petWin.isDestroyed()) return;
-  const c = screen.getCursorScreenPoint();
-  const b = petWin.getBounds();
-  const inside = c.x >= b.x && c.x < b.x + b.width && c.y >= b.y && c.y < b.y + b.height;
-  if (inside !== petInteractive) {
-    petInteractive = inside;
-    try { petWin.setIgnoreMouseEvents(!inside, { forward: false }); } catch {}
-    log("[pet] interactive →", inside);
-  }
-  if (inside) petWin.webContents.send("cursor-pos", { inside: true, x: c.x - b.x, y: c.y - b.y });
-}, 16);
+/* 交互机制（终版）：猫窗不再使用任何点击穿透/激活切换。
+   历史教训：穿透窗依赖系统鼠标钩子转发做「悬停激活」，钩子会被全屏
+   应用/UAC 摘除且永不恢复，激活总是慢于点击（心跳实证 down:0/up:8，
+   mousedown 全被穿透吞掉）。现在猫窗永久可交互：所有点击都到达渲染层，
+   是否点在猫身上由渲染层 overPet 按像素判定，透明像素的点击吸收不动。
+   代价：悬停猫窗矩形期间下层应用收不到点击（桌面宠标准取舍）。 */
 
 ipcMain.on("bubble-pinned", (_e, v) => { bubblePinned = !!v; });
 
