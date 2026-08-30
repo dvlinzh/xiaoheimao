@@ -175,10 +175,11 @@ function overPet(x, y) {
   return alphaMap[py * cvs.width + px] > 8;
 }
 
-/* 交互态由主进程轮询驱动（光标进窗=整窗可点），渲染层不再切换穿透；
-   这里只保留像素判定供点击门控使用。 */
+/* 交互态双通道驱动：渲染层 mousemove（事件正常时）+ 主进程光标轮询
+   （钩子被摘时）都会调用 setClickable，由 overPet 做逐像素判定。 */
 document.addEventListener("mousemove", (e) => {
   lastInteraction = Date.now();
+  setClickable(overPet(e.clientX, e.clientY));
 });
 
 /* 拖拽姿态：主进程判定真实拖动后推送（被拎走的猫） */

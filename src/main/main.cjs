@@ -128,7 +128,8 @@ function createPet() {
     try {
       petWin.showInactive();
       petWin.moveTop();
-      // 猫窗永久可交互（不再穿透）：透明像素的点击由渲染层 overPet 门控吸收
+      // 动态穿透初始态：默认穿透+转发，主进程光标轮询（下方 100ms 循环）接管切换
+      try { petWin.setIgnoreMouseEvents(true, { forward: true }); } catch {}
     } catch (e) { log("[pet] show failed:", String(e)); }
   });
   petWin.webContents.on("did-fail-load", (_e, code, desc, url) =>
@@ -289,13 +290,16 @@ function showDock(show) {
       dockWin.loadURL(`http://127.0.0.1:${port}/dock.html`);
       dockWin.webContents.on("console-message", (_e, level, message, line, source) =>
         log("[dock:console]", message, `(${source}:${line})`));
+      dockWin.webContents.on("render-process-gone", (_e, details) =>
+        log("[dock] render-process-gone:", JSON.stringify(details)));
       dockWin.webContents.once("did-finish-load", () => {
         try { dockWin.setIgnoreMouseEvents(true, { forward: true }); dockWin.moveTop(); } catch {}
       });
     } else {
-      // 幽灵可见态保险：Electron 记为可见但 DWM 表面可能已丢（被全屏应用覆盖过），
-      // show() 无操作 → 用户眼前什么都没有。hide→show 强制重新呈现。
+      // 每次唤出强制重载页面：穿透窗渲染进程可能静默僵死/DOM 冻结在旧态
+      // （曾整晚显示空环）。重载 ~200ms，换来的确定性远比速度重要。
       dockWin.hide();
+      dockWin.loadURL(`http://127.0.0.1:${port}/dock.html`);
       dockWin.show();
       dockWin.moveTop();
     }
@@ -529,9 +533,23 @@ ipcMain.on("drag-end", () => {
 ipcMain.on("set-clickable", (_e, clickable) => {
   const win = BrowserWindow.fromWebContents(_e.sender);
   if (!win || win.isDestroyed()) return;
-  if (win === petWin) return;   // 猫窗永久可交互，任何渲染层都不得切穿透
   try { win.setIgnoreMouseEvents(!clickable, { forward: true }); } catch {}
 });
+
+/* 悬停保活轮询：穿透窗的 hover 激活若依赖系统鼠标钩子转发，会被
+   全屏应用/UAC 等环境事件摘除且永不恢复（猫变"可看不可点"）。
+   主进程轮询光标位置主动驱动——getCursorScreenPoint 是普通 API，
+   与 OS 事件投递状态完全解耦；渲染层 overPet 做逐像素判定。 */
+setInterval(() => {
+  if (!petWin || petWin.isDestroyed() || !petWin.isVisible()) return;
+  const c = screen.getCursorScreenPoint();
+  const b = petWin.getBounds();
+  if (c.x < b.x || c.x >= b.x + b.width || c.y < b.y || c.y >= b.y + b.height) {
+    petWin.webContents.send("cursor-pos", { inside: false });
+    return;
+  }
+  petWin.webContents.send("cursor-pos", { inside: true, x: c.x - b.x, y: c.y - b.y });
+}, 100);
 
 /* 交互机制（终版）：猫窗不再使用任何点击穿透/激活切换。
    历史教训：穿透窗依赖系统鼠标钩子转发做「悬停激活」，钩子会被全屏
@@ -607,7 +625,7 @@ function hideCat() {
 function createTray() {
   const iconPath = path.join(__dirname, "../renderer/assets/tray.png");
   const icon = nativeImage.createFromPath(iconPath);
-  tray = new Tray(icon.isEmpty() ? nativeImage.createEmpty() : icon.resize({ width: 16, height: 16 }));
+  tray = new Tray(icon);   // 32px 源，交由系统按 DPI 缩放（16px 缩小后偏小）
   tray.setToolTip("思维板 · 小黑猫");
   // 左键/双击：唤猫（隐藏时即打开）
   tray.on("click", showCat);
