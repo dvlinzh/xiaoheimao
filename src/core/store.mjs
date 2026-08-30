@@ -93,6 +93,7 @@ export function charJaccard(a, b) {
 }
 
 const normText = (t) => String(t ?? "").trim().replace(/\s+/g, " ");
+const num = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : d);
 
 /* ────────────────────────── 初始化 ────────────────────────── */
 
@@ -110,6 +111,7 @@ export function readSettings() {
   const s = readJson(SETTINGS_PATH) || {};
   const font = s.fontSize;
   const m = s.modules || {};
+  const ui = s.ui || {};   // 图标环/桌宠运行参数（ring-calibrator 实时写入）
   return {
     mode: s.mode === "on" ? "on" : "off",
     windowPos: s.windowPos || null,
@@ -123,6 +125,25 @@ export function readSettings() {
     skin: "cat",
     panelTheme: "cream",   // 优雅纸色为主题；深色变体保留在 CSS（data-theme="ink"）待 UI 开关
     language: s.language === "en" ? "en" : "zh",
+    // 图标环/桌宠运行参数（标定工具 ring-calibrator 实时写入，缺省走代码默认）
+    ui: (() => {
+      const u = s.ui || {};
+      const d = u.dock || {}, p = u.pet || {};
+      return {
+        dock: {
+          cx: num(d.cx, 150),
+          cy: num(d.cy, 168),
+          r: num(d.r, 75),
+          span: num(d.span, 120),
+          start: num(d.start, -90),
+          liveMs: num(d.liveMs, 600000),
+        },
+        pet: {
+          bury: num(p.bury, 13),
+          dragThresh: num(p.dragThresh, 10),
+        },
+      };
+    })(),
     greetings: Array.isArray(s.greetings) && s.greetings.length && !s.greetings.some((g) => /德布劳内|阵型|中场|17 号/.test(g))
       ? s.greetings.slice(0, 12)
       : ["喵～小黑猫上线。", "闭眼是在想事，喵。", "缺口我会盯着的，喵。", "思维板已就位，喵。"],
@@ -310,6 +331,7 @@ export function organize(projectId, payload = {}) {
       text: normText(it.text),
       group: it.group ? String(it.group).slice(0, 12) : undefined,
       done: !!it.done,
+      raw: it.raw ? String(it.raw).slice(0, 200) : undefined,
     })),
     points: mergeList("points", payload.points, (it) => ({
       text: normText(it.text),
