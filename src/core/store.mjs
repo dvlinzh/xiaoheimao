@@ -343,6 +343,7 @@ export function organize(projectId, payload = {}) {
       if (!!it.chosen) for (const p of goal.plans) p.chosen = false;
       return {
         title: normText(it.title ?? it.text),
+        group: it.group ? String(it.group).slice(0, 16) : undefined,
         chosen: !!it.chosen, dismissed: !!it.dismissed,
         paths: Array.isArray(it.paths) ? it.paths.map((p) => ({ step: String(p?.step ?? p ?? "").slice(0, 30) })).filter((p) => p.step) : [],
       };

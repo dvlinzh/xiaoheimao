@@ -433,3 +433,6 @@ body[data-font="l"] { zoom: 1.23; }
 .li-act:hover { color: var(--text); border-color: var(--amber); background: var(--amber-soft); }
 .has-link { cursor: pointer; }
 .has-link:hover .li-text { color: var(--teal); }
+
+/* 方案组头（按问题归组）：采用中的组亮青边 */
+.grp-adopted { color: var(--teal); }

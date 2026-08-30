@@ -412,7 +412,7 @@ function renderLayer(listEl, kind, goal) {
     }
   } else if (kind === "plans") {
     let num = 0;
-    for (const it of arr) {
+    const mkPlanRow = (it) => {
       num++;
       const li = mkLi("pl-row", { layer: "plans", id: it.id });
       const head = document.createElement("div"); head.className = "pl-head";
@@ -444,8 +444,27 @@ function renderLayer(listEl, kind, goal) {
         li.appendChild(pd);
       }
       bindItemDrag(li, { layer: "plans", id: it.id }, it.title);
-      listEl.appendChild(li);
+      return li;
+    };
+    // 【按问题归组】有 group 的方案聚成可折叠组，组头即「针对什么问题」；
+    // 组内含采用方案时组头标「采用中」——一眼看出每个问题当前押注的路线
+    const groups = {}, standalone = [];
+    for (const it of arr) {
+      const g = it.group;
+      if (g) (groups[g] = groups[g] || []).push(it);
+      else standalone.push(it);
     }
+    for (const [gname, items] of Object.entries(groups)) {
+      const key = "plans:" + gname;
+      const isOpen = !!expGroup[key];
+      const adopted = items.some((x) => x.chosen);
+      listEl.appendChild(mkGroupHead("🎯 " + gname, items.length + " 案" + (adopted ? " · 采用中" : ""), isOpen, adopted ? "grp-adopted" : "", () => {
+        expGroup[key] = !isOpen;
+        renderLayers(curSkeleton);
+      }));
+      if (isOpen) for (const it of items) listEl.appendChild(mkPlanRow(it));
+    }
+    for (const it of standalone) listEl.appendChild(mkPlanRow(it));
   } else if (kind === "gaps") {
     for (const it of arr) {
       const stale = !it.resolved && it.at && (Date.now() - Date.parse(it.at)) > 14 * 86400000;

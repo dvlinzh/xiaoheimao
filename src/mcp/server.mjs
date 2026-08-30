@@ -28,7 +28,8 @@ const TOOLS = [
           type: "array",
           items: {
             type: "object", properties: {
-              text: { type: "string", description: "想法原话提炼（≤30字）" },
+              text: { type: "string", description: "想法归纳（≤30字）：压缩短句，不摘原话" },
+              raw: { type: "string", description: "用户原话（可选，≤200字）：归纳前的原始表达，供追溯" },
               group: { type: "string", description: "可选分组名（≤12字），同类想法归并" },
               done: { type: "boolean", description: "已实现/已采纳" },
             }, required: ["text"],
@@ -50,6 +51,7 @@ const TOOLS = [
           items: {
             type: "object", properties: {
               title: { type: "string", description: "方案标题（≤25字）" },
+              group: { type: "string", description: "所属问题/缺口（≤16字）——并列的方案同组，读的人才知道每组在解决什么" },
               chosen: { type: "boolean", description: "当前采用（同一时刻至多一个方案为 true）" },
               dismissed: { type: "boolean", description: "已否决" },
               paths: { type: "array", items: { type: "object", properties: { step: { type: "string" } } } },
