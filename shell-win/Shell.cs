@@ -90,6 +90,7 @@ namespace XiaoHeiMao
 
         public static void OpenPanel(string key, string url, int w, int h)
         {
+            EnsureServer();   // 13134 若已不在（比如 Electron 版退了）就现场拉起，面板永远点得开
             ClosePanel(key);
             var pf = new PanelForm(key, url, w, h);
             PositionNearPet(pf, key == "dashboard");
