@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>最小理解系统 — 三维框架 × AI 对话方法论</title>
+<style>
+  :root {
+    --bg: #0d0d0f; --card: #141416; --card2: #1b1b1f; --line: #28282e;
+    --line2: #34343c; --text: #ececec; --dim: #9a9aa2; --faint: #66666e;
+    --amber: #fbbf24; --teal: #5eead4; --sky: #5ea3f7; --violet: #8b7cf6;
+    --red: #f0716c; --green: #58a873;
+    --grad-tail: linear-gradient(135deg, #8b7cf6, #5ea3f7, #5eead4);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    font-size: 15px; line-height: 1.8;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 40px 24px 80px; }
+  h1 { font-family: Georgia, "Songti SC", serif; font-size: 30px; margin: 0 0 6px; }
+  h1 span { background: var(--grad-tail); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sub { color: var(--dim); margin: 0 0 36px; font-size: 14.5px; }
+  h2 {
+    font-size: 20px; margin: 52px 0 8px; padding-left: 12px;
+    border-left: 3px solid var(--amber); line-height: 1.4;
+  }
+  .lead { color: var(--dim); font-size: 14px; margin: 0 0 20px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 20px; margin-bottom: 16px;
+  }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .mod {
+    border: 1px solid var(--line); border-radius: 12px; padding: 18px;
+    background: var(--card);
+  }
+  .mod .tag {
+    display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 10px;
+    border-radius: 999px; margin-bottom: 10px; border: 1px solid;
+  }
+  .mod h4 { margin: 0 0 6px; font-size: 15px; }
+  .mod p { margin: 0 0 8px; color: var(--dim); font-size: 13.5px; }
+  .mod .out {
+    margin: 10px 0 8px; font-size: 13px; color: var(--text);
+    background: var(--card2); border-radius: 8px; padding: 8px 12px;
+  }
+  .mod .out b { color: var(--teal); font-size: 11px; letter-spacing: 1px; }
+  .mod .chk {
+    margin: 8px 0 0; font-size: 12.5px; color: var(--faint);
+    border-left: 2px solid var(--amber); padding-left: 10px; font-style: italic;
+  }
+  .mod.ideas .tag { color: var(--teal); border-color: var(--teal); }
+  .mod.points .tag { color: var(--amber); border-color: var(--amber); }
+  .mod.gaps .tag  { color: var(--red); border-color: var(--red); }
+  .mod.plans .tag { color: var(--violet); border-color: var(--violet); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { color: var(--faint); font-size: 11px; letter-spacing: 1px; font-weight: 700; }
+  td code { color: var(--teal); background: var(--card2); border-radius: 5px; padding: 1px 6px; font-size: 12.5px; }
+  .ok { color: var(--green); }
+  .no { color: var(--red); }
+
+  .tri { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 14px 0; }
+  .tri .q { background: var(--card2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 13.5px; }
+  .tri .q b { display: block; margin-bottom: 4px; color: var(--text); }
+  .tri .q .n { font-size: 22px; font-weight: 700; color: var(--amber); font-family: Georgia, serif; }
+
+  .vs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0; }
+  .vs .col { border-radius: 12px; padding: 18px; }
+  .vs .col.fw { background: rgba(94,163,247,.06); border: 1px solid rgba(94,163,247,.25); }
+  .vs .col.pet { background: rgba(139,124,246,.06); border: 1px solid rgba(139,124,246,.25); }
+  .vs .col h4 { margin: 0 0 8px; font-size: 14px; }
+  .vs .col p { margin: 0; color: var(--dim); font-size: 13.5px; }
+
+  .formula {
+    background: var(--card2); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 20px; font-size: 14px; line-height: 2; margin: 14px 0;
+  }
+  .formula b { color: var(--teal); }
+  .steps { counter-reset: s; padding: 0; list-style: none; margin: 0; }
+  .steps li { counter-increment: s; display: flex; gap: 12px; margin-bottom: 14px; align-items: flex-start; }
+  .steps li::before {
+    content: counter(s, decimal-leading-zero); flex: none;
+    width: 28px; height: 28px; border-radius: 50%; background: var(--card2);
+    border: 1px solid var(--line2); color: var(--amber); font-weight: 700; font-size: 13px;
+    display: flex; align-items: center; justify-content: center; margin-top: 2px;
+  }
+  .steps b { color: var(--text); }
+  .steps p { margin: 0; color: var(--dim); font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>最小理解系统 <span>Why × What × How</span></h1>
+<p class="sub">以最少的维度，覆盖理解一个项目/作品所需的充分信息。三种经典思维方法的组合应用 —— 可操作、可检验、可交付。</p>
+
+<!-- ══════ 为什么需要 ══════ -->
+<h2>为什么需要它</h2>
+<p class="lead">
+  拿到任何新项目或作品，你面前有两条路：<b>花几天时间通读所有材料，或者凭感觉猜。</b>
+  前者成本高，后者错误多。这套框架走第三条路 —— <b>用结构化的提问，在 25 分钟内建立"最小但完整"的理解</b>。
+  后续所有深入分析，都是在这三个维度上做"放大"而已。
+</p>
+
+<!-- ══════ 三维框架 ══════ -->
+<h2>三维框架</h2>
+<p class="lead">
+  理解任何项目，本质上只需要回答三个问题：<b>为什么存在、由什么构成、怎么运转</b>。
+  三者构成最小充分集 —— 少了任何一个，理解不完整；多了则冗余。
+</p>
+
+<!-- ══════ 价值维 Why ══════ -->
+<h2>维度一 · 价值维（Why）</h2>
+<p class="lead">解决动机和定位问题，是所有理解的起点。</p>
+
+<div class="grid3">
+  <div class="mod ideas">
+    <span class="tag">模块一</span>
+    <h4>需求锚点</h4>
+    <p>锁定项目回应的真实需求原点。区分"痛点"（不解决会痛）、"痒点"（有了更好）、"爽点"（即时满足）。</p>
+    <div class="out"><b>输出物</b><br>当__场景下，人面临__困境</div>
+    <div class="chk">检验：能否用一个具体场景还原需求被触发的瞬间？</div>
+  </div>
+  <div class="mod ideas">
+    <span class="tag">模块二</span>
+    <h4>受众画像</h4>
+    <p>明确"谁"是核心服务对象。不是 demographic，而是 behavioral —— 他们在什么情境下会主动寻找这个解决方案。</p>
+    <div class="out"><b>输出物</b><br>为__（行为特征）的__（人群）</div>
+    <div class="chk">检验：能否说出"谁最不需要它"？能排除说明画像清晰。</div>
+  </div>
+  <div class="mod ideas">
+    <span class="tag">模块三</span>
+    <h4>价值主张</h4>
+    <p>一句话概括项目存在的理由和独特价值。</p>
+    <div class="out"><b>输出物</b><br>通过__方式，为__受众，提供__价值，区别于__替代方案</div>
+    <div class="chk">检验：把项目名遮住，这句话是否仍然成立？成立说明价值独立于品牌。</div>
+  </div>
+</div>
+
+<!-- ══════ 结构维 What ══════ -->
+<h2>维度二 · 结构维（What）</h2>
+<p class="lead">解决组成和边界问题，帮你看清项目/作品的全貌。</p>
+
+<div class="grid3">
+  <div class="mod points">
+    <span class="tag">模块一</span>
+    <h4>功能拆解</h4>
+    <p>用 WBS 思路逐层拆分，直到每个单元能用一句话描述其职责。</p>
+    <div class="out"><b>输出物</b><br>功能清单（不超过 7 个一级模块）</div>
+    <div class="chk">检验：每个模块能否独立说清"它负责什么"？说不清说明拆得不够或拆错了。</div>
+  </div>
+  <div class="mod points">
+    <span class="tag">模块二</span>
+    <h4>骨架识别</h4>
+    <p>逐一做"删除测试"—— 去掉这个模块，项目还能运转吗？不能去掉的 = 骨架；能去掉的 = 增强层。</p>
+    <div class="out"><b>输出物</b><br>骨架清单（通常 2-4 个模块）+ 增强层清单</div>
+    <div class="chk">检验：骨架是否足够支撑价值主张的兑现？运转了但价值没兑现，说明漏拆了。</div>
+  </div>
+  <div class="mod points">
+    <span class="tag">模块三</span>
+    <h4>边界定义</h4>
+    <p>明确项目"不做什么"，防止理解发散。列出 3 个"看似相关但明确不做"的事项。</p>
+    <div class="out"><b>输出物</b><br>我们不做__、__、__</div>
+    <div class="chk">检验：边界是否帮助区分了它与同类项目？能区分说明边界有效。</div>
+  </div>
+</div>
+
+<!-- ══════ 路径维 How ══════ -->
+<h2>维度三 · 路径维（How）</h2>
+<p class="lead">解决机制和流程问题，理解价值如何从输入传递到输出。</p>
+
+<div class="grid3">
+  <div class="mod plans">
+    <span class="tag">模块一</span>
+    <h4>核心链路</h4>
+    <p>从用户/受众视角，找到从"进入"到"获得价值"的最短路径。</p>
+    <div class="out"><b>输出物</b><br>3-5 步核心链路图</div>
+    <div class="chk">检验：能否在 3 步内让受众触达核心价值？超过 5 步说明路径有冗余。</div>
+  </div>
+  <div class="mod plans">
+    <span class="tag">模块二</span>
+    <h4>依赖与瓶颈</h4>
+    <p>标注每一步的前置条件，找到最慢/最容易出错的环节。</p>
+    <div class="out"><b>输出物</b><br>瓶颈标注 + 依赖关系箭头</div>
+    <div class="chk">检验：把瓶颈环节加重 2 倍，整体是否慢 2 倍？（是 → 它确实是瓶颈）</div>
+  </div>
+  <div class="mod plans">
+    <span class="tag">模块三</span>
+    <h4>反馈闭环</h4>
+    <p>项目是否有自我迭代的能力？什么信息回流、触发什么改变？</p>
+    <div class="out"><b>输出物</b><br>反馈回路图：结果 → 采集 → 分析 → 调整 → 再交付</div>
+    <div class="chk">检验：没有这条回路，项目是否"开环运行、越做越偏"？是，说明反馈闭环必要。</div>
+  </div>
+</div>
+
+<!-- ══════ 9 模块总览 ══════ -->
+<h2>九模块总览</h2>
+<div class="card">
+<table>
+  <tr><th>维度</th><th>模块</th><th>一句话核心</th><th>最小化检验</th></tr>
+  <tr><td rowspan="3"><b>价值维</b></td><td>需求锚点</td><td>回应的真实问题是什么</td><td>用一个具体场景还原需求瞬间</td></tr>
+  <tr><td>受众画像</td><td>谁在什么情境下需要它</td><td>能排除非目标人群</td></tr>
+  <tr><td>价值主张</td><td>一句话为什么值得存在</td><td>遮住名字仍成立</td></tr>
+  <tr><td rowspan="3"><b>结构维</b></td><td>功能拆解</td><td>由哪些独立单元组成</td><td>每个单元一句话可说清</td></tr>
+  <tr><td>骨架识别</td><td>哪些是不可删除的核心</td><td>删除测试</td></tr>
+  <tr><td>边界定义</td><td>明确不做什么</td><td>能区分同类</td></tr>
+  <tr><td rowspan="3"><b>路径维</b></td><td>核心链路</td><td>从进入到获得价值的最短路径</td><td>3 步内触达核心价值</td></tr>
+  <tr><td>依赖与瓶颈</td><td>哪一步最关键、最容易卡住</td><td>加重 2 倍整体慢 2 倍</td></tr>
+  <tr><td>反馈闭环</td><td>结果如何回流驱动改进</td><td>无回路则开环偏航</td></tr>
+</table>
+</div>
+
+<!-- ══════ 两档用法 ══════ -->
+<h2>两档用法</h2>
+<p class="lead">
+  9 模块是"完整理解"的深度。不是所有场景都需要全量 —— 用两档匹配你的时间和需求。
+</p>
+<div class="grid2">
+  <div class="card">
+    <h4>⚡ 快筛档（5-10 分钟）</h4>
+    <p>第一次接触项目/作品，只需要建立基本理解：</p>
+    <div class="tri">
+      <div class="q"><span class="n">01</span><b>Why 一句话</b>为什么存在、为谁、解决什么</div>
+      <div class="q"><span class="n">02</span><b>What 三模块</b>列出 3-5 个核心，标出"不可删除"的</div>
+      <div class="q"><span class="n">03</span><b>How 一条链路</b>从用户视角走一遍完整流程</div>
+    </div>
+    <p style="margin-top:10px;font-size:12.5px;color:var(--faint);">后续深入都是在这三步上做"放大"。</p>
+  </div>
+  <div class="card">
+    <h4>🔍 深挖档（30-40 分钟）</h4>
+    <p>已决定深耕，需要系统性理解：</p>
+    <div class="tri">
+      <div class="q"><span class="n">01</span><b>三维快筛</b>先过一遍基础框架</div>
+      <div class="q"><span class="n">02</span><b>定位最薄弱维度</b>哪个维度最不透明、最影响判断</div>
+      <div class="q"><span class="n">03</span><b>九模块深挖</b>只对该维度做 3 模块展开（定义/动作/输出/检验）</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ 思维血统 ══════ -->
+<h2>思维血统</h2>
+<p class="lead">
+  这个框架不是某一种单一思维方法，而是多种经典思维方法按认知顺序的组合编排。
+</p>
+<div class="card">
+<table>
+  <tr><th>思维方法</th><th>在本框架中的体现</th></tr>
+  <tr><td><b>黄金圈法则</b><br><span style="font-size:12px;color:var(--faint)">Simon Sinek</span></td><td>Why-What-How 三维结构本身来源于从内向外思考的模型</td></tr>
+  <tr><td><b>第一性原理</b></td><td>追问最小不可分单元，"删除测试"是典型的第一性原理操作</td></tr>
+  <tr><td><b>MECE 原则</b><br><span style="font-size:12px;color:var(--faint)">麦肯锡</span></td><td>三维度互不重叠（Mutually Exclusive）、合在一起完全穷尽（Collectively Exhaustive）</td></tr>
+  <tr><td><b>系统思维</b></td><td>维度间的闭环关系、反馈回路模块——不把项目看作静态零件集合，而是有输入/输出/回路的动态系统</td></tr>
+  <tr><td><b>奥卡姆剃刀</b></td><td>追求"最小充分"，拒绝过度拆解——如无必要，勿增实体</td></tr>
+</table>
+</div>
+
+<!-- ══════ AI 对话应用 ══════ -->
+<h2>应用：和 AI 对话的质量提升</h2>
+<p class="lead">
+  你和 AI 说的每一句话，本质上都在描述一个你想要完成的"项目"——
+  哪怕只是"帮我写一封邮件"，它也是一个有目标、有结构、有路径的小项目。
+  这套框架最直接的应用场景，就是<b>让你在开口之前把需求想清楚</b>。
+</p>
+
+<div class="card">
+  <h4 style="margin:0 0 14px">三问映射到 AI 对话</h4>
+  <table>
+    <tr><th style="width:100px">维度</th><th>对应到 AI 对话的核心问题</th></tr>
+    <tr><td><b>价值维</b></td><td>我到底要什么结果？给谁看？解决什么问题？</td></tr>
+    <tr><td><b>结构维</b></td><td>这个结果应该包含哪些部分？哪些必须有、哪些可以不要？</td></tr>
+    <tr><td><b>路径维</b></td><td>AI 应该按什么顺序、用什么方式帮我产出来？</td></tr>
+  </table>
+</div>
+
+<div class="grid2">
+  <div class="card" style="border-color:var(--red)">
+    <h4 style="color:var(--red)">✗ 模糊的指令</h4>
+    <p style="color:var(--dim);font-family:Georgia,serif;font-size:15px;">"帮我写一个项目方案"</p>
+    <p style="color:var(--dim);font-size:13px;margin-top:8px;">
+      AI 只能猜。猜出来的大概率不是你要的，然后来回改五六轮，双方都痛苦。
+    </p>
+  </div>
+  <div class="card" style="border-color:var(--green)">
+    <h4 style="color:var(--green)">✓ 用三维框架拆过的指令</h4>
+    <p style="font-size:13px;color:var(--dim);line-height:1.8;">
+      <b style="color:var(--text)">价值维：</b>面向投资人的项目方案，目的是理解商业模式并愿意进入下一轮。<br>
+      <b style="color:var(--text)">结构维：</b>问题定义、解决方案是骨架必须讲透；团队是增强层简要带过；不需要竞品分析。<br>
+      <b style="color:var(--text)">路径维：</b>先出大纲我确认后再逐模块展开，每模块 200 字内，理性克制不用营销话术。
+    </p>
+  </div>
+</div>
+
+<div class="card" style="margin-top:14px">
+  <h4 style="margin:0 0 12px">⚡ 日常简化版：30 秒三问</h4>
+  <div class="tri">
+    <div class="q"><b>0. 这是执行型还是探索型？</b>探索型别硬套框架——先让 AI 帮你发散，方向清晰了再用框架锁定。</div>
+    <div class="q"><span class="n">1</span><b>我到底要什么？</b>一句话描述最终交付物，以及它用来干什么</div>
+    <div class="q"><span class="n">2</span><b>它应该长什么样？</b>包含哪几块、哪块最重要、哪块可以省略</div>
+    <div class="q"><span class="n">3</span><b>怎么给我？</b>先出大纲还是直接出全文？什么风格？什么格式？</div>
+  </div>
+  <p style="margin-top:10px;font-size:12.5px;color:var(--faint);">三问对应价值维、结构维、路径维——口语化版本，适合日常使用。</p>
+</div>
+
+<!-- ══════ 例外：探索型对话 ══════ -->
+<h2>例外：探索型对话</h2>
+<p class="lead">
+  有一种场景<b>不适合</b>先拆再问——你自己在探索阶段，不确定要什么。
+</p>
+<div class="card">
+  <p style="margin:0 0 12px;color:var(--dim);font-size:14px;">
+    "我想用 AI 做点副业，但不知道做什么好"
+  </p>
+  <p style="color:var(--text);font-size:14px;">
+    这时候你的价值维是空的，结构维和路径维更无从谈起。正确的做法是反过来——
+    <b>先让 AI 帮你发散，在对话过程中逐步收敛，等方向清晰了再用框架锁定需求。</b>
+  </p>
+</div>
+
+<!-- ══════ 与思维板的互补关系 ══════ -->
+<h2>与思维板插件的互补关系</h2>
+<p class="lead">
+  框架管执行对话的需求前置，插件管探索对话的需求涌现——两者不是竞争，是同一条
+  "AI 对话质量链"的上下游。
+</p>
+<div class="vs">
+  <div class="col fw">
+    <h4>📐 本框架（需求前置澄清）</h4>
+    <p><b>适用：</b>执行型对话——目标清晰、要产出交付物</p>
+    <p><b>用法：</b>开口前用三维自检，把需求想清楚了再提</p>
+    <p><b>本质：</b>减少 AI 猜测，提升首轮产出质量</p>
+  </div>
+  <div class="col pet">
+    <h4>🐱 思维板插件（需求涌现沉淀）</h4>
+    <p><b>适用：</b>探索型对话——方向在过程中逐渐清晰</p>
+    <p><b>用法：</b>正常聊天，插件自动整理想法/结论/缺口到四层骨架</p>
+    <p><b>本质：</b>对话结束，沉淀不丢——下一步用本框架锁定执行需求</p>
+  </div>
+</div>
+<div class="card" style="margin-top:14px">
+  <p style="margin:0;font-size:14px;color:var(--dim);line-height:2;">
+    <b style="color:var(--text)">完整闭环：</b>探索期用思维板自动沉淀想法和缺口 → 方向清晰的那一刻 →
+    用三维框架锁定执行需求 → 高质量产出 → 新想法回流思维板 → 循环。<br>
+    <b>思维板是方法的工具化实现：四层骨架（想法/要点/方案/缺口）正是对话流的最小理解系统。</b>
+  </p>
+</div>
+
+<!-- ══════ 一句话总结 ══════ -->
+<div style="text-align:center;padding:60px 0 20px;">
+  <p style="font-family:Georgia,serif;font-size:20px;color:var(--text);margin:0 0 8px;">
+    和 AI 对话的本质是<b style="color:var(--teal)">需求传递</b>，<br>
+    这套框架的本质是<b style="color:var(--teal)">需求澄清</b>。
+  </p>
+  <p style="color:var(--faint);font-size:14px;">
+    框架不是给 AI 用的，是给你自己用的。
+  </p>
+</div>
+
+</div>
+</body>
+</html>
