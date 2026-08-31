@@ -6,6 +6,7 @@
 // 生命感：闲置 5 分钟趴下（睡眠姿态）；AI 写入思维板 → 头顶冒对话框（journal 联动）。
 
 using System;
+using System.IO;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -119,10 +120,16 @@ namespace XiaoHeiMao
             menu.Items.Add("退出", null, (_, __) => Application.Exit());
             ContextMenuStrip = menu;
 
+            // 托盘图标：专用 tray.png（老版同款猫头标）；缺失时退回猫帧缩略
+            Icon trayIcon;
+            var trayPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets", "tray.png");
+            if (File.Exists(trayPath)) trayIcon = new Icon(trayPath);
+            else trayIcon = Icon.FromHandle(((Bitmap)_idle.Bmp.Clone()).GetHicon());
+
             _tray = new NotifyIcon
             {
                 Text = "思维板·小黑猫",
-                Icon = Icon.FromHandle(((Bitmap)_idle.Bmp.Clone()).GetHicon()),
+                Icon = trayIcon,
                 Visible = true,
             };
             _tray.DoubleClick += (_, __) => { Show(); Location = SnapPos(Location.X); };

@@ -9,6 +9,8 @@ set CSC=%HERE%roslyn\csc.exe
 rem Cat sprites: copied from the shared asset source (single source of truth)
 if not exist "%HERE%assets" mkdir "%HERE%assets"
 copy /y "%HERE%..\src\renderer\assets\cat\cat-*.png" "%HERE%assets\" >nul
+rem Tray icon: dedicated 64x64 cat head (old Electron version same style)
+copy /y "%HERE%..\src\renderer\assets\tray.png" "%HERE%assets\" >nul
 rem Harness icons for the dock ring
 if not exist "%HERE%assets\icons" mkdir "%HERE%assets\icons"
 copy /y "%HERE%..\src\renderer\assets\icons\*.png" "%HERE%assets\icons\" >nul 2>nul
