@@ -59,7 +59,7 @@ namespace XiaoHeiMao
         Dictionary<string, long> _liveAt = new Dictionary<string, long>();
         Dictionary<string, Bitmap> _icons = new Dictionary<string, Bitmap>();
         bool _modeOn;
-        public bool Guides = true;                  // 标定辅助线（圆心/扇形），校准完可关
+        public bool Guides = false;                 // 标定辅助线（圆心/扇形），默认关；菜单「圆环标定线」可再开
         readonly Timer _poll = new Timer { Interval = 3000 };
         bool _dirty = true;
 
