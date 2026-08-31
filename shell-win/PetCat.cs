@@ -223,22 +223,24 @@ namespace XiaoHeiMao
                 }
                 g.DrawImage(src, dx, dy, dw, dh);
 
-                // 对话框（journal 联动：AI 写入时冒泡）
-                if (_speech != null && (int)(DateTime.UtcNow - _t0).TotalSeconds < _speechUntilSec) DrawSpeech(g, _speech);
+                // 对话框（journal 联动：AI 写入时冒泡），悬在猫头顶上方
+                if (_speech != null && (int)(DateTime.UtcNow - _t0).TotalSeconds < _speechUntilSec) DrawSpeech(g, _speech, dy);
             }
             PremultiplyInPlace(_frame);
             PushToScreen(_frame);
             if (_hop > 0) _hop = Math.Max(0, _hop - 5);
         }
 
-        /// <summary>头顶对话框：深色圆角小卡 + 小尾巴指向猫，与面板同色系</summary>
-        static void DrawSpeech(Graphics g, string text)
+        /// <summary>头顶对话框：深色圆角小卡 + 小尾巴指向猫。水平居中对准猫头，
+        /// 垂直悬在猫头顶（headTopY=猫绘制区顶部）上方，不再飘在窗口顶。</summary>
+        static void DrawSpeech(Graphics g, string text, int headTopY)
         {
             using (var font = new Font("Microsoft YaHei", 9f, FontStyle.Regular))
             {
                 var size = g.MeasureString(text, font);
-                int bw = Math.Min((int)size.Width + 20, 210), bh = (int)size.Height + 12;
-                int bx = (WIN_W - bw) / 2, by = 6;
+                int bw = Math.Min((int)size.Width + 20, 210), bh = (int)size.Height + 10;
+                int bx = (WIN_W - bw) / 2;
+                int by = Math.Max(2, headTopY - bh - 6);   // 气泡底(含尾巴)贴猫头顶
                 using (var path = RoundedRect(bx, by, bw, bh, 9))
                 using (var bg = new SolidBrush(Color.FromArgb(0x14, 0x14, 0x16)))
                 using (var pen = new Pen(Color.FromArgb(0x28, 0x28, 0x2e)))
@@ -249,7 +251,10 @@ namespace XiaoHeiMao
                     g.FillPolygon(bg, new[] { new Point(bx + bw / 2 - 5, by + bh - 1), new Point(bx + bw / 2 + 5, by + bh - 1), new Point(bx + bw / 2, by + bh + 6) });
                 }
                 using (var fg = new SolidBrush(Color.FromArgb(0xec, 0xec, 0xec)))
-                    g.DrawString(text, font, fg, bx + 10, by + 6);
+                {
+                    // 文字在气泡内水平垂直双居中（MeasureString 自带余量，两侧对称消掉）
+                    g.DrawString(text, font, fg, bx + (bw - size.Width) / 2, by + (bh - size.Height) / 2);
+                }
             }
         }
 
