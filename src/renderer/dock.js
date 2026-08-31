@@ -23,6 +23,10 @@ const ICON_IMG = {
 };
 let LIVE_MS = 600000;            // 运行判定窗口，由 ui.dock.liveMs 每次刷新覆盖
 
+/** HTML 转义：harness 名/缺口数等来自本地数据（含 /api/import 导入），
+ *  拼进 innerHTML 属性前必须过一道，防投毒数据注入属性/脚本。 */
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
 const imgOk = {};   // 实物图标探测缓存
 async function probeIcons() {
   await Promise.all(Object.entries(ICON_IMG).map(async ([h, f]) => {
@@ -130,7 +134,7 @@ async function refresh() {
       const tipText = `${LABELS[h] || h}｜${by[h].gaps ? "缺口 " + by[h].gaps + " · " : ""}${state === "on" ? "整理中" : state === "idle" ? "待命" : "整理模式关"}`;
       const hasNew = by[h].newest > (seen[h] || 0);
       const glow = state === "on" ? `--glow:${ICON_COLOR[h] || ICON_COLOR.other};` : "";
-      html += `<div class="chip st-${state}" data-h="${encodeURIComponent(h)}" data-tip="${tipText}" data-x="${x}" data-y="${y}" style="left:${x}px;top:${y}px;animation-delay:${i * 40}ms;${glow}">`
+      html += `<div class="chip st-${state}" data-h="${encodeURIComponent(h)}" data-tip="${esc(tipText)}" data-x="${x}" data-y="${y}" style="left:${x}px;top:${y}px;animation-delay:${i * 40}ms;${glow}">`
         + `<span class="disc">${iconSvg(h, 26)}</span>`
         + `<span class="badge${hasNew ? " show" : ""}"></span></div>`;
     });

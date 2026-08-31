@@ -39,9 +39,15 @@ function json(res, obj) {
   res.end(JSON.stringify(obj));
 }
 
+const BODY_LIMIT = 8 * 1024 * 1024;   // 8MB 请求体上限，防巨型 POST 撑内存
 async function readBody(req) {
   const chunks = [];
-  for await (const c of req) chunks.push(c);
+  let size = 0;
+  for await (const c of req) {
+    size += c.length;
+    if (size > BODY_LIMIT) { try { req.destroy(); } catch {} return null; }
+    chunks.push(c);
+  }
   if (!chunks.length) return {};
   try { return JSON.parse(Buffer.concat(chunks).toString("utf8")); } catch { return null; }
 }
@@ -51,12 +57,27 @@ function badJson(res) {
   return json(res, { ok: false, message: "请求体不是合法 JSON" });
 }
 
+/** 反 CSRF/跨站投毒：浏览器跨站 POST（恶意网页 drive-by）一律拒绝。
+ *  本服务绑 127.0.0.1，但任意网页都能以简单请求（text/plain）打到这——
+ *  浏览器跨站 POST 必带 Origin/Sec-Fetch-Site，据此拦截；curl/Node/MCP 等
+ *  非浏览器客户端不带这些头，不受影响。 */
+function forbiddenCrossSite(req) {
+  const o = req.headers.origin;
+  if (o && !/^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i.test(o)) return true;
+  const sfs = req.headers["sec-fetch-site"];
+  if (sfs && sfs !== "same-origin" && sfs !== "same-site" && sfs !== "none") return true;
+  return false;
+}
+
 async function route(req, res) {
   const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
   const path = url.pathname;
 
   if (path.startsWith("/api/")) {
     const q = url.searchParams;
+    if (req.method === "POST" && forbiddenCrossSite(req)) {
+      return json(res, { ok: false, message: "拒绝跨站请求（仅允许本机页面/客户端调用）" });
+    }
     switch (true) {
       case req.method === "GET" && path === "/api/overview":
         return json(res, store.overview());

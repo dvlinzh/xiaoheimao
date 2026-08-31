@@ -15,7 +15,7 @@
 import { resolve, basename, join } from "node:path";
 import { homedir } from "node:os";
 import {
-  mkdirSync, readFileSync, writeFileSync, existsSync,
+  mkdirSync, readFileSync, writeFileSync, existsSync, copyFileSync,
   appendFileSync, rmSync, renameSync, readdirSync, statSync,
 } from "node:fs";
 import { randomUUID } from "node:crypto";
@@ -29,18 +29,44 @@ const SETTINGS_PATH = join(ROOT, "settings.json");
 export const LAYERS = ["ideas", "points", "plans", "gaps"];
 const LAYER_TEXT_KEY = { ideas: "text", points: "text", plans: "title", gaps: "text" };
 
+/** 项目/任务 id 白名单：p<hash>（目录项目）或 t_<ts>_<rand>（DSH 会话任务）。
+ *  一切外部传入的 id 都先过这道闸——拒绝含路径语义的 id，
+ *  防 /api/import、/api/action 等入口穿越出数据目录删写任意文件。 */
+const ID_RE = /^(p[a-z0-9]{2,20}|t_[a-z0-9]{2,20}(_[a-z0-9]{2,12})?)$/;
+export function isValidId(id) { return typeof id === "string" && ID_RE.test(id); }
+
+/** 目录内安全拼接：id 不合法返回 null（调用方按"不存在"处理，绝不拼接穿透路径） */
+function safeJoin(dir, id) {
+  if (!isValidId(id)) return null;
+  const p = join(dir, id + ".json");
+  return p.startsWith(dir) ? p : null;   // 双保险
+}
+
 /* ────────────────────────── 基础工具 ────────────────────────── */
 
 function readJson(path) {
+  if (!path) return null;
   try {
     if (!existsSync(path)) return null;
     let raw = readFileSync(path, "utf8");
     if (raw.charCodeAt(0) === 0xfeff) raw = raw.slice(1);   // 旧工具写盘可能带 BOM，直接 parse 会静默丢文件
     return JSON.parse(raw);
-  } catch { return null; }
+  } catch (e) {
+    // 文件存在但解析失败（写坏/截断）：先备份留证再当空值——否则上游会拿新数据
+    // 把可能只剩半个字节问题的文件直接盖掉，连抢救机会都没有。
+    if (e instanceof SyntaxError) {
+      try {
+        const bak = `${path}.corrupt-${Date.now()}`;
+        copyFileSync(path, bak);
+        journalEvent({ type: "json-corrupt", path: basename(path), backup: basename(bak) });
+      } catch {}
+    }
+    return null;
+  }
 }
 
 function writeJson(path, data) {
+  if (!path) return false;   // id 未过白名单：宁可不写，也不拼穿透路径
   const tmp = `${path}.tmp-${process.pid}-${Date.now() % 100000}`;
   try {
     mkdirSync(resolve(path, ".."), { recursive: true });
@@ -171,12 +197,12 @@ export function resolveProject(cwd, harness = "unknown") {
   const dir = resolve(cwd || process.cwd());
   const key = process.platform === "win32" ? dir.toLowerCase() : dir;
   const id = "p" + hashId(key);
-  const existing = readJson(join(PROJECTS_DIR, id + ".json"));
+  const existing = readJson(projectPath(id));
   if (existing) {
     // 目录还在且换成别的 harness 打开 → 只登记 harness 首见，不覆盖原始出身
     if (!existing.harnesses?.includes(harness)) {
       existing.harnesses = [...(existing.harnesses || []), harness];
-      writeJson(join(PROJECTS_DIR, id + ".json"), existing);
+      writeJson(projectPath(id), existing);
       journalEvent({ type: "harness-join", projectId: id, harness });
     }
     return existing;
@@ -193,18 +219,20 @@ export function resolveProject(cwd, harness = "unknown") {
     pendingNewTask: false,
     msgCounter: 0,
   };
-  writeJson(join(PROJECTS_DIR, id + ".json"), rec);
+  writeJson(projectPath(id), rec);
   journalEvent({ type: "project-new", projectId: id, harness, title: rec.title });
   return rec;
 }
 
+function projectPath(id) { return safeJoin(PROJECTS_DIR, id); }
+
 function saveProject(rec) {
   rec.updatedAt = now();
-  writeJson(join(PROJECTS_DIR, rec.id + ".json"), rec);
+  return writeJson(projectPath(rec.id), rec);
 }
 
 function loadProject(projectId) {
-  const rec = readJson(join(PROJECTS_DIR, projectId + ".json"));
+  const rec = readJson(projectPath(projectId));
   return rec || null;
 }
 
@@ -215,7 +243,8 @@ function loadProject(projectId) {
  *  而非「项目归属由目录决定」的 harness（如 Claude Code）。数据结构同构，互不冲突。 */
 export function createSessionRecord(id, init = {}) {
   ensureDirs();
-  if (readJson(join(PROJECTS_DIR, id + ".json"))) return { id, existing: true };
+  if (!isValidId(id)) return null;
+  if (readJson(projectPath(id))) return { id, existing: true };
   const rec = {
     id,
     title: normText(init.title || "新任务"),
@@ -229,7 +258,7 @@ export function createSessionRecord(id, init = {}) {
     msgCounter: 0,
     ...init.extra,
   };
-  writeJson(join(PROJECTS_DIR, id + ".json"), rec);
+  writeJson(projectPath(id), rec);
   journalEvent({ type: "project-new", projectId: id, harness: rec.harness, title: rec.title });
   return rec;
 }
@@ -240,7 +269,7 @@ export function touchRecord(id, patch) {
   if (!rec) return null;
   Object.assign(rec, patch || {});
   rec.updatedAt = now();
-  writeJson(join(PROJECTS_DIR, id + ".json"), rec);
+  writeJson(projectPath(id), rec);
   return rec;
 }
 
@@ -263,7 +292,7 @@ function emptyGoal(title = "默认目标", goal = "") {
   return { id: gid(), title, goal, ideas: [], points: [], plans: [], gaps: [], createdAt: now() };
 }
 
-function skeletonPath(projectId) { return join(SKELETONS_DIR, projectId + ".json"); }
+function skeletonPath(projectId) { return safeJoin(SKELETONS_DIR, projectId); }
 
 export function readSkeleton(projectId) {
   const raw = readJson(skeletonPath(projectId));
@@ -285,7 +314,7 @@ export function readSkeleton(projectId) {
 }
 
 function writeSkeleton(projectId, sk) {
-  writeJson(skeletonPath(projectId), sk);
+  return writeJson(skeletonPath(projectId), sk);
 }
 
 function currentGoal(sk) {
@@ -375,31 +404,35 @@ export function organize(projectId, payload = {}) {
     return { added, updated };
   };
 
+  /* decorate(it, dup)：dup 非空 = 近似重复命中后的更新。此时只覆盖「显式提供」的字段——
+   * 否则 Object.assign 会用缺省值把旧条目的 done/decided/chosen/paths 洗掉（丢状态）。
+   * 新建（dup=null）则照常补全缺省。 */
   const stats = {
-    ideas: mergeList("ideas", payload.ideas, (it) => ({
+    ideas: mergeList("ideas", payload.ideas, (it, dup) => ({
       text: normText(it.text),
-      group: it.group ? String(it.group).slice(0, 12) : undefined,
-      done: !!it.done,
-      raw: it.raw ? String(it.raw).slice(0, 200) : undefined,
+      ...(!dup || it.group !== undefined ? { group: it.group ? String(it.group).slice(0, 12) : undefined } : {}),
+      ...(!dup || it.done !== undefined ? { done: !!it.done } : {}),
+      ...(!dup || it.raw !== undefined ? { raw: it.raw ? String(it.raw).slice(0, 200) : undefined } : {}),
     })),
-    points: mergeList("points", payload.points, (it) => ({
+    points: mergeList("points", payload.points, (it, dup) => ({
       text: normText(it.text),
-      decided: !!it.decided,
-      link: it.link ? String(it.link).slice(0, 300) : undefined,
+      ...(!dup || it.decided !== undefined ? { decided: !!it.decided } : {}),
+      ...(!dup || it.link !== undefined ? { link: it.link ? String(it.link).slice(0, 300) : undefined } : {}),
     })),
-    plans: mergeList("plans", payload.plans, (it) => {
+    plans: mergeList("plans", payload.plans, (it, dup) => {
       // 「当前采用」全局唯一：本轮采用谁，就先清掉所有旧采用
-      if (!!it.chosen) for (const p of goal.plans) p.chosen = false;
+      if (it.chosen) for (const p of goal.plans) p.chosen = false;
       return {
         title: normText(it.title ?? it.text),
-        group: it.group ? String(it.group).slice(0, 16) : undefined,
-        chosen: !!it.chosen, dismissed: !!it.dismissed,
-        paths: Array.isArray(it.paths) ? it.paths.map((p) => ({ step: String(p?.step ?? p ?? "").slice(0, 30) })).filter((p) => p.step) : [],
+        ...(!dup || it.group !== undefined ? { group: it.group ? String(it.group).slice(0, 16) : undefined } : {}),
+        ...(!dup || it.chosen !== undefined ? { chosen: !!it.chosen } : {}),
+        ...(!dup || it.dismissed !== undefined ? { dismissed: !!it.dismissed } : {}),
+        ...(!dup || it.paths !== undefined ? { paths: Array.isArray(it.paths) ? it.paths.map((p) => ({ step: String(p?.step ?? p ?? "").slice(0, 30) })).filter((p) => p.step) : [] } : {}),
       };
     }),
-    gaps: mergeList("gaps", payload.gaps, (it) => ({
+    gaps: mergeList("gaps", payload.gaps, (it, dup) => ({
       text: normText(it.text),
-      resolved: !!it.resolved,
+      ...(!dup || it.resolved !== undefined ? { resolved: !!it.resolved } : {}),
     })),
   };
   // 「当前采用」全局唯一由 mergeList 装饰器保证，这里不再后处理
@@ -448,7 +481,8 @@ export function organize(projectId, payload = {}) {
 
   const touched = Object.keys(applied).some((k) => applied[k] > 0) || candidate;
   if (touched) {
-    writeSkeleton(projectId, sk);
+    // 写盘失败不得假报 ok——否则调用方（AI/面板）以为已记入，实际磁盘没变
+    if (!writeSkeleton(projectId, sk)) return { ok: false, message: "骨架写盘失败（磁盘不可写？）" };
     rec.state = "clarifying";
     saveProject(rec);
     journalEvent({
@@ -473,11 +507,11 @@ export function tickMessage(projectDir) {
   const dir = resolve(projectDir || process.cwd());
   const key = process.platform === "win32" ? dir.toLowerCase() : dir;
   const id = "p" + hashId(key);
-  const rec = readJson(join(PROJECTS_DIR, id + ".json"));
+  const rec = readJson(projectPath(id));
   if (!rec) return null;
   const interval = readSettings().organizeInterval;
   rec.msgCounter = (rec.msgCounter || 0) + 1;
-  writeJson(join(PROJECTS_DIR, id + ".json"), rec);
+  writeJson(projectPath(id), rec);
   return { counter: rec.msgCounter, interval, due: rec.msgCounter >= interval };
 }
 
@@ -487,33 +521,38 @@ export function tickMessage(projectDir) {
  */
 export function controlAction(projectId, { action, params = {} } = {}) {
   ensureDirs();
-  const rec = loadProject(projectId);
+  const rec = loadProject(projectId);   // id 过不了白名单时 loadProject 返回 null，天然挡掉穿透
   if (!rec) return { ok: false, message: "项目不存在" };
   if (action === "delete") {
-    rmSync(skeletonPath(projectId), { force: true });
-    rmSync(join(PROJECTS_DIR, projectId + ".json"), { force: true });
+    try {
+      const sp = skeletonPath(projectId), pp = projectPath(projectId);
+      if (sp) rmSync(sp, { force: true });
+      if (pp) rmSync(pp, { force: true });
+    } catch (e) { return { ok: false, message: "删除失败: " + String(e?.message || e) }; }
     journalEvent({ type: "task-deleted", projectId });
     return { ok: true };
   }
   const sk = readSkeleton(projectId);
   if (!sk && !["new-goal"].includes(action)) return { ok: false, message: "骨架为空" };
   const goal = sk ? currentGoal(sk) : null;
+  // 写盘失败上抛为错误返回，不假装成功
+  const saveSk = (target) => (writeSkeleton(projectId, target) ? null : { ok: false, message: "骨架写盘失败（磁盘不可写？）" });
 
   switch (action) {
     case "new-goal": {
       const title = normText(params.title) || "新目标";
       const ng = emptyGoal(title, params.goal ? normText(params.goal) : "");
-      if (!sk) { var created = { goals: [ng], currentGoalId: ng.id }; }
-      else { sk.goals.push(ng); sk.currentGoalId = ng.id; }
-      const target = created || sk;
-      writeSkeleton(projectId, target);
+      const target = sk || { goals: [ng], currentGoalId: ng.id };
+      if (sk) { sk.goals.push(ng); sk.currentGoalId = ng.id; }
+      const werr = saveSk(target); if (werr) return werr;
       rec.pendingNewTask = false; rec.state = "draft"; saveProject(rec);
       journalEvent({ type: "goal-switched", projectId, to: ng.title });
       return { ok: true, goalId: ng.id };
     }
     case "switch-goal": {
       if (!findById(sk.goals, params.id)) return { ok: false, message: "目标不存在" };
-      sk.currentGoalId = params.id; writeSkeleton(projectId, sk);
+      sk.currentGoalId = params.id;
+      const werr = saveSk(sk); if (werr) return werr;
       journalEvent({ type: "goal-switched", projectId, to: findById(sk.goals, params.id).title });
       return { ok: true };
     }
@@ -523,7 +562,7 @@ export function controlAction(projectId, { action, params = {} } = {}) {
       const t = normText(params.title);
       if (!t) return { ok: false, message: "名称为空" };
       g.title = t; g.at = now();
-      writeSkeleton(projectId, sk);
+      const werr = saveSk(sk); if (werr) return werr;
       return { ok: true };
     }
     case "remove-goal": {
@@ -532,43 +571,49 @@ export function controlAction(projectId, { action, params = {} } = {}) {
       if (sk.goals.length <= 1) return { ok: false, message: "至少要留一个目标" };
       sk.goals = sk.goals.filter((x) => x.id !== params.id);
       if (sk.currentGoalId === params.id) sk.currentGoalId = sk.goals[0].id;   // 删掉当前目标 → 回落到第一个
-      writeSkeleton(projectId, sk);
+      const werr = saveSk(sk); if (werr) return werr;
       journalEvent({ type: "goal-removed", projectId, title: g.title });
       return { ok: true };
     }
     case "remove-item": {
       if (!LAYERS.includes(params.layer)) return { ok: false, message: "未知层级" };
       goal[params.layer] = goal[params.layer].filter((x) => x.id !== params.id);
-      writeSkeleton(projectId, sk); saveProject(rec);
+      const werr = saveSk(sk); if (werr) return werr;
+      saveProject(rec);
       journalEvent({ type: "item-removed", projectId, layer: params.layer });
       return { ok: true };
     }
     case "toggle-point": {
       const it = findById(goal.points, params.id); if (!it) return { ok: false };
       it.decided = !it.decided; it.at = now();
-      writeSkeleton(projectId, sk); return { ok: true };
+      const werr = saveSk(sk); if (werr) return werr;
+      return { ok: true };
     }
     case "toggle-done": {
       const it = findById(goal.ideas, params.id); if (!it) return { ok: false };
       it.done = !it.done; it.at = now();
-      writeSkeleton(projectId, sk); return { ok: true };
+      const werr = saveSk(sk); if (werr) return werr;
+      return { ok: true };
     }
     case "toggle-gap": {
       const it = findById(goal.gaps, params.id); if (!it) return { ok: false };
       it.resolved = !it.resolved; it.at = now();
-      writeSkeleton(projectId, sk); journalEvent({ type: "gap-toggled", projectId });
+      const werr = saveSk(sk); if (werr) return werr;
+      journalEvent({ type: "gap-toggled", projectId });
       return { ok: true };
     }
     case "choose-plan": {
       for (const p of goal.plans) p.chosen = p.id === params.id;
       const me = findById(goal.plans, params.id); if (me) { me.dismissed = false; me.at = now(); }
-      writeSkeleton(projectId, sk); journalEvent({ type: "plan-chosen", projectId });
+      const werr = saveSk(sk); if (werr) return werr;
+      journalEvent({ type: "plan-chosen", projectId });
       return { ok: true };
     }
     case "dismiss-plan": {
       const p = findById(goal.plans, params.id); if (!p) return { ok: false };
       p.dismissed = !p.dismissed; p.chosen = false; p.at = now();
-      writeSkeleton(projectId, sk); return { ok: true };
+      const werr = saveSk(sk); if (werr) return werr;
+      return { ok: true };
     }
     case "rename-project": {
       rec.title = normText(params.title) || rec.title; saveProject(rec); return { ok: true };
@@ -705,10 +750,14 @@ export function exportAll() {
 export function importAll(data, opts = {}) {
   if (!data || data.version !== 1 || !data.tasks) return { ok: false, message: "格式不符" };
   const from = opts.from || "import";   // 导入来源标记：让 harness 分组有归属（这批数据多半来自 dsh 插件）
-  let n = 0;
+  let n = 0, skipped = 0;
   for (const [oldId, item] of Object.entries(data.tasks)) {
+    // 导入数据一律视为不可信：id 必须过白名单（否则 ../../ 可穿越写盘到任意位置）
+    if (!isValidId(oldId) || !item || typeof item.task !== "object") { skipped++; continue; }
+    // 单条任务体积上限 1MB，防巨型导入撑爆磁盘/内存
+    try { if (JSON.stringify(item).length > 1024 * 1024) { skipped++; continue; } } catch { skipped++; continue; }
     // 新 id 防冲突
-    const nid = existsSync(join(PROJECTS_DIR, oldId + ".json"))
+    const nid = existsSync(projectPath(oldId) || "\0")
       ? "p" + randomUUID().slice(0, 8) : oldId;
     const rec = { ...item.task, id: nid };
     // 老数据没有 harnesses：补上来源 + harness 兜底（否则全进 "other"，图标坞被 42 枚爪印淹没）
@@ -716,10 +765,10 @@ export function importAll(data, opts = {}) {
       rec.harness = rec.harness && rec.harness !== "unknown" ? rec.harness : from;
       rec.harnesses = [rec.harness];
     }
-    writeJson(join(PROJECTS_DIR, nid + ".json"), rec);
-    if (item.skeleton) writeJson(skeletonPath(nid), item.skeleton);
+    writeJson(projectPath(nid), rec);
+    if (item.skeleton && typeof item.skeleton === "object") writeJson(skeletonPath(nid), item.skeleton);
     n++;
   }
-  journalEvent({ type: "imported", count: n });
-  return { ok: true, imported: n };
+  journalEvent({ type: "imported", count: n, skipped });
+  return { ok: true, imported: n, ...(skipped ? { skipped } : {}) };
 }

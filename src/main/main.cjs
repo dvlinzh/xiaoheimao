@@ -9,9 +9,14 @@ const path = require("node:path");
 const { appendFileSync, readFileSync } = require("node:fs");
 
 const LOG = path.join(process.env.MIND_BOARD_HOME || path.join(require("node:os").homedir(), ".mind-board"), "electron.log");
+// stdout 可能是会关闭的管道（如 `npm start | head`、终端被关）：EPIPE 会让
+// uncaughtException 处理器调 log 再次抛错，形成异常风暴瘫痪主进程。断了就永久转纯文件日志。
+let consoleOk = true;
 function log(...a) {
   try { appendFileSync(LOG, new Date().toISOString() + " " + a.join(" ") + "\n"); } catch {}
-  console.log(...a);
+  if (consoleOk) {
+    try { console.log(...a); } catch (e) { if (e?.code === "EPIPE") consoleOk = false; }
+  }
 }
 process.on("unhandledRejection", (e) => log("[unhandledRejection]", e?.stack || String(e)));
 process.on("uncaughtException", (e) => log("[uncaughtException]", e?.stack || String(e)));
@@ -152,6 +157,7 @@ function createPet() {
     try {
       petWin.showInactive();
       petWin.moveTop();
+      forceRepaint(petWin);
       // 穿透由 win.setShape（渲染层上报猫轮廓）负责；窗口本体保持可交互
     } catch (e) { log("[pet] show failed:", String(e)); }
   });
@@ -162,19 +168,25 @@ function createPet() {
   petWin.on("closed", () => { petWin = null; });
 }
 
-/** 唤起面板：强制重呈现（moveTop + 透明度轻推逼 DWM 重建表面）并刷新宽限基准 */
+/** 透明窗防幽灵可见：轻推透明度逼 DWM 丢弃并重建表面（比 hide+show 无闪烁）。
+ *  所有透明窗的每条显示路径（新建/复用/唤起）都要过这一手——
+ *  锁屏或被全屏应用覆盖后，DWM 会丢弃透明表面，裸 show() 是静默 no-op。 */
+function forceRepaint(win) {
+  try {
+    if (!win || win.isDestroyed()) return;
+    win.setOpacity(0.99);
+    setTimeout(() => { try { win && !win.isDestroyed() && win.setOpacity(1); } catch {} }, 60);
+  } catch {}
+}
+
+/** 唤起面板：强制重呈现（moveTop + 防幽灵）并刷新宽限基准 */
 function summonBubble() {
   bubbleShowAt = Date.now();
   if (bubbleWin && !bubbleWin.isDestroyed()) {
     bubbleWin.show();
     bubbleWin.moveTop();
     bubbleWin.focus();
-    // 透明窗「Electron 认为可见、屏幕上什么都没有」的幽灵态：
-    // 轻推透明度强制 DWM 丢弃并重建表面，比 hide+show 平滑（无闪烁）
-    try {
-      bubbleWin.setOpacity(0.99);
-      setTimeout(() => { try { bubbleWin && !bubbleWin.isDestroyed() && bubbleWin.setOpacity(1); } catch {} }, 60);
-    } catch {}
+    forceRepaint(bubbleWin);
   }
 }
 
@@ -244,6 +256,8 @@ async function openBubble(harness) {
   bubbleWin.on("show", () => {
     bubbleShowAt = Date.now();
     bubbleShown = true;
+    // 新建窗首秀也可能是幽灵态：show 事件里就推一把，不等用户的第二次点击
+    forceRepaint(bubbleWin);
     log("[bubble] shown, bounds:", JSON.stringify(bubbleWin.getBounds()));
   });
   bubbleWin.on("hide", () => { bubbleShown = false; });
@@ -328,7 +342,7 @@ function showDock(show) {
       dockWin.webContents.once("did-finish-load", () => {
         // 环打开期间整窗可交互（标准弹层语义）；旧模型在此切穿透态，
         // 会在显示完成后把窗口永久切回穿透——点芯片无反应的元凶
-        try { dockWin.setIgnoreMouseEvents(false); dockWin.moveTop(); } catch {}
+        try { dockWin.setIgnoreMouseEvents(false); dockWin.moveTop(); forceRepaint(dockWin); } catch {}
       });
     } else {
       // 每次唤出强制重载页面：穿透窗渲染进程可能静默僵死/DOM 冻结在旧态
@@ -337,6 +351,7 @@ function showDock(show) {
       dockWin.loadURL(`http://127.0.0.1:${port}/dock.html`);
       dockWin.show();
       dockWin.moveTop();
+      forceRepaint(dockWin);
     }
     positionDock();
   } else if (dockWin && !dockWin.isDestroyed() && dockWin.isVisible()) {

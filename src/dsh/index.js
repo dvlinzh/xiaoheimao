@@ -10,11 +10,10 @@ import { resolve } from "node:path";
 import { homedir } from "node:os";
 import { existsSync, readdirSync, cpSync, readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { createServer } from "node:http";
 
 import * as store from "../core/store.mjs";
 import { FULL_PROTOCOL, statusLine } from "../core/protocol.mjs";
-import { TOOLS } from "../mcp/server.mjs";
+import { TOOLS } from "../mcp/tools.mjs";
 
 export const name = "mind-board-pet";
 export const inject = ["webServer"];
@@ -102,10 +101,6 @@ export function apply(ctx) {
     // （DSH 的工具调用方是主 agent，它从注入的状态行拿到当前 projectId，按 id 寻址）。
     const byName = {};
     for (const t of TOOLS) byName[t.name] = t;
-    const toProjectArgs = (name, args = {}) => {
-      const { projectId, ...rest } = args;
-      return { ...rest, cwd: projectId || process.cwd() };
-    };
     const mkTool = (name, executeFn) => {
       const src = byName[name];
       const inputSchema = JSON.parse(JSON.stringify(src.inputSchema));

@@ -649,7 +649,9 @@ function renderOv() {
     const stateTxt = { draft: "构思", clarifying: "推进", reflected: "已沉淀" }[p.state] || p.state;
     const meta = document.createElement("span");
     meta.className = "ov-meta";
-    meta.innerHTML = `${c.gaps ? `<b>缺口 ${c.gaps}</b> · ` : ""}${stateTxt}`;
+    // 不用 innerHTML：stateTxt 有 p.state 兜底分支，项目记录可被导入数据投毒
+    if (c.gaps) { const b = document.createElement("b"); b.textContent = `缺口 ${c.gaps}`; meta.append(b, document.createTextNode(" · ")); }
+    meta.append(document.createTextNode(stateTxt));
     const row1 = document.createElement("span");
     row1.className = "ov-row1";
     const dot = document.createElement("i");
