@@ -92,6 +92,7 @@ namespace XiaoHeiMao
             menu.Items.Add("思维面板", null, (_, __) => Shell.TogglePanel("bubble", $"http://127.0.0.1:{Shell.Port}/bubble.html?harness=claude-code&side=taskbar", 470, 660));
             menu.Items.Add("项目仪表盘", null, (_, __) => Shell.TogglePanel("dashboard", $"http://127.0.0.1:{Shell.Port}/dashboard.html", 860, 580));
             menu.Items.Add("设置", null, (_, __) => Shell.TogglePanel("settings", $"http://127.0.0.1:{Shell.Port}/settings.html", 274, 420));
+            menu.Items.Add("圆环标定线", null, (_, __) => Shell.ToggleRingGuides());
             menu.Items.Add("隐藏（托盘找回）", null, (_, __) => { Hide(); Shell.HideRing(); });
             menu.Items.Add("退出", null, (_, __) => Application.Exit());
             ContextMenuStrip = menu;

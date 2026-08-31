@@ -58,8 +58,12 @@ namespace XiaoHeiMao
         Dictionary<string, long> _liveAt = new Dictionary<string, long>();
         Dictionary<string, Bitmap> _icons = new Dictionary<string, Bitmap>();
         bool _modeOn;
+        public bool Guides = true;                  // 标定辅助线（圆心/扇形），校准完可关
         readonly Timer _poll = new Timer { Interval = 3000 };
         bool _dirty = true;
+
+        /// <summary>辅助线开关切换后强制重画</summary>
+        public void Redraw() { _dirty = true; if (IsHandleCreated) Render(); }
 
         public DockRing()
         {
@@ -83,11 +87,11 @@ namespace XiaoHeiMao
             if (Visible) { Follow(); var ignored = RefreshData(); }
         }
 
-        /// <summary>环悬在猫头顶上方；猫动了就跟着动（轮询时顺带跟）</summary>
+        /// <summary>环贴猫头顶：弧心（窗内 140,140）对到猫耳上方。猫动了就跟着动。</summary>
         public void Follow()
         {
             if (Shell.Pet == null) return;
-            Location = new Point(Shell.Pet.Location.X, Math.Max(0, Shell.Pet.Location.Y - RING_H + 56));
+            Location = new Point(Shell.Pet.Location.X, Math.Max(0, Shell.Pet.Location.Y - 30));
         }
 
         /// <summary>拉总览：harness 去重并集 + 各 harness 最近写盘时间 + 整理模式</summary>
@@ -129,8 +133,8 @@ namespace XiaoHeiMao
             int n = keys.Count;
             for (int i = 0; i < n; i++)
             {
-                // 弧线：-165°..-15° 均布（1 枚时正头顶 -90°）
-                double ang = n == 1 ? -90 : -165 + (150.0 / (n - 1)) * i;
+                // 弧线：-165°..-15° 均布；单枚偏左上（-120°，猫耳左上侧，用户校准）
+                double ang = n == 1 ? -120 : -165 + (150.0 / (n - 1)) * i;
                 double rad = ang * Math.PI / 180;
                 _chips.Add(new Chip
                 {
@@ -210,6 +214,28 @@ namespace XiaoHeiMao
                             var sz = g.MeasureString(c.H.Substring(0, 1).ToUpper(), font);
                             g.DrawString(c.H.Substring(0, 1).ToUpper(), font, fg, c.Center.X - sz.Width / 2, c.Center.Y - sz.Height / 2);
                         }
+                    }
+                }
+
+                // 标定辅助线：圆心十字 + 扇形弧线 + 边界射线（用户对着屏幕指挥微调用）
+                if (Guides)
+                {
+                    var center = new PointF(RING_W / 2f, RING_H - 10);
+                    using (var pen = new Pen(Color.FromArgb(0xf0, 0x71, 0x6c)) { DashStyle = DashStyle.Dash })
+                    {
+                        g.DrawArc(pen, center.X - (float)ARC_R, center.Y - (float)ARC_R, (float)ARC_R * 2, (float)ARC_R * 2, -165f, 150f);
+                        g.DrawLine(pen, center.X - 10, center.Y, center.X + 10, center.Y);
+                        g.DrawLine(pen, center.X, center.Y - 10, center.X, center.Y + 10);
+                        g.DrawLine(pen, center.X, center.Y,
+                            center.X + (float)(ARC_R * Math.Cos(-165 * Math.PI / 180)), center.Y + (float)(ARC_R * Math.Sin(-165 * Math.PI / 180)));
+                        g.DrawLine(pen, center.X, center.Y,
+                            center.X + (float)(ARC_R * Math.Cos(-15 * Math.PI / 180)), center.Y + (float)(ARC_R * Math.Sin(-15 * Math.PI / 180)));
+                    }
+                    using (var fg = new SolidBrush(Color.FromArgb(0xf0, 0x71, 0x6c)))
+                    using (var font = new Font("Microsoft YaHei", 7.5f))
+                    {
+                        var sc = Location;
+                        g.DrawString($"圆心(屏 {sc.X + 140},{sc.Y + 140})  半径{ARC_R}  弧 -165°..-15°", font, fg, 4, 2);
                     }
                 }
                 Premultiply(bmp);
