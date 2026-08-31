@@ -22,3 +22,4 @@ shell-win/assets/
 shell-win/roslyn/
 shell-win/wv2/
 shell-win/WebView2Loader.dll
+shell-win/*_PetCat.exe
