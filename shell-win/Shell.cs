@@ -442,9 +442,15 @@ namespace XiaoHeiMao
 
     static class Program
     {
+        [DllImport("winmm.dll")] static extern uint timeBeginPeriod(uint ms);
+        [DllImport("winmm.dll")] static extern uint timeEndPeriod(uint ms);
+
         [STAThread]
         static void Main()
         {
+            // WinForms 计时器默认粒度 ~15.6ms：60fps 呼吸会抖成 30-50ms 一帧（肉眼可见的卡）
+            // timeBeginPeriod(1) 把本进程计时粒度提到 1ms——动画丝滑的关键
+            timeBeginPeriod(1);
             // winexe 无控制台：全局异常一律落文件，崩溃有证据
             Directory.CreateDirectory(Shell.DataRoot);
             AppDomain.CurrentDomain.UnhandledException += (_, e) => Shell.LogCrash(e.ExceptionObject);
@@ -455,6 +461,7 @@ namespace XiaoHeiMao
             Shell.Pet.Show();
             // 不绑主窗（ApplicationContext）：猫窗意外被关时进程不死、托盘还在
             Application.Run(new ApplicationContext());
+            timeEndPeriod(1);
         }
     }
 }

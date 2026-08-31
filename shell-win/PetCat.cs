@@ -41,12 +41,14 @@ namespace XiaoHeiMao
 
         class Pose { public Bitmap Bmp; public int FootRow; }   // FootRow=最低不透明行（脚底）
         readonly Pose _idle, _walk;
-        readonly Timer _anim = new Timer { Interval = 33 };   // ~30fps 足够，60 是浪费电
+        readonly Timer _anim = new Timer { Interval = 16 };   // 60fps（配合 timeBeginPeriod(1) 才真准）
         readonly DateTime _t0 = DateTime.UtcNow;
         readonly NotifyIcon _tray;
         bool _dragging;
         Point _dragOffset;
         double _hop;                                // 双击跳起的剩余高度
+        double _swingAng, _swingTarget;             // 拎起摆角（rad）与速度激励目标（对齐 skin-cat.js）
+        Point _lastCursor;                          // 拖拽期光标追踪（算手速驱动摆动）
 
         public PetWindow()
         {
@@ -145,13 +147,25 @@ namespace XiaoHeiMao
             return new Pose { Bmp = bmp, FootRow = foot };
         }
 
-        /// <summary>每帧：呼吸缩放（绕底部中心）→ 画上画布 → 推给 DWM</summary>
+        /// <summary>每帧：呼吸缩放（绕底部中心）→ 拖拽摆动（绕头心）→ 画上画布 → 推给 DWM</summary>
         void Render()
         {
             double t = (DateTime.UtcNow - _t0).TotalMilliseconds / BREATH_MS * 2 * Math.PI;
             double breath = Math.Sin(t);
             var pose = _dragging ? _walk : _idle;
             var src = pose.Bmp;
+
+            // 拖拽摆动弹簧：手速驱动目标摆角，角度向目标收敛（对齐 skin-cat.js）
+            var cur = Cursor.Position;
+            if (_dragging)
+            {
+                int vx = cur.X - _lastCursor.X;
+                _swingTarget = Math.Max(-0.26, Math.Min(0.26, -(vx) * 0.012 * 2));   // 16ms 帧×2 补偿到原 16ms 语义
+            }
+            else _swingTarget = 0;
+            _swingAng += (_swingTarget - _swingAng) * 0.10;
+            _lastCursor = cur;
+
             double scaleX = SCALE * (1 + BREATH_AMP * breath);
             double scaleY = SCALE * (1 + BREATH_AMP * 0.6 * breath);
             int dw = (int)(src.Width * scaleX), dh = (int)(src.Height * scaleY);
@@ -163,13 +177,22 @@ namespace XiaoHeiMao
             {
                 using (var g = Graphics.FromImage(canvas))
                 {
-                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    g.InterpolationMode = InterpolationMode.HighQualityBilinear;   // 帧率优先，肉眼无差
+                    g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                    if (_dragging || Math.Abs(_swingAng) > 0.004)
+                    {
+                        // 拎起摆动：固定点 = 头中心（头不动，身体随手速甩）
+                        float px = dx + dw * 0.5f, py = dy + dh * 0.20f;
+                        g.TranslateTransform(px, py);
+                        g.RotateTransform((float)(_swingAng * 180 / Math.PI));
+                        g.TranslateTransform(-px, -py);
+                    }
                     g.DrawImage(src, dx, dy, dw, dh);
                 }
                 PremultiplyInPlace(canvas);
                 PushToScreen(canvas);
             }
-            if (_hop > 0) _hop = Math.Max(0, _hop - 2.5);
+            if (_hop > 0) _hop = Math.Max(0, _hop - 5);
         }
 
         static void PremultiplyInPlace(Bitmap bmp)
