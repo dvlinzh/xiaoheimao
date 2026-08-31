@@ -1,15 +1,16 @@
 @echo off
-rem XiaoHeiMao C# shell build — uses Windows built-in csc.exe (zero install).
-rem Output: shell-win\PetCat.exe (single file, only needs .NET Framework 4.x, bundled with Win11)
+rem XiaoHeiMao C# shell build.
+rem Compiler: roslyn\csc.exe (Microsoft.Net.Compilers.Toolset, one-time download, see README).
+rem WebView2 managed assemblies: wv2\ (NuGet pkg). Runtime is system-bundled.
 setlocal
-set CSC=C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe
 set HERE=%~dp0
+set CSC=%HERE%roslyn\csc.exe
 
 rem Cat sprites: copied from the shared asset source (single source of truth)
 if not exist "%HERE%assets" mkdir "%HERE%assets"
-copy /y "%HERE%..\src\renderer\assets\cat\cat-idle.png" "%HERE%assets\" >nul
-copy /y "%HERE%..\src\renderer\assets\cat\cat-walk.png" "%HERE%assets\" >nul
-copy /y "%HERE%..\src\renderer\assets\cat\cat-sleep.png" "%HERE%assets\" >nul
+copy /y "%HERE%..\src\renderer\assets\cat\cat-*.png" "%HERE%assets\" >nul
+rem WebView2 native loader must sit next to the exe
+copy /y "%HERE%wv2\runtimes\win-x64\native\WebView2Loader.dll" "%HERE%" >nul
 
-"%CSC%" /nologo /unsafe /target:winexe /platform:x64 /optimize+ /out:"%HERE%PetCat.exe" "%HERE%PetCat.cs" /r:System.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll
+"%CSC%" /nologo /unsafe /target:winexe /platform:x64 /optimize+ /out:"%HERE%PetCat.exe" "%HERE%PetCat.cs" "%HERE%Shell.cs" /r:System.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Web.Extensions.dll /r:"%HERE%wv2\lib\net462\Microsoft.Web.WebView2.Core.dll" /r:"%HERE%wv2\lib\net462\Microsoft.Web.WebView2.WinForms.dll"
 if %errorlevel%==0 (echo BUILD OK: %HERE%PetCat.exe) else (echo BUILD FAILED & exit /b 1)

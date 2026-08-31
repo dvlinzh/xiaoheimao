@@ -19,3 +19,6 @@ src/renderer/assets/cat.bak-*
 # C# shell build artifacts
 shell-win/PetCat.exe
 shell-win/assets/
+shell-win/roslyn/
+shell-win/wv2/
+shell-win/WebView2Loader.dll
