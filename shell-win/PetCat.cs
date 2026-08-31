@@ -36,7 +36,8 @@ namespace XiaoHeiMao
         /* ── 配置（与 Electron 版 skin-cat.js 对齐） ────────── */
         const int WIN_W = 280, WIN_H = 250;
         const int BURY = 13;
-        const double BREATH_AMP = 0.0072, BREATH_MS = 2600, SCALE = 0.42;   // 呼吸幅度用户校准：0.012×0.6
+        const double BREATH_AMP = 0.0072, BREATH_MS = 2600;   // 呼吸幅度用户校准：0.012×0.6
+        double _scale = 0.42;                      // 体型：0.42 大 / 0.34 中 / 0.27 小（菜单可调，持久化）
         const int FOOT_MARGIN = 2;
         const int FRAME_MS = 33;                    // 30fps：呼吸是慢波，30/60 肉眼无差（用户实测确认）
         const int IDLE_SLEEP_MS = 5 * 60 * 1000;    // 闲置 5 分钟趴下
@@ -71,6 +72,7 @@ namespace XiaoHeiMao
             _idle = Prepare(Image.FromFile(System.IO.Path.Combine(dir, "cat-idle.png")));
             _walk = Prepare(Image.FromFile(System.IO.Path.Combine(dir, "cat-walk.png")));
             _sleep = Prepare(Image.FromFile(System.IO.Path.Combine(dir, "cat-sleep.png")));
+            _scale = Shell.CatScale;
 
             var wa0 = Screen.PrimaryScreen.WorkingArea;
             Location = new Point(wa0.Right - WIN_W - 312, wa0.Bottom - WIN_H + BURY);   // 原型期与 Electron 猫并排对照
@@ -84,10 +86,18 @@ namespace XiaoHeiMao
             var miMode = new ToolStripMenuItem("整理模式");
             miMode.Click += async (_, __) => { await Shell.ToggleModeAsync(); };
             menu.Items.Add(miMode);
+            var miSize = new ToolStripMenuItem("猫体型");
+            miSize.Click += (_, __) =>
+            {
+                _scale = _scale > 0.38 ? 0.34 : _scale > 0.30 ? 0.27 : 0.42;   // 大→中→小→大
+                Shell.PersistCatScale(_scale);
+            };
+            menu.Items.Add(miSize);
             menu.Opening += (_, __) =>
             {
                 miMode.Text = Shell.ModeCache == "on" ? "整理模式：开（点击关闭）" : "整理模式：关（点击开启）";
                 var ignored = Shell.RefreshModeAsync();   // 后台刷新，下次打开菜单就是新状态
+                miSize.Text = _scale > 0.38 ? "猫体型：大" : _scale > 0.30 ? "猫体型：中" : "猫体型：小";
             };
             menu.Items.Add("思维面板", null, (_, __) => Shell.TogglePanel("bubble", $"http://127.0.0.1:{Shell.Port}/bubble.html?harness=claude-code&side=taskbar", 470, 660));
             menu.Items.Add("项目仪表盘", null, (_, __) => Shell.TogglePanel("dashboard", $"http://127.0.0.1:{Shell.Port}/dashboard.html", 860, 580));
@@ -202,8 +212,8 @@ namespace XiaoHeiMao
             _swingAng += (_swingTarget - _swingAng) * 0.10;
             _lastCursor = cur;
 
-            double scaleX = SCALE * (1 + BREATH_AMP * breath);
-            double scaleY = SCALE * (1 + BREATH_AMP * 0.6 * breath);
+            double scaleX = _scale * (1 + BREATH_AMP * breath);
+            double scaleY = _scale * (1 + BREATH_AMP * 0.6 * breath);
             int dw = (int)(src.Width * scaleX), dh = (int)(src.Height * scaleY);
             int dx = (WIN_W - dw) / 2;
             int dy = WIN_H - FOOT_MARGIN - (int)((pose.FootRow + 1) * scaleY) - (int)_hop;

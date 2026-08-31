@@ -33,17 +33,28 @@ namespace XiaoHeiMao
             try { File.AppendAllText(CrashLog, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " " + ex + "\n\n"); } catch { }
         }
 
-        /* ── 壳状态持久化（置顶/自启读真实来源；面板位置见 UiFile） ── */
+        /* ── 壳状态持久化（置顶/体型/自启读真实来源；面板位置见 UiFile） ── */
+        public static double CatScale = 0.42;   // 猫体型（permille 存 _catscale）
+
         public static void LoadState()
         {
             LoadUi();
             if (_ui.TryGetValue("_pin", out var p) && p.Length == 1) Pin = p[0] == 1;
+            if (_ui.TryGetValue("_catscale", out var cs) && cs.Length == 1 && cs[0] >= 150 && cs[0] <= 600)
+                CatScale = cs[0] / 1000.0;
         }
 
         static void PersistPin()
         {
             LoadUi();
             _ui["_pin"] = new[] { Pin ? 1 : 0 };
+            try { File.WriteAllText(UiFile, new JavaScriptSerializer().Serialize(_ui)); } catch { }
+        }
+
+        public static void PersistCatScale(double s)
+        {
+            LoadUi();
+            _ui["_catscale"] = new[] { (int)Math.Round(s * 1000) };
             try { File.WriteAllText(UiFile, new JavaScriptSerializer().Serialize(_ui)); } catch { }
         }
 
