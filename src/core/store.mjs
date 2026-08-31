@@ -26,8 +26,60 @@ const SKELETONS_DIR = join(ROOT, "skeletons");
 const JOURNAL_PATH = join(ROOT, "journal.jsonl");
 const SETTINGS_PATH = join(ROOT, "settings.json");
 
-export const LAYERS = ["ideas", "points", "plans", "gaps"];
-const LAYER_TEXT_KEY = { ideas: "text", points: "text", plans: "title", gaps: "text" };
+/* ────────────────────────── 三维九模块骨架（替代旧四层 ideas/points/plans/gaps） ──────────────────────────
+ * 模块清单与条数建议见 docs/understanding-framework.html「记录骨架」节。
+ * 旧四层数据读入时自动迁移（备份 .legacy.json 留证），字段映射：
+ *   ideas→需求锚点  points→反馈闭环  plans→功能拆解(chosen→骨架识别)  gaps→依赖与瓶颈 */
+export const DIMS = {
+  why: {
+    label: "价值维", color: "teal",
+    modules: {
+      anchor:      { label: "需求锚点", range: [1, 2], textKey: "text" },
+      audience:    { label: "受众画像", range: [1, 1], textKey: "text" },
+      proposition: { label: "价值主张", range: [1, 1], textKey: "text" },
+    },
+  },
+  what: {
+    label: "结构维", color: "violet",
+    modules: {
+      modules:    { label: "功能拆解", range: [3, 7], textKey: "title" },
+      skeleton:   { label: "骨架识别", range: [2, 4], textKey: "title" },
+      boundaries: { label: "边界定义", range: [2, 3], textKey: "text" },
+    },
+  },
+  how: {
+    label: "路径维", color: "amber",
+    modules: {
+      link:        { label: "核心链路", range: [3, 5], textKey: "text" },
+      bottlenecks: { label: "依赖与瓶颈", range: [1, 3], textKey: "text" },
+      feedback:    { label: "反馈闭环", range: [1, 2], textKey: "text" },
+    },
+  },
+};
+/** 全部模块键的扁平列表（顺序即面板渲染顺序） */
+export const MODULES = Object.entries(DIMS).flatMap(([dim, d]) =>
+  Object.entries(d.modules).map(([mod, m]) => ({ dim, mod, ...m })));
+const MODULE_SET = new Set(MODULES.map((m) => m.mod));
+
+/** 空九模块桶 */
+function emptyDims() {
+  const dims = {};
+  for (const [dim, d] of Object.entries(DIMS)) {
+    dims[dim] = {};
+    for (const mod of Object.keys(d.modules)) dims[dim][mod] = [];
+  }
+  return dims;
+}
+
+/** 旧四层条目 → 九模块的迁移映射（读入时执行一次，原文件备份） */
+const LEGACY_MAP = [
+  ["ideas",  "why",  "anchor"],
+  ["points", "how",  "feedback"],
+  ["plans",  "what", "modules"],
+  ["gaps",   "how",  "bottlenecks"],
+];
+const TEXT_KEY_FALLBACK = { modules: "title", skeleton: "title" };   // plans 旧文本键是 title
+
 
 /** 项目/任务 id 白名单：p<hash>（目录项目）或 t_<ts>_<rand>（DSH 会话任务）。
  *  一切外部传入的 id 都先过这道闸——拒绝含路径语义的 id，
@@ -289,28 +341,83 @@ export function allRecords() {
 /* ────────────────────────── 骨架 ────────────────────────── */
 
 function emptyGoal(title = "默认目标", goal = "") {
-  return { id: gid(), title, goal, ideas: [], points: [], plans: [], gaps: [], createdAt: now() };
+  return { id: gid(), title, goal, dims: emptyDims(), createdAt: now() };
 }
 
 function skeletonPath(projectId) { return safeJoin(SKELETONS_DIR, projectId); }
 
-export function readSkeleton(projectId) {
-  const raw = readJson(skeletonPath(projectId));
-  if (!raw) return null;
-  // 兼容旧单目标结构（原 dsh 插件迁移来的文件没有 goals 数组时兜底包一层）
-  if (!Array.isArray(raw.goals)) {
-    const g0 = emptyGoal(raw.title || "默认目标", typeof raw.goal === "string" ? raw.goal : "");
-    for (const layer of LAYERS) g0[layer] = Array.isArray(raw[layer]) ? raw[layer] : [];
-    return { goals: [g0], currentGoalId: g0.id };
+/** 旧四层骨架 → 新九模块的迁移（幂等：已含 dims 的目标原样保留） */
+function migrateGoal(g) {
+  // 判定"已是新结构"：dims 存在【且】不再带旧四层键。
+  // （readSkeleton 的 spread {...emptyGoal(), ...g} 会把空 dims 和旧四层混在一起，
+  //  只看 dims 有桶数组会误判成已迁移——旧数据从来没被搬进来。）
+  const stillLegacy = ["ideas", "points", "plans", "gaps"].some((k) => Array.isArray(g[k]));
+  if (g?.dims && typeof g.dims === "object" && !stillLegacy) {
+    // 已是新结构：补齐缺的模块桶即可
+    const d = emptyDims();
+    for (const [dim, dd] of Object.entries(DIMS)) {
+      for (const mod of Object.keys(dd.modules)) {
+        d[dim][mod] = Array.isArray(g.dims[dim]?.[mod]) ? g.dims[dim][mod] : [];
+      }
+    }
+    g.dims = d;
+    return g;
   }
-  const goals = raw.goals.map((g) => ({
-    ...emptyGoal(g.title || "目标", typeof g.goal === "string" ? g.goal : ""),
-    ...g,
-  }));
-  for (const g of goals) for (const l of LAYERS) if (!Array.isArray(g[l])) g[l] = [];
-  const currentGoalId = goals.some((g) => g.id === raw.currentGoalId)
-    ? raw.currentGoalId : (goals[0]?.id || null);
-  return { goals, currentGoalId };
+  // 旧四层：映射迁移（plans.chosen=true 的进骨架识别，其余进功能拆解）
+  const dims = emptyDims();
+  for (const [layer, dim, mod] of LEGACY_MAP) {
+    const items = Array.isArray(g[layer]) ? g[layer] : [];
+    for (const it of items) {
+      const text = normText(it.text ?? it.title);
+      if (!text) continue;
+      const entry = { id: it.id || mod[0].toUpperCase() + randomUUID().slice(0, 6), at: it.at || now() };
+      entry[DIMS[dim].modules[mod].textKey] = text;
+      dims[dim][mod].push(entry);
+      // chosen 方案同时登记进骨架识别（它本就是"被押注的架构决策"）
+      if (layer === "plans" && it.chosen) {
+        const e2 = { ...entry, id: "S" + randomUUID().slice(0, 6) };
+        dims.what.skeleton.push(e2);
+      }
+    }
+  }
+  delete g.ideas; delete g.points; delete g.plans; delete g.gaps;
+  g.dims = dims;
+  return g;
+}
+
+export function readSkeleton(projectId) {
+  const path = skeletonPath(projectId);
+  const raw = readJson(path);
+  if (!raw) return null;
+  let migrated = false;
+  let out;
+  if (!Array.isArray(raw.goals)) {
+    // 兼容最旧单目标结构
+    const g0 = emptyGoal(raw.title || "默认目标", typeof raw.goal === "string" ? raw.goal : "");
+    for (const layer of LEGACY_MAP.map((m) => m[0])) {
+      g0[layer] = Array.isArray(raw[layer]) ? raw[layer] : [];
+    }
+    migrateGoal(g0); migrated = true;
+    out = { goals: [g0], currentGoalId: g0.id };
+  } else {
+    const goals = raw.goals.map((g) => {
+      const base = { ...emptyGoal(g.title || "目标", typeof g.goal === "string" ? g.goal : ""), ...g };
+      if (migrateGoal(base) !== base || !Array.isArray(base.dims?.why?.anchor)) migrated = true;
+      return base;
+    });
+    const currentGoalId = goals.some((g) => g.id === raw.currentGoalId)
+      ? raw.currentGoalId : (goals[0]?.id || null);
+    out = { goals, currentGoalId };
+  }
+  // 迁移过就留备份并写回新结构（备份只建一次，防循环覆盖）
+  if (migrated && path && existsSync(path)) {
+    try {
+      const bak = path.replace(/\.json$/, ".legacy.json");
+      if (!existsSync(bak)) copyFileSync(path, bak);
+    } catch {}
+    writeJson(path, out);
+  }
+  return out;
 }
 
 function writeSkeleton(projectId, sk) {
@@ -325,10 +432,20 @@ function currentGoal(sk) {
 function hasContent(g) {
   if (!g) return false;
   if (String(g.goal || "").trim()) return true;
-  return LAYERS.some((l) => (g[l] || []).length > 0);
+  if (!g.dims) return false;
+  for (const dd of Object.values(g.dims))
+    for (const arr of Object.values(dd))
+      if (Array.isArray(arr) && arr.length > 0) return true;
+  return false;
 }
 
 function findById(list, id) { return list.find((x) => x.id === id); }
+/** 按模块取目标下的桶 */
+function bucketOf(goal, mod) { return goal.dims?.[moduleDim(mod)]?.[mod]; }
+function moduleDim(mod) {
+  for (const [dim, d] of Object.entries(DIMS)) if (d.modules[mod]) return dim;
+  return null;
+}
 
 /* ────────────────────────── 整理（organize 核心） ────────────────────────── */
 
@@ -372,18 +489,21 @@ export function organize(projectId, payload = {}) {
     rec.pendingNewTask = false;
   }
 
-  const applied = {}; let gapAdded = false;
+  const applied = {};
 
-  const mergeList = (layer, incoming, decorate) => {
+  /** 合并一个模块的条目：去重（精确/Jaccard≥0.7）→ 更新；否则新增 */
+  const mergeList = (dim, mod, incoming, decorate) => {
     if (!Array.isArray(incoming) || !incoming.length) return { added: 0, updated: 0 };
+    const m = DIMS[dim]?.modules?.[mod];
+    if (!m) return { added: 0, updated: 0 };
     let added = 0, updated = 0;
     for (const item of incoming) {
       if (!item || typeof item !== "object") continue;
-      const text = normText(item.text ?? item.title);
+      const text = normText(item[m.textKey] ?? item.text ?? item.title);
       if (!text) continue;
-      const bucket = goal[layer];
+      const bucket = goal.dims[dim][mod];
       const dup = bucket.find((b) => {
-        const bt = normText(b[LAYER_TEXT_KEY[layer]]);
+        const bt = normText(b[m.textKey]);
         if (!bt) return false;
         if (bt.toLowerCase() === text.toLowerCase()) return true;
         return charJaccard(bt, text) >= 0.7;
@@ -394,87 +514,33 @@ export function organize(projectId, payload = {}) {
         updated++;
       } else {
         const fresh = decorate(item, null);
-        fresh.id = layer[0].toUpperCase() + randomUUID().slice(0, 6);
+        fresh.id = mod[0].toUpperCase() + randomUUID().slice(0, 6);
         fresh.at = now();
         bucket.push(fresh);
         added++;
-        if (layer === "gaps") gapAdded = true;
       }
     }
     return { added, updated };
   };
 
-  /* decorate(it, dup)：dup 非空 = 近似重复命中后的更新。此时只覆盖「显式提供」的字段——
-   * 否则 Object.assign 会用缺省值把旧条目的 done/decided/chosen/paths 洗掉（丢状态）。
-   * 新建（dup=null）则照常补全缺省。 */
   const stats = {
-    ideas: mergeList("ideas", payload.ideas, (it, dup) => ({
-      text: normText(it.text),
-      ...(!dup || it.group !== undefined ? { group: it.group ? String(it.group).slice(0, 12) : undefined } : {}),
-      ...(!dup || it.done !== undefined ? { done: !!it.done } : {}),
-      ...(!dup || it.raw !== undefined ? { raw: it.raw ? String(it.raw).slice(0, 200) : undefined } : {}),
-    })),
-    points: mergeList("points", payload.points, (it, dup) => ({
-      text: normText(it.text),
-      ...(!dup || it.decided !== undefined ? { decided: !!it.decided } : {}),
-      ...(!dup || it.link !== undefined ? { link: it.link ? String(it.link).slice(0, 300) : undefined } : {}),
-    })),
-    plans: mergeList("plans", payload.plans, (it, dup) => {
-      // 「当前采用」全局唯一：本轮采用谁，就先清掉所有旧采用
-      if (it.chosen) for (const p of goal.plans) p.chosen = false;
-      return {
-        title: normText(it.title ?? it.text),
-        ...(!dup || it.group !== undefined ? { group: it.group ? String(it.group).slice(0, 16) : undefined } : {}),
-        ...(!dup || it.chosen !== undefined ? { chosen: !!it.chosen } : {}),
-        ...(!dup || it.dismissed !== undefined ? { dismissed: !!it.dismissed } : {}),
-        ...(!dup || it.paths !== undefined ? { paths: Array.isArray(it.paths) ? it.paths.map((p) => ({ step: String(p?.step ?? p ?? "").slice(0, 30) })).filter((p) => p.step) : [] } : {}),
-      };
-    }),
-    gaps: mergeList("gaps", payload.gaps, (it, dup) => ({
-      text: normText(it.text),
-      ...(!dup || it.resolved !== undefined ? { resolved: !!it.resolved } : {}),
-    })),
+    anchor:      mergeList("why", "anchor",      payload.anchor,      (it) => ({ text: normText(it.text ?? it.title), raw: it.raw ? String(it.raw).slice(0, 200) : undefined })),
+    audience:    mergeList("why", "audience",    payload.audience,    (it) => ({ text: normText(it.text ?? it.title) })),
+    proposition: mergeList("why", "proposition", payload.proposition, (it) => ({ text: normText(it.text ?? it.title) })),
+    modules:     mergeList("what", "modules",    payload.modules,     (it) => ({ title: normText(it.title ?? it.text), paths: Array.isArray(it.paths) ? it.paths.map((p) => ({ step: String(p?.step ?? p ?? "").slice(0, 30) })).filter((p) => p.step) : [] })),
+    skeleton:    mergeList("what", "skeleton",   payload.skeleton,    (it) => ({ title: normText(it.title ?? it.text) })),
+    boundaries:  mergeList("what", "boundaries", payload.boundaries,  (it) => ({ text: normText(it.text ?? it.title) })),
+    link:        mergeList("how",  "link",       payload.link,        (it) => ({ text: normText(it.text ?? it.step ?? it.title) })),
+    bottlenecks: mergeList("how",  "bottlenecks",payload.bottlenecks, (it) => ({ text: normText(it.text ?? it.title) })),
+    feedback:    mergeList("how",  "feedback",   payload.feedback,    (it) => ({ text: normText(it.text ?? it.title) })),
   };
-  // 「当前采用」全局唯一由 mergeList 装饰器保证，这里不再后处理
-  for (const [layer, s] of Object.entries(stats)) {
-    if (s.added > 0) applied[layer] = s.added;
-    if (s.updated > 0) applied[layer + "_updated"] = s.updated;
+  for (const [mod, s] of Object.entries(stats)) {
+    if (s.added > 0) applied[mod] = s.added;
+    if (s.updated > 0) applied[mod + "_updated"] = s.updated;
   }
 
-  /* 新旧替代（合并之后跑）：新结论可携带 supersedes（旧条目 id 或原文），
-   * 旧条目标记退场——保留在数据里可审计，但不再计入统计、不在面板渲染。
-   * 跳过「新结论恰好合并进了旧条目」的目标：那是自我替代，会把精炼结论藏掉。 */
-  let superseded = 0;
-  const applySupersede = (layer, incoming) => {
-    for (const it of (incoming || [])) {
-      const carrier = normText(it?.text ?? it?.title);
-      const refs = it?.supersedes ? [].concat(it.supersedes) : [];
-      for (const ref of refs) {
-        const mark = (x) => {
-          if (!x || x.superseded) return;
-          if (carrier && charJaccard(normText(x[LAYER_TEXT_KEY[layer]]), carrier) >= 0.7) return;
-          x.superseded = true; x.supersededAt = now(); superseded++;
-        };
-        const byId = (goal[layer] || []).find((x) => x.id === ref);
-        if (byId) { mark(byId); continue; }
-        const nt = normText(ref);
-        if (!nt) continue;
-        // 按原文近似匹配定位（AI 手头未必有 id，给旧原文也能标）
-        let best = null, bestSim = 0;
-        for (const x of (goal[layer] || [])) {
-          const s = charJaccard(normText(x[LAYER_TEXT_KEY[layer]]), nt);
-          if (s > bestSim) { bestSim = s; best = x; }
-        }
-        if (best && bestSim >= 0.5) mark(best);
-      }
-    }
-  };
-  applySupersede("ideas", payload.ideas);
-  applySupersede("points", payload.points);
-  if (superseded > 0) {
-    applied.superseded = superseded;
-    journalEvent({ type: "superseded", projectId, count: superseded });
-  }
+  /* 旧 supersede 机制移除：九模块模型里"同结论再写"由维度内去重自动收敛，
+   * 真正的替代靠新结论覆盖（mergeList 的更新路径） */
 
   if (payload.goal) goal.goal = normText(payload.goal);
   if (payload.goalTitle) goal.title = normText(payload.goalTitle);
@@ -487,7 +553,7 @@ export function organize(projectId, payload = {}) {
     saveProject(rec);
     journalEvent({
       type: "organized", projectId, harness: payload.harness || rec.harness,
-      applied, gapAdded,
+      applied,
       brief: normText(goal.goal || goal.title).slice(0, 20),
     });
   }
@@ -576,43 +642,16 @@ export function controlAction(projectId, { action, params = {} } = {}) {
       return { ok: true };
     }
     case "remove-item": {
-      if (!LAYERS.includes(params.layer)) return { ok: false, message: "未知层级" };
-      goal[params.layer] = goal[params.layer].filter((x) => x.id !== params.id);
+      // params: { dim, mod, id }（九模块）；旧调用兼容 {layer}
+      const mod = params.mod || params.layer;
+      const dim = params.dim || (MODULE_SET.has(mod) ? moduleDim(mod) : null);
+      if (!dim || !MODULE_SET.has(mod)) return { ok: false, message: "未知模块" };
+      const bucket = goal.dims?.[dim]?.[mod];
+      if (!Array.isArray(bucket)) return { ok: false, message: "模块不存在" };
+      goal.dims[dim][mod] = bucket.filter((x) => x.id !== params.id);
       const werr = saveSk(sk); if (werr) return werr;
       saveProject(rec);
-      journalEvent({ type: "item-removed", projectId, layer: params.layer });
-      return { ok: true };
-    }
-    case "toggle-point": {
-      const it = findById(goal.points, params.id); if (!it) return { ok: false };
-      it.decided = !it.decided; it.at = now();
-      const werr = saveSk(sk); if (werr) return werr;
-      return { ok: true };
-    }
-    case "toggle-done": {
-      const it = findById(goal.ideas, params.id); if (!it) return { ok: false };
-      it.done = !it.done; it.at = now();
-      const werr = saveSk(sk); if (werr) return werr;
-      return { ok: true };
-    }
-    case "toggle-gap": {
-      const it = findById(goal.gaps, params.id); if (!it) return { ok: false };
-      it.resolved = !it.resolved; it.at = now();
-      const werr = saveSk(sk); if (werr) return werr;
-      journalEvent({ type: "gap-toggled", projectId });
-      return { ok: true };
-    }
-    case "choose-plan": {
-      for (const p of goal.plans) p.chosen = p.id === params.id;
-      const me = findById(goal.plans, params.id); if (me) { me.dismissed = false; me.at = now(); }
-      const werr = saveSk(sk); if (werr) return werr;
-      journalEvent({ type: "plan-chosen", projectId });
-      return { ok: true };
-    }
-    case "dismiss-plan": {
-      const p = findById(goal.plans, params.id); if (!p) return { ok: false };
-      p.dismissed = !p.dismissed; p.chosen = false; p.at = now();
-      const werr = saveSk(sk); if (werr) return werr;
+      journalEvent({ type: "item-removed", projectId, module: mod });
       return { ok: true };
     }
     case "rename-project": {
@@ -635,7 +674,17 @@ export function controlAction(projectId, { action, params = {} } = {}) {
 function summarize(projectId, rec) {
   const sk = readSkeleton(projectId);
   const goal = sk ? currentGoal(sk) : null;
-  const count = (l, pred = () => true) => (goal ? goal[l].filter((x) => !x.superseded && pred(x)).length : 0);
+  const counts = { why: 0, what: 0, how: 0 };
+  let total = 0;
+  if (goal?.dims) {
+    for (const [dim, dd] of Object.entries(DIMS)) {
+      for (const mod of Object.keys(dd.modules)) {
+        const n = (goal.dims[dim]?.[mod] || []).length;
+        counts[dim] += n;
+        total += n;
+      }
+    }
+  }
   return {
     id: projectId,
     title: rec.title,
@@ -645,16 +694,7 @@ function summarize(projectId, rec) {
     pendingNewTask: !!rec.pendingNewTask,
     updatedAt: rec.updatedAt,
     currentGoal: goal ? goal.goal || goal.title : "",
-    counts: goal ? {
-      ideas: count("ideas", (i) => !i.done),
-      doneIdeas: count("ideas", (i) => !!i.done),
-      points: count("points"),
-      decidedPoints: count("points", (p) => !!p.decided),
-      plans: count("plans"),
-      chosenPlan: count("plans", (p) => !!p.chosen),
-      gaps: count("gaps", (g) => !g.resolved),
-      resolvedGaps: count("gaps", (g) => !!g.resolved),
-    } : { ideas: 0, doneIdeas: 0, points: 0, decidedPoints: 0, plans: 0, chosenPlan: 0, gaps: 0, resolvedGaps: 0 },
+    counts: { ...counts, total },
     updatedAtMs: Date.parse(rec.updatedAt || 0) || 0,
   };
 }
@@ -716,21 +756,26 @@ export function fullSkeleton(projectId) {
   return { summary: summarize(projectId, rec), skeleton: sk };
 }
 
-/** 给 agent 看的紧凑文本视图 */
+/** 给 agent 看的紧凑文本视图（三维九模块） */
 export function queryMarkdown(cwd, harness = "unknown") {
-  const rec = resolveProject(cwd, harness);
+  // 显式 id（t_/p 白名单）直接读档案；否则按目录推导（兼容旧调用方）
+  const rec = isValidId(cwd) && loadProject(cwd) ? loadProject(cwd) : resolveProject(cwd, harness);
   const s = summarize(rec.id, rec);
   const sk = readSkeleton(rec.id);
   const g = sk ? currentGoal(sk) : null;
-  const sec = (l, label, fmt) =>
-    g && g[l].length ? `\n${label}（${g[l].length}）：\n` + g[l].map(fmt).join("\n") : "";
+  const sections = [];
+  for (const [dim, dd] of Object.entries(DIMS)) {
+    const parts = [];
+    for (const [mod, m] of Object.entries(dd.modules)) {
+      const arr = g?.dims?.[dim]?.[mod] || [];
+      if (arr.length) parts.push(`${m.label}（${arr.length}）：\n` + arr.map((x) => `- ${x[m.textKey]}`).join("\n"));
+    }
+    if (parts.length) sections.push(`\n${dd.label}：\n` + parts.join("\n"));
+  }
   const md =
     `【思维板】${s.title}\n` +
-    `目标：${s.currentGoal || "（未定）"}\n状态：${s.state}｜未想清缺口 ${s.counts.gaps}` +
-    sec("ideas", "想法", (i) => `- [${i.id}] ${i.text}${i.group ? `（组:${i.group}）` : ""}${i.done ? " ✅已实现" : ""}`) +
-    sec("gaps", "缺口", (x) => `- [${x.id}] ${x.text}${x.resolved ? "（已解决）" : ""}`) +
-    sec("plans", "方案", (p) => `- ${p.title}${p.chosen ? "【当前采用】" : p.dismissed ? "【已否决】" : ""}`) +
-    sec("points", "要点", (p) => `- [${p.id}] ${p.text}${p.decided ? " ✔已定" : ""}${p.link ? ` ↗${p.link}` : ""}`);
+    `目标：${s.currentGoal || "（未定）"}\n状态：${s.state}｜条目 ${s.counts.total}` +
+    sections.join("");
   return { markdown: md, summary: s };
 }
 

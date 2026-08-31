@@ -68,25 +68,13 @@ function taskBrief(id) {
   const s = data?.summary;
   if (!s) return "";
   const c = s.counts || {};
-  return `【当前任务】projectId=「${id}」｜目标「${s.currentGoal || "未定"}」｜想法 ${c.ideas ?? 0}・要点 ${c.points ?? 0}・方案 ${c.plans ?? 0}｜缺口 ${c.gaps ?? 0}${s.pendingNewTask ? "｜⚠ 疑似新主题待确认" : ""}`;
+  return `【当前任务】projectId=「${id}」｜目标「${s.currentGoal || "未定"}」｜价值${c.why ?? 0}・结构${c.what ?? 0}・路径${c.how ?? 0}${s.pendingNewTask ? "｜⚠ 疑似新主题待确认" : ""}`;
 }
 
 /** 骨架紧凑文本（query 工具返回值；格式对齐 store.queryMarkdown） */
 function queryText(id) {
-  const data = store.fullSkeleton(id);
-  if (!data) return "(空骨架)";
-  const { summary: s, skeleton: sk } = data;
-  const g = sk?.goals?.find((x) => x.id === sk.currentGoalId);
-  const sec = (layer, label, fmt) =>
-    g && g[layer].length ? `\n${label}（${g[layer].length}）：\n` + g[layer].map(fmt).join("\n") : "";
-  return (
-    `【思维板】${s.title}\n` +
-    `目标：${s.currentGoal || "（未定）"}\n状态：${s.state}｜未想清缺口 ${s.counts.gaps}` +
-    sec("ideas", "想法", (i) => `- ${i.text}${i.done ? " ✅" : ""}`) +
-    sec("points", "要点", (p) => `- ${p.text}${p.decided ? " ✔" : ""}`) +
-    sec("plans", "方案", (p) => `- ${p.title}${p.chosen ? "【当前采用】" : p.dismissed ? "【已否决】" : ""}`) +
-    sec("gaps", "缺口", (x) => `- ${x.text}${x.resolved ? "（已解决）" : ""}`)
-  );
+  // 直接复用 store 的紧凑文本（它已按三维九模块渲染）
+  return store.queryMarkdown(id, "dsh").markdown;
 }
 
 /** 每个会话的首轮检查与手动档疑似提醒，只触发一次 */

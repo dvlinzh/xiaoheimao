@@ -63,7 +63,7 @@ ok(injectedTexts.some((t) => t.includes("思维板协议") || t.includes("当前
 ok(injectedTexts.some((t) => t.includes("projectId=「" + taskId + "」")), "注入含 projectId");
 
 /* 4. organize 工具执行 → 骨架写盘 */
-const orgRes = await org.execute({ projectId: taskId, goal: "多入口思维面板", ideas: [{ text: "一个想法" }], gaps: [{ text: "还缺验证" }] });
+const orgRes = await org.execute({ projectId: taskId, goal: "多入口思维面板", anchor: [{ text: "一个想法" }], bottlenecks: [{ text: "还缺验证" }] });
 ok(orgRes.ok === true, `organize 执行成功（${JSON.stringify(orgRes).slice(0, 60)}）`);
 ok(existsSync(join(HOME, "skeletons", taskId + ".json")), "骨架文件已写盘");
 const qryRes = await qry.execute({ projectId: taskId });
