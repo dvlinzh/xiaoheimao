@@ -62,44 +62,53 @@
 
     <main id="layers">
       <!-- 价值维 Why -->
-      <details open class="layer dim-why" title="价值维 · 需求锚点：触发场景/痛点">
-        <summary>需求锚点 <em id="c-anchor"></em></summary>
-        <ul class="items" id="list-anchor"></ul>
-      </details>
-      <details open class="layer dim-why" title="价值维 · 受众画像：核心受众行为特征">
-        <summary>受众画像 <em id="c-audience"></em></summary>
-        <ul class="items" id="list-audience"></ul>
-      </details>
-      <details open class="layer dim-why" title="价值维 · 价值主张：一句话通过__为__解决__">
-        <summary>价值主张 <em id="c-proposition"></em></summary>
-        <ul class="items" id="list-proposition"></ul>
-      </details>
+      <div class="dim-group dim-why">
+        <div class="dim-head">价值维 <span class="dim-sub">为什么做这件事</span></div>
+        <details open class="layer" data-mod="anchor" title="需求锚点：触发场景/痛点（1-2条）">
+          <summary>需求锚点 <em id="c-anchor"></em><span class="mod-hint">场景 + 痛点</span></summary>
+          <ul class="items" id="list-anchor"></ul>
+        </details>
+        <details open class="layer" data-mod="audience" title="受众画像：核心受众行为特征（1条）">
+          <summary>受众画像 <em id="c-audience"></em><span class="mod-hint">为__情境下的__人</span></summary>
+          <ul class="items" id="list-audience"></ul>
+        </details>
+        <details open class="layer" data-mod="proposition" title="价值主张：一句话通过__为__解决__（1条）">
+          <summary>价值主张 <em id="c-proposition"></em><span class="mod-hint">通过__为__解决__</span></summary>
+          <ul class="items" id="list-proposition"></ul>
+        </details>
+      </div>
       <!-- 结构维 What -->
-      <details open class="layer dim-what" title="结构维 · 功能拆解：模块名+一句话职责">
-        <summary>功能拆解 <em id="c-modules"></em></summary>
-        <ul class="items" id="list-modules"></ul>
-      </details>
-      <details open class="layer dim-what" title="结构维 · 骨架识别：删掉就垮的核心模块">
-        <summary>骨架识别 <em id="c-skeleton"></em></summary>
-        <ul class="items" id="list-skeleton"></ul>
-      </details>
-      <details open class="layer dim-what" title="结构维 · 边界定义：明确不做">
-        <summary>边界定义 <em id="c-boundaries"></em></summary>
-        <ul class="items" id="list-boundaries"></ul>
-      </details>
+      <div class="dim-group dim-what">
+        <div class="dim-head">结构维 <span class="dim-sub">这件事由什么构成</span></div>
+        <details open class="layer" data-mod="modules" title="功能拆解：模块名+一句话职责（3-7条）">
+          <summary>功能拆解 <em id="c-modules"></em><span class="mod-hint">模块名：职责</span></summary>
+          <ul class="items" id="list-modules"></ul>
+        </details>
+        <details open class="layer" data-mod="skeleton" title="骨架识别：删掉就垮的核心模块（2-4条）">
+          <summary>骨架识别 <em id="c-skeleton"></em><span class="mod-hint">删掉就垮的</span></summary>
+          <ul class="items" id="list-skeleton"></ul>
+        </details>
+        <details open class="layer" data-mod="boundaries" title="边界定义：明确不做（2-3条）">
+          <summary>边界定义 <em id="c-boundaries"></em><span class="mod-hint">不做__</span></summary>
+          <ul class="items" id="list-boundaries"></ul>
+        </details>
+      </div>
       <!-- 路径维 How -->
-      <details open class="layer dim-how" title="路径维 · 核心链路：步骤名→输出">
-        <summary>核心链路 <em id="c-link"></em></summary>
-        <ul class="items" id="list-link"></ul>
-      </details>
-      <details open class="layer dim-how" title="路径维 · 依赖与瓶颈：缺什么/卡在哪">
-        <summary>依赖与瓶颈 <em id="c-bottlenecks"></em></summary>
-        <ul class="items" id="list-bottlenecks"></ul>
-      </details>
-      <details open class="layer dim-how" title="路径维 · 反馈闭环：什么信息回流">
-        <summary>反馈闭环 <em id="c-feedback"></em></summary>
-        <ul class="items" id="list-feedback"></ul>
-      </details>
+      <div class="dim-group dim-how">
+        <div class="dim-head">路径维 <span class="dim-sub">这件事怎么运转</span></div>
+        <details open class="layer" data-mod="link" title="核心链路：步骤名→输出（3-5条）">
+          <summary>核心链路 <em id="c-link"></em><span class="mod-hint">步骤 → 输出</span></summary>
+          <ul class="items" id="list-link"></ul>
+        </details>
+        <details open class="layer" data-mod="bottlenecks" title="依赖与瓶颈：缺什么/卡在哪（1-3条）">
+          <summary>依赖与瓶颈 <em id="c-bottlenecks"></em><span class="mod-hint">缺什么/卡在哪</span></summary>
+          <ul class="items" id="list-bottlenecks"></ul>
+        </details>
+        <details open class="layer" data-mod="feedback" title="反馈闭环：什么信息回流（1-2条）">
+          <summary>反馈闭环 <em id="c-feedback"></em><span class="mod-hint">回流 → 调整</span></summary>
+          <ul class="items" id="list-feedback"></ul>
+        </details>
+      </div>
     </main>
 
   </div>

@@ -182,26 +182,45 @@ header {
 #hp-bar.low i.f { background: var(--red); }
 #hp-text { color: var(--dim); font-size: 10px; flex: none; }
 
-/* ── 四层：文档式分节 ── */
+/* ── 三维九模块：三大分区 + 子模块卡 ── */
 #layers { flex: 1; overflow-y: auto; padding: 2px 16px 12px; scrollbar-width: thin; scrollbar-color: var(--line2) transparent; }
 #layers::-webkit-scrollbar { width: 5px; }
 #layers::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 3px; }
-.layer { padding: 14px 0; }
-.layer:first-child { padding-top: 4px; }
-.layer + .layer { border-top: 1px solid var(--line); }
-summary {
+
+/* 维度分区：三块大卡片 */
+.dim-group { margin-bottom: 4px; }
+.dim-head {
+  display: flex; align-items: baseline; gap: 10px;
+  font-size: 15px; font-weight: 700; letter-spacing: 1px;
+  padding: 16px 2px 8px; margin-top: 2px;
+}
+.dim-sub { color: var(--faint); font-size: 11px; font-weight: 400; letter-spacing: 0; }
+.dim-why .dim-head { color: var(--teal); }
+.dim-what .dim-head { color: var(--violet); }
+.dim-how .dim-head { color: var(--amber); }
+
+/* 子模块卡 */
+.layer { padding: 12px 12px 10px; margin-bottom: 10px; background: var(--card2); border-radius: 10px; border: 1px solid var(--line); }
+.layer:last-child { margin-bottom: 0; }
+.layer summary {
   list-style: none; cursor: pointer;
   display: flex; align-items: center; gap: 8px;
-  font-size: 13.5px; font-weight: 600; letter-spacing: .6px;
-  padding: 0 0 8px; color: var(--text);
+  font-size: 13px; font-weight: 600; letter-spacing: .4px;
+  padding: 0 0 6px; color: var(--text);
 }
 summary::-webkit-details-marker { display: none; }
-summary em { font-style: normal; color: var(--dim); font-size: 10.5px; font-weight: 400; margin-left: auto; letter-spacing: 0; }
+summary em { font-style: normal; color: var(--dim); font-size: 10.5px; font-weight: 400; letter-spacing: 0; }
+.mod-hint {
+  margin-left: auto; font-style: normal; color: var(--faint); font-size: 10px; font-weight: 400; letter-spacing: 0;
+  border-left: 1px solid var(--line2); padding-left: 10px;
+}
+
+/* 条目 */
 .items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .items li {
   display: flex; align-items: baseline; gap: 8px;
-  padding: 8px 10px; font-size: 15px; line-height: 1.7;
-  border-radius: 8px;
+  padding: 7px 9px; font-size: 14px; line-height: 1.65;
+  border-radius: 8px; background: var(--card);
   position: relative;
 }
 .items li:hover { background: var(--card2); }
@@ -214,6 +233,13 @@ summary em { font-style: normal; color: var(--dim); font-size: 10.5px; font-weig
 }
 .items li:hover .li-del { visibility: visible; }
 .li-del:hover { color: var(--red); }
+
+/* 空态提示：当某模块没内容时，hint 说明它放什么 */
+li.hint {
+  color: var(--faint); font-size: 12.5px; font-style: italic;
+  padding: 8px 10px; background: transparent; border: 1px dashed var(--line2);
+  border-radius: 8px; text-align: center;
+}
 .gr {
   flex: none; font-size: 10px; font-weight: 600; letter-spacing: .4px;
   color: var(--dim); background: var(--amber-soft); border: 1px solid var(--amber-border);
