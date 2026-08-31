@@ -26,3 +26,9 @@ shell-win/*_PetCat.exe
 
 # 调试截图（托盘/形状校验产物）
 shell-win/*.png
+
+# 体检/窗口诊断运行产物
+shell-win/health-report.txt
+shell-win/health-win-*.png
+shell-win/pc-win-*.png
+shell-win/win-snap.png
