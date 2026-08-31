@@ -83,49 +83,20 @@ function pickDefaultProject(ov) {
   return { list, name: harness };
 }
 
-/* ── 项目选择：顶部标题即触发器；点名字改名，点其余处/箭头展开下拉 ── */
+/* ── 项目切换走 ☰ 总览（只列当前 harness 参与过的项目）；顶部名字只管改名 ── */
 let projList = [];
 const projTrigger = $("#proj-trigger");
-const projMenu = $("#proj-menu");
-
-function renderProjMenu() {
-  projMenu.replaceChildren();
-  if (!projList.length) return;
-  for (const p of projList) {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "proj-item" + (p.id === curProjectId ? " on" : "");
-    b.title = `${p.projectDir}\n想法 ${p.counts.ideas}・缺口 ${p.counts.gaps}`;
-    const nm = document.createElement("span");
-    nm.className = "proj-item-name";
-    nm.textContent = p.title;
-    b.appendChild(nm);
-    b.addEventListener("click", () => {
-      projMenu.hidden = true;
-      if (p.id !== curProjectId) selectProject(p.id);
-    });
-    projMenu.appendChild(b);
-  }
-}
 
 function renderProjTrigger(ov) {
   projList = pickDefaultProject(ov).list;
   const cur = projList.find((p) => p.id === curProjectId);
   $("#proj-name").textContent = cur?.title || (projList[0]?.title || "思维板");
-  renderProjMenu();
 }
 
-/* 触发器：点名字 → 改名；点其他（含箭头）→ 展开/收起菜单 */
+/* 触发器：点名字 → 改名 */
 projTrigger.addEventListener("click", (e) => {
   if (e.target.tagName === "INPUT") return;
-  if (e.target.closest("#proj-name")) {
-    if (curProjectId) startRenameProject();
-    return;
-  }
-  projMenu.hidden = !projMenu.hidden;
-});
-document.addEventListener("click", (e) => {
-  if (!projMenu.hidden && !e.target.closest("#proj-select")) projMenu.hidden = true;
+  if (e.target.closest("#proj-name") && curProjectId) startRenameProject();
 });
 
 function startRenameProject() {
@@ -647,7 +618,10 @@ function setOvMode(v) {
 function renderOv() {
   const box = document.getElementById("ov-list");
   if (!box || !lastOv) return;
-  const list = [...(lastOv.projects || [])].sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0));
+  // 只列当前 harness 参与过的项目（多 harness 项目在每个侧都可见、可正常切换）
+  const list = [...(lastOv.projects || [])]
+    .filter((p) => !harness || (p.harnesses || []).includes(harness) || p.harness === harness)
+    .sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0));
   box.replaceChildren(...list.map((p) => {
     const b = document.createElement("button");
     b.type = "button";
@@ -694,6 +668,8 @@ function renderOv() {
     return b;
   }));
 }
+
+document.getElementById("btn-overview")?.addEventListener("click", () => setOvMode(!ovMode));
 
 /* ── 字体/字号：挪进面板（原属设置窗），写回 settings，3 秒轮询自动生效 ── */
 const fontPop = document.getElementById("font-pop");
