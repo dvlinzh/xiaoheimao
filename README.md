@@ -16,10 +16,9 @@
 请帮我安装并启动「思维板·小黑猫」插件（https://github.com/dvlinzh/xiaoheimao）：
 
 1. git clone https://github.com/dvlinzh/xiaoheimao.git 到本机任意目录（如 ~/mind-board-pet）
-2. cd 进去后执行：npm install（注意：Node.js ≥ 18；Electron 下载失败时先设
-   环境变量 ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ 再重试）
-3. 启动桌宠：npm start（Electron 窗口：屏幕上的小黑猫 + 图标环 + 思维面板）
-   浏览器兜底：npm run pet 后打开 http://127.0.0.1:13134/pet.html
+2. cd 进去后执行：npm install（Node.js ≥ 18，无需 Electron——原生壳仅 58KB）
+3. 构建并启动：npm run build:shell && npm start
+   （屏幕上的小黑猫 + 图标环 + 思维面板，全部由 C# 原生壳 + WebView2 承载）
 4. 接入 Claude Code（本仓库已自带配置，零改动）：用 Claude Code 打开这个目录，
    首次会提示批准 .mcp.json 里的 mind-board 服务器（三个工具：
    organize/query/control），批准后 SessionStart / UserPromptSubmit 两个钩子
@@ -50,7 +49,7 @@
 ```
 入口 A  MCP stdio（任何 harness）       src/mcp/server.mjs
 入口 B  Claude Code 钩子               src/hooks/*.mjs
-入口 C  Electron 壳（猫+面板）          src/main/main.cjs
+入口 C  C# 原生壳（猫+面板）        shell-win/PetCat.cs
 入口 D  DSH Cordis 插件壳              src/dsh/index.js   ← DSH 生态用这个
 ```
 
@@ -89,9 +88,9 @@ mind-board-pet/
 │   ├── mcp/server.mjs       MCP stdio 服务器（三个工具）
 │   ├── hooks/*.mjs          SessionStart / UserPromptSubmit 钩子脚本
 │   ├── server/app.mjs       本地 HTTP 服务 127.0.0.1:13134（API + 页面）
-│   ├── main/main.cjs        Electron 主进程（四窗编排/拖拽/热键/位置记忆）
-│   ├── renderer/pet.*       猫窗（透明 + 逐像素命中）
-│   ├── renderer/dock.*      harness 图标环（120° 扇形，以猫头为圆心）
+│   ├── shell-win/           C# 原生壳（PetCat 猫窗 / DockRing 圆环 / WebView2 面板）
+│   ├── renderer/pet.*       猫页（透明 + 逐像素命中，WebView2/Electron 通用）
+│   ├── renderer/dock.*      harness 图标环页（120° 扇形，以猫头为圆心）
 │   ├── renderer/bubble.*    思维板面板（四层骨架可视化，可拖拽删除/归档）
 │   └── renderer/docs/       技术图解与标定工具（ring-calibrator.html 等）
 └── scripts/smoke-test.mjs   冒烟测试

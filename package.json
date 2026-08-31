@@ -1,12 +1,10 @@
 {
   "name": "mind-board-pet",
-  "description": "思维板·小黑猫 — 跨 harness 共享的思维整理面板。数据中枢 + MCP 工具 + 桌宠壳 + DSH 插件。",
-  "version": "0.3.0",
+  "description": "思维板·小黑猫 — 跨 harness 共享的思维整理面板。数据中枢 + MCP 工具 + C# 原生壳。",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
-  "main": "src/main/main.cjs",
   "exports": {
-    ".": "./src/main/main.cjs",
     "./dsh": "./src/dsh/index.js",
     "./client": "./src/dsh/client.js",
     "./package.json": "./package.json"
@@ -20,11 +18,9 @@
     }
   },
   "scripts": {
-    "start": "electron .",
+    "start": "node scripts/start.mjs",
+    "build:shell": "cd shell-win && fetch-deps.bat && build.bat",
     "pet": "node src/server/app.mjs",
     "test": "node scripts/smoke-test.mjs && node scripts/dsh-shell-smoke.mjs"
-  },
-  "devDependencies": {
-    "electron": "^33.0.0"
   }
 }

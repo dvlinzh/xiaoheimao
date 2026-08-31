@@ -1,4 +1,5 @@
 @echo off
-rem 启动思维板·小兔（真实数据源 ~/.mind-board）
-cd /d "%~dp0"
-npx electron .
+rem One-click launcher for mind-board-pet (C# native shell + data service).
+rem Requires Node.js >= 18. ASCII wrapper: logic lives in scripts/launch.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\launch.ps1"
+pause
