@@ -66,13 +66,6 @@ namespace XiaoHeiMao
             else { _ring.Follow(); _ring.Show(); }
         }
         public static void HideRing() { try { _ring?.Hide(); } catch { } }
-        public static void ToggleRingGuides()
-        {
-            if (_ring == null || _ring.IsDisposed) _ring = new DockRing();
-            _ring.Guides = !_ring.Guides;
-            _ring.Redraw();
-            if (!_ring.Visible) { _ring.Follow(); _ring.Show(); }
-        }
 
         /* ── journal 动效：AI 写入思维板 → 猫冒对话框（5s 轮询，增量读取） ── */
         static long _journalPos;
