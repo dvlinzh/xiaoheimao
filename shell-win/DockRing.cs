@@ -35,10 +35,10 @@ namespace XiaoHeiMao
 
         const int RING_W = 280, RING_H = 150;      // 环窗尺寸（与猫窗同宽，悬在猫身侧）
         const int CHIP_D = 29;                      // 芯片直径（用户校准：缩小 20%）
-        const double ARC_R = 96;                    // 弧线半径（固定，不随体型缩放）
+        const double ARC_R = 96;                    // 弧线半径（大档基准，随体型等比）
         const double ARC_A0 = -210, ARC_A1 = -90;   // 扇形 120° 朝左：一条边垂直，容纳多 harness（用户校准）
-        // 圆环锚点（用户校准定稿）：圆心 = 猫窗左上角 + (ANCHOR_X, ANCHOR_Y)，固定像素，不随体型变
-        const int ANCHOR_X = 135, ANCHOR_Y = 160;
+
+
         const double LIVE_MS = 10 * 60 * 1000;      // 10 分钟内有写盘 = 运行中
 
         // 配色/图标对齐 dock.js
@@ -64,6 +64,7 @@ namespace XiaoHeiMao
         public bool Guides = false;                 // 标定辅助线（圆心/扇形），默认关；菜单「圆环标定线」可再开
         readonly Timer _poll = new Timer { Interval = 3000 };
         bool _dirty = true;
+        double _lastK = 1.0;
 
 
         /// <summary>辅助线开关切换后强制重画</summary>
@@ -91,13 +92,14 @@ namespace XiaoHeiMao
             if (Visible) { Follow(); var ignored = RefreshData(); }
         }
 
-        /// <summary>环锚定固定像素：圆心 = 猫窗左上角 + (ANCHOR_X, ANCHOR_Y)，体型换档不移动。</summary>
+        /// <summary>环锚在猫身的固定比例点（头左上方），圆心半径随体型等比：猫动环动、猫小环小。</summary>
+        double EffArcR => ARC_R * (Shell.Pet?.ScaleK ?? 1.0);
+
         public void Follow()
         {
             if (Shell.Pet == null) return;
-            Location = new Point(
-                Shell.Pet.Location.X + ANCHOR_X - RING_W / 2,
-                Shell.Pet.Location.Y + ANCHOR_Y - (RING_H - 10));
+            var a = Shell.Pet.CatAnchor();
+            Location = new Point(a.X - RING_W / 2, a.Y - (RING_H - 10));
         }
 
         /// <summary>拉总览：harness 去重并集 + 各 harness 最近写盘时间 + 整理模式</summary>
@@ -126,7 +128,7 @@ namespace XiaoHeiMao
                     }
                 _liveAt = live;
                 var keys = live.Keys.OrderBy(k => k).ToList();
-                if (!keys.SequenceEqual(_chips.Select(c => c.H))) LayoutChips(keys);
+                if (!keys.SequenceEqual(_chips.Select(c => c.H)) || Math.Abs((Shell.Pet?.ScaleK ?? 1.0) - _lastK) > 0.001) { _lastK = Shell.Pet?.ScaleK ?? 1.0; LayoutChips(keys); }
                 _dirty = true;
                 Render();
             }
@@ -145,7 +147,7 @@ namespace XiaoHeiMao
                 _chips.Add(new Chip
                 {
                     H = keys[i],
-                    Center = new PointF((float)(RING_W / 2 + ARC_R * Math.Cos(rad)), (float)(RING_H - 10 + ARC_R * Math.Sin(rad))),
+                    Center = new PointF((float)(RING_W / 2 + EffArcR * Math.Cos(rad)), (float)(RING_H - 10 + EffArcR * Math.Sin(rad))),
                 });
             }
         }
@@ -227,7 +229,7 @@ namespace XiaoHeiMao
                 if (Guides)
                 {
                     var center = new PointF(RING_W / 2f, RING_H - 10);
-                    float gR = (float)ARC_R;
+                    float gR = (float)EffArcR;
                     using (var pen = new Pen(Color.FromArgb(0xf0, 0x71, 0x6c)) { DashStyle = DashStyle.Dash })
                     {
                         g.DrawArc(pen, center.X - gR, center.Y - gR, gR * 2, gR * 2, (float)ARC_A0, (float)(ARC_A1 - ARC_A0));

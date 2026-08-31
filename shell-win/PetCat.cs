@@ -40,6 +40,18 @@ namespace XiaoHeiMao
         double _scale = 0.42;                      // 体型：0.42 大 / 0.34 中 / 0.27 小（菜单可调，持久化）
         const int FOOT_MARGIN = 2;                 // 原版 canvas bottom:2px
 
+        /* 猫身锚点：圆环挂点，定义在猫绘制区上的比例位置（大档校准=头左上方），
+         * 猫缩放/拖动时锚点跟着身体走（用户定稿：环锚在猫的固定像素上）。 */
+        public const double ANCHOR_U = 0.45, ANCHOR_V = 0.34;
+        volatile int _rDx, _rDy, _rDw, _rDh;       // 最近一帧猫绘制区（渲染线程写，环线程读）
+        public double ScaleK => _scale / 0.42;
+
+        /// <summary>猫身锚点的屏幕坐标（圆环圆心挂这里）</summary>
+        public Point CatAnchor()
+        {
+            return new Point(_locX + _rDx + (int)(_rDw * ANCHOR_U), _locY + _rDy + (int)(_rDh * ANCHOR_V));
+        }
+
         const int FRAME_MS = 33;                    // 30fps：呼吸是慢波，30/60 肉眼无差（用户实测确认）
         const int IDLE_SLEEP_MS = 5 * 60 * 1000;    // 闲置 5 分钟趴下
 
@@ -218,6 +230,7 @@ namespace XiaoHeiMao
             int dw = (int)(src.Width * scaleX), dh = (int)(src.Height * scaleY);
             int dx = (WIN_W - dw) / 2;
             int dy = WIN_H - FOOT_MARGIN - (int)((pose.FootRow + 1) * scaleY) - (int)_hop;
+            _rDx = dx; _rDy = dy; _rDw = dw; _rDh = dh;   // 供圆环锚点读取
 
             using (var g = Graphics.FromImage(_frame))
             {
