@@ -413,6 +413,129 @@
   </div>
 </div>
 
+<!-- ══════ 3D×9M 协作协议：方法论到执行规则的固化 ══════ -->
+<h2>3D×9M 协作协议</h2>
+<p class="lead">
+  方法论不止用于"理解项目"，还可以固化为 AI 协作的执行规则。以下把三维九模块
+  编排为<b>六阶段协作流程</b>——这是"最小理解系统"插件化（3D×9M）的核心设计。
+</p>
+
+<div class="card">
+  <h4 style="margin:0 0 12px">角色定义（按阶段自动切换）</h4>
+  <div class="tri">
+    <div class="q"><b>🎤 提问者</b>讨论阶段（阶段零~三）：通过提问帮用户澄清想法。每次只问 1-3 个问题，绝不替用户做决定。</div>
+    <div class="q"><b>🔨 执行者</b>用户明确说"开始做 / 执行 / 写代码"后：直接产出可交付内容。</div>
+    <div class="q"><b>📝 整理者</b>每个阶段结束或用户要求"整理"时：输出当前结论并调用 mind_board_organize 写入。</div>
+  </div>
+</div>
+
+<div class="card">
+  <h4 style="margin:0 0 12px">六阶段协作流程</h4>
+  <div class="steps">
+    <li><b>阶段零 · 播种</b><p>AI 提问帮用户把想法说清楚。出口条件：用户说"差不多了 / 可以开始定锚"。</p></li>
+    <li><b>阶段一 · 定锚（价值维）</b><p>锁定需求锚点 + 受众画像 + 价值主张。产出：3 条以内的核心锚点。出口条件：用户确认"定锚完成"。</p></li>
+    <li><b>阶段二 · 拆骨（结构维）</b><p>AI 穷举结构维模块，用户做取舍。产出：功能拆解、骨架识别、边界定义。出口条件：用户确认"骨架 OK"。</p></li>
+    <li><b>阶段三 · 通路（路径维）</b><p>AI 生成路径维链路，用户校验。产出：核心链路、依赖瓶颈、反馈闭环。出口条件：用户确认"通路可行"。</p></li>
+    <li><b>阶段四 · 执行</b><p>确认一块做一块，边做边推进。严格按执行交付格式输出（见下）。</p></li>
+    <li><b>阶段五 · 存档</b><p>整理全部结论为结构化记录，调用 mind_board_organize 写入骨架。</p></li>
+  </div>
+</div>
+
+<div class="card">
+  <h4 style="margin:0 0 12px">核心原则</h4>
+  <table>
+    <tr><th>原则</th><th>含义</th></tr>
+    <tr><td><b>渐进式确认</b></td><td>确认前绝不进入下一阶段</td></tr>
+    <tr><td><b>最小信息量</b></td><td>每次交互只聚焦当前模块，不提前发散</td></tr>
+    <tr><td><b>冲突检测</b></td><td>用户的回答与已确认的"价值维"矛盾时，立即指出并要求澄清</td></tr>
+  </table>
+</div>
+
+<div class="grid2">
+  <div class="card">
+    <h4 style="margin:0 0 10px">执行交付格式（阶段四强制）</h4>
+    <p style="margin:0 0 6px;color:var(--dim);font-size:13.5px;">每次执行产出必须包含：</p>
+    <p style="margin:0;font-size:13.5px;line-height:2;">
+      ① <b>本次执行内容</b>：一句话说明<br>
+      ② <b>产出</b>：具体内容（代码/文案/配置）<br>
+      ③ <b>完成度</b>：[已完成] / [待确认] / [下一步]<br>
+      ④ <b>需要你确认</b>：1-3 个需要用户拍板的具体问题
+    </p>
+  </div>
+  <div class="card">
+    <h4 style="margin:0 0 10px">验收循环与异常处理</h4>
+    <table>
+      <tr><th>用户说</th><th>AI 动作</th></tr>
+      <tr><td>"可以 / 通过"</td><td>标记完成 → 进入下一模块</td></tr>
+      <tr><td>"改__"</td><td>按意见修改后再次交付</td></tr>
+      <tr><td>"重做"</td><td>回到讨论模式重新确认</td></tr>
+      <tr><td>"先跳过"</td><td>标注 [待定] → 跳到下一模块</td></tr>
+      <tr><td>"先不定了"</td><td>标注 [待定]，继续推进</td></tr>
+      <tr><td>"回到上一步"</td><td>立刻回退到上一阶段</td></tr>
+      <tr><td>"方向不对换思路"</td><td>停止执行 → 回退到讨论模式</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h4 style="margin:0 0 10px">禁止行为（红线）</h4>
+  <p style="margin:0;font-size:13.5px;color:var(--dim);">
+    ✗ 阶段零~三直接输出完整代码或长篇方案 &nbsp;·&nbsp; ✗ 一次性抛出超过 3 个问题 &nbsp;·&nbsp;
+    ✗ 用户未确认时自动进入下一阶段 &nbsp;·&nbsp; ✗ 忽略已确认的价值维约束
+  </p>
+</div>
+
+<!-- ══════ 数据映射：3D×9M → 四层骨架 ══════ -->
+<h2>数据映射：3D×9M → 四层骨架</h2>
+<p class="lead">
+  非侵入式叠加设计：不替换、不破坏原有四层骨架与 MCP 工具，用 <code>3d9m-*</code>
+  group 命名空间区分数据归属——插件关闭后数据保留，重新启用可继续推进。
+</p>
+<div class="card">
+  <table>
+    <tr><th>3D×9M 模块</th><th>维度</th><th>骨架层</th><th>标识</th></tr>
+    <tr><td>需求锚点 / 受众画像 / 价值主张</td><td>价值维 Why</td><td><code>ideas</code></td><td><code>group: 3d9m-value</code></td></tr>
+    <tr><td>功能拆解</td><td>结构维 What</td><td><code>plans</code></td><td><code>group: 3d9m-struct</code></td></tr>
+    <tr><td>骨架识别</td><td>结构维 What</td><td><code>plans</code></td><td><code>chosen</code></td></tr>
+    <tr><td>边界定义</td><td>结构维 What</td><td><code>gaps</code></td><td><code>group: 3d9m-boundary</code></td></tr>
+    <tr><td>核心链路</td><td>路径维 How</td><td><code>plans.paths</code></td><td><code>type: 3d9m-path</code></td></tr>
+    <tr><td>依赖与瓶颈</td><td>路径维 How</td><td><code>gaps</code></td><td><code>group: 3d9m-bottleneck</code></td></tr>
+    <tr><td>反馈闭环</td><td>路径维 How</td><td><code>points</code></td><td><code>type: 3d9m-feedback</code></td></tr>
+  </table>
+  <p style="margin:10px 0 0;font-size:13px;color:var(--faint);">
+    模块完成度从骨架数据读取：ideas 层 <code>3d9m-value</code> ≥3 条 → 价值维 ✅；plans 层
+    <code>3d9m-struct</code> ≥3 条 → 结构维 ✅；paths + feedback 有数据 → 路径维 ✅。
+    状态行格式：<code>[3D×9M] 阶段: 执行 | 价值维✅ 结构维✅ 路径维⏳ | 当前目标: __</code>
+  </p>
+</div>
+
+<!-- ══════ 上下文经济学 ══════ -->
+<h2>上下文经济学</h2>
+<p class="lead">协议的上下文成本核算与三种优化手段——方法论落进 AI 协作时必须算的经济账。</p>
+<div class="grid2">
+  <div class="card">
+    <h4 style="margin:0 0 10px">成本核算</h4>
+    <table>
+      <tr><th>内容</th><th>占用</th><th>频率</th></tr>
+      <tr><td>3D×9M 协议全文</td><td>~1200-1500 tok</td><td>仅首轮</td></tr>
+      <tr><td>状态行</td><td>~80-120 tok</td><td>每轮</td></tr>
+      <tr><td>骨架 3d9m-* 标记</td><td>~200-400 tok</td><td>按需</td></tr>
+      <tr><td><b>对比：一个 MCP 工具定义</b></td><td><b>~500-2000 tok</b></td><td>常驻</td></tr>
+    </table>
+    <p style="margin:10px 0 0;font-size:13px;color:var(--faint);">每轮增量不到一个 MCP 工具定义的 1/10——不臃肿。真正吃上下文的是执行阶段的产出内容，那是任务本身的开销，不是插件的。</p>
+  </div>
+  <div class="card">
+    <h4 style="margin:0 0 10px">三种优化手段</h4>
+    <table>
+      <tr><th>手段</th><th>效果</th></tr>
+      <tr><td><b>① 协议压缩</b><br><span style="color:var(--faint);font-size:12px">自然语言 → 规则条目式</span></td><td>~1500 → ~600-800 tok（首轮轻量）</td></tr>
+      <tr><td><b>② 状态行按需显示</b> <span style="color:var(--green);font-size:12px">推荐</span><br><span style="color:var(--faint);font-size:12px">仅阶段切换时注入</span></td><td>大部分轮次增量归零；50 轮+ 省约 5000 tok</td></tr>
+      <tr><td><b>③ 协议懒加载</b><br><span style="color:var(--faint);font-size:12px">"启动3D9M"激活后才加载</span></td><td>平时完全零开销</td></tr>
+    </table>
+    <p style="margin:10px 0 0;font-size:13px;color:var(--faint);">推荐策略：默认启用②（statusLineMode: "on-change"），可与①叠加。</p>
+  </div>
+</div>
+
 <!-- ══════ 一句话总结 ══════ -->
 <div style="text-align:center;padding:60px 0 20px;">
   <p style="font-family:Georgia,serif;font-size:20px;color:var(--text);margin:0 0 8px;">
