@@ -87,7 +87,7 @@ namespace XiaoHeiMao
         public void Follow()
         {
             if (Shell.Pet == null) return;
-            Location = new Point(Shell.Pet.Location.X, Math.Max(0, Shell.Pet.Location.Y - RING_H + 30));
+            Location = new Point(Shell.Pet.Location.X, Math.Max(0, Shell.Pet.Location.Y - RING_H + 56));
         }
 
         /// <summary>拉总览：harness 去重并集 + 各 harness 最近写盘时间 + 整理模式</summary>
@@ -157,6 +157,17 @@ namespace XiaoHeiMao
             return img;
         }
 
+        /// <summary>不透明化调暗：向面板底色混合。分层窗口里「半透明」=透视桌面，
+        /// 透过圆盘看到桌面内容，观感糊——所以调暗一律用实心混合色，不降 alpha。</summary>
+        static Color DimColor(Color c, double k)
+        {
+            Color bg = Color.FromArgb(0x14, 0x14, 0x16);
+            return Color.FromArgb(255,
+                (int)(bg.R + (c.R - bg.R) * k),
+                (int)(bg.G + (c.G - bg.G) * k),
+                (int)(bg.B + (c.B - bg.B) * k));
+        }
+
         void Render()
         {
             if (!_dirty || !Visible || !IsHandleCreated) return;
@@ -170,10 +181,10 @@ namespace XiaoHeiMao
                 {
                     bool live = _modeOn && _liveAt.TryGetValue(c.H, out var la) && now - la < LIVE_MS;
                     var col = ICON_COLOR.TryGetValue(c.H, out var cc) ? cc : ICON_COLOR["other"];
-                    float dim = !_modeOn ? 0.38f : live ? 1f : 0.55f;   // 关=暗 / 活=亮 / 待命=半暗（对齐 dock）
+                    double k = !_modeOn ? 0.38 : live ? 1.0 : 0.62;   // 关=暗 / 活=亮 / 待命=半亮（实心混合，非透明）
                     var rect = new RectangleF(c.Center.X - CHIP_D / 2f, c.Center.Y - CHIP_D / 2f, CHIP_D, CHIP_D);
-                    using (var bg = new SolidBrush(Color.FromArgb((int)(255 * dim), 0x14, 0x14, 0x16)))
-                    using (var ringPen = new Pen(Color.FromArgb((int)(255 * dim), live ? col : Color.FromArgb(0x28, 0x28, 0x2e)), live ? 2.4f : 1f))
+                    using (var bg = new SolidBrush(Color.FromArgb(0x14, 0x14, 0x16)))   // 圆盘恒不透明
+                    using (var ringPen = new Pen(live ? col : DimColor(col, k * 0.5), live ? 2.4f : 1f))
                     {
                         g.FillEllipse(bg, rect);
                         g.DrawEllipse(ringPen, rect);
@@ -181,7 +192,8 @@ namespace XiaoHeiMao
                     var icon = LoadIcon(c.H);
                     if (icon != null)
                     {
-                        var cm = new ColorMatrix { Matrix33 = dim };
+                        // 图标 alpha 调暗没关系：它是叠在不透明圆盘上的，合成结果仍不透明
+                        var cm = new ColorMatrix { Matrix33 = (float)k };
                         using (var ia = new ImageAttributes())
                         {
                             ia.SetColorMatrix(cm);
@@ -192,7 +204,7 @@ namespace XiaoHeiMao
                     }
                     else
                     {
-                        using (var fg = new SolidBrush(Color.FromArgb((int)(255 * dim), 0xec, 0xec, 0xec)))
+                        using (var fg = new SolidBrush(DimColor(Color.FromArgb(0xec, 0xec, 0xec), k)))
                         using (var font = new Font("Segoe UI", 8f, FontStyle.Bold))
                         {
                             var sz = g.MeasureString(c.H.Substring(0, 1).ToUpper(), font);
