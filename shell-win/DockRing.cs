@@ -87,11 +87,11 @@ namespace XiaoHeiMao
             if (Visible) { Follow(); var ignored = RefreshData(); }
         }
 
-        /// <summary>环贴猫头顶：弧心（窗内 140,140）对到猫耳上方（用户校准：圆心=猫顶-10px、左偏5px）。</summary>
+        /// <summary>环位置（用户校准：圆心=猫顶+190px、左偏25px——芯片落在猫左侧脚边）。</summary>
         public void Follow()
         {
             if (Shell.Pet == null) return;
-            Location = new Point(Shell.Pet.Location.X - 5, Math.Max(0, Shell.Pet.Location.Y - 10));
+            Location = new Point(Shell.Pet.Location.X - 25, Shell.Pet.Location.Y + 190);
         }
 
         /// <summary>拉总览：harness 去重并集 + 各 harness 最近写盘时间 + 整理模式</summary>
