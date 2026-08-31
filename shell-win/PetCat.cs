@@ -81,7 +81,7 @@ namespace XiaoHeiMao
             _tray.DoubleClick += (_, __) => { Show(); Location = SnapPos(Location.X); Render(); };
             _tray.ContextMenuStrip = menu;
 
-            _anim.Tick += (_, __) => Render();
+            _anim.Tick += (_, __) => { try { Render(); } catch (Exception ex) { Shell.LogCrash(ex); } };
             _anim.Start();
         }
 

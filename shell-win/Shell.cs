@@ -26,7 +26,13 @@ namespace XiaoHeiMao
         public static bool Autostart = false;
         public static readonly string RepoRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".."));
         public static readonly string DataRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".mind-board");
+        public static readonly string CrashLog = Path.Combine(DataRoot, "petcat-crash.log");
         public const int Port = 13134;
+
+        public static void LogCrash(object ex)
+        {
+            try { File.AppendAllText(CrashLog, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " " + ex + "\n\n"); } catch { }
+        }
 
         static readonly Dictionary<string, PanelForm> _panels = new Dictionary<string, PanelForm>();
         static CoreWebView2Environment _wvEnv;
@@ -304,10 +310,16 @@ namespace XiaoHeiMao
         [STAThread]
         static void Main()
         {
+            // winexe 无控制台：全局异常一律落文件，崩溃有证据
+            Directory.CreateDirectory(Shell.DataRoot);
+            AppDomain.CurrentDomain.UnhandledException += (_, e) => Shell.LogCrash(e.ExceptionObject);
+            Application.ThreadException += (_, e) => Shell.LogCrash("[UI] " + e.Exception);
             Application.EnableVisualStyles();
             Shell.EnsureServer();
             Shell.Pet = new PetWindow();
-            Application.Run(Shell.Pet);
+            Shell.Pet.Show();
+            // 不绑主窗（ApplicationContext）：猫窗意外被关时进程不死、托盘还在
+            Application.Run(new ApplicationContext());
         }
     }
 }
