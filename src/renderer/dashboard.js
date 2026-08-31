@@ -37,7 +37,7 @@ function render() {
 
   /* 统计条 */
   const active = projects.filter((p) => p.active !== false);
-  const totalGaps = active.reduce((s, p) => s + (p.counts?.gaps || 0), 0);
+  const totalItems = active.reduce((s, p) => s + (p.counts?.total || 0), 0);
   const pending = projects.filter((p) => p.pendingNewTask).length;
   const liveH = new Set();
   for (const p of active) for (const h of (p.harnesses || [])) {
@@ -72,7 +72,7 @@ function render() {
   if (stateEl.sort === "recent") {
     list.sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0));
   } else if (stateEl.sort === "gaps") {
-    list.sort((a, b) => (b.counts?.gaps || 0) - (a.counts?.gaps || 0));
+    list.sort((a, b) => (b.counts?.total || 0) - (a.counts?.total || 0));
   } else if (stateEl.sort === "name") {
     list.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
   }
@@ -90,10 +90,10 @@ function render() {
       </div>
       <div class="goal ${goal ? "has" : ""}" title="${esc(goal)}">${goal ? "🎯 " + esc(goal) : "🎯 目标未定"}</div>
       <div class="counts">
-        <span class="cnt">想法 <b>${(c.ideas || 0) + (c.doneIdeas || 0)}</b></span>
-        <span class="cnt gaps ${c.gaps ? "warn" : ""}">缺口 <b>${c.gaps || 0}</b></span>
-        <span class="cnt">方案 <b>${c.plans || 0}</b></span>
-        <span class="cnt">要点 <b>${c.points || 0}</b></span>
+        <span class="cnt">价值 <b>${c.why || 0}</b></span>
+        <span class="cnt">结构 <b>${c.what || 0}</b></span>
+        <span class="cnt">路径 <b>${c.how || 0}</b></span>
+        <span class="cnt">合计 <b>${c.total || 0}</b></span>
       </div>
       ${p.pendingNewTask ? `<div class="pending">⚠ 有未确认的新目标</div>` : ""}
       <div class="hrow">${hs}<span class="ago">${agoS}</span></div>

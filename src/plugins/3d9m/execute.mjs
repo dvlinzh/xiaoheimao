@@ -3,25 +3,14 @@
 // 状态持久化到 ~/.mind-board/projects/<id>.json 的 stage3d9m 字段。
 
 import { readSettings, organize, fullSkeleton } from "../core/store.mjs";
+import { getModuleStatus as _getModuleStatus } from "./protocol-3d9m.mjs";
 
 /** 阶段枚举 */
 export const STAGES = ["播种", "定锚", "拆骨", "通路", "执行", "存档"];
 
-/** 从骨架读九模块完成度（与 protocol-3d9m.getModuleStatus 同源逻辑） */
+/** 从骨架读九模块完成度（与 protocol-3d9m 同源） */
 export function getModuleStatus(skeleton) {
-  const st = { valueDone: "todo", structDone: "todo", pathDone: "todo" };
-  if (!skeleton) return st;
-  const val = (skeleton.ideas || []).filter((i) => i.group === "3d9m-value");
-  if (val.length >= 3) st.valueDone = "done";
-  else if (val.length > 0) st.valueDone = "pending";
-  const str = (skeleton.plans || []).filter((p) => p.group === "3d9m-struct");
-  if (str.length >= 3) st.structDone = "done";
-  else if (str.length > 0) st.structDone = "pending";
-  const paths = (skeleton.plans || []).flatMap((p) => p.paths || []).filter((p) => p.type === "3d9m-path");
-  const fb = (skeleton.points || []).filter((p) => p.type === "3d9m-feedback");
-  if (paths.length > 0 && fb.length > 0) st.pathDone = "done";
-  else if (paths.length > 0 || fb.length > 0) st.pathDone = "pending";
-  return st;
+  return _getModuleStatus(skeleton);
 }
 
 /** 从组织配置读取当前阶段（stage3d9m 字段），无则默认 0 */
@@ -37,7 +26,7 @@ export function setStage(projectId, stage) {
 }
 
 /** 阶段推进判定：根据九模块完成度返回建议的下一阶段
- *  价值维≥3 条 → 阶段一完成 → 推进阶段二；以此类推。 */
+ *  价值维✅ → 拆骨；结构维✅ → 通路；路径维✅ → 执行 */
 export function suggestStage(skeleton) {
   const st = getModuleStatus(skeleton);
   if (st.valueDone === "done" && st.structDone === "todo") return 2;   // 价值维✅ → 拆骨
@@ -81,3 +70,5 @@ export function attachMetadata(organizeArgs, moduleName, stage, status) {
     },
   };
 }
+
+/** 从组织配置读取当前阶段（stage3d9m 字段），无则默认 0 */

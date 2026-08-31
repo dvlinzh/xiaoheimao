@@ -158,23 +158,26 @@ function renderChrome(s) {
   $("#pending-banner").hidden = !s.pendingNewTask;
 }
 
-/* 像素 HP 血条：已敲定要点 / 全部要点 */
+/* 维度进度：价值/结构/路径三维各自的完成度（按记录骨架下限计） */
 function renderHp(c) {
   const bar = $("#hp-bar");
-  const total = (c.points || 0);
-  const decided = (c.decidedPoints || 0);
-  const segs = 10;
-  let fill = total > 0 ? Math.round((decided / total) * segs) : 0;
+  const segs = 9;   // 九模块
+  const mins = { anchor:1, audience:1, proposition:1, modules:3, skeleton:2, boundaries:2, link:3, bottlenecks:1, feedback:1 };
+  let done = 0, total = 0;
+  const dims = curSkeleton?.goals?.find((g) => g.id === curSkeleton?.currentGoalId)?.dims;
+  for (const [mod, min] of Object.entries(mins)) {
+    total++;
+    const dim = mod === "anchor" || mod === "audience" || mod === "proposition" ? "why" : mod === "link" || mod === "bottlenecks" || mod === "feedback" ? "how" : "what";
+    if ((dims?.[dim]?.[mod] || []).length >= min) done++;
+  }
   bar.replaceChildren();
   for (let i = 0; i < segs; i++) {
     const cell = document.createElement("i");
-    if (i < fill) cell.className = "f";
+    if (i < done) cell.className = "f";
     bar.appendChild(cell);
   }
-  bar.classList.toggle("low", total > 0 && fill <= segs * 0.3);
-  $("#hp-text").textContent = total > 0
-    ? `${decided}/${total}`
-    : "NO DATA";
+  bar.classList.toggle("low", done <= segs * 0.3);
+  $("#hp-text").textContent = done + "/" + segs + " 模块";
 }
 
 function goalOf(sk) {
@@ -321,8 +324,11 @@ function mkSpan(cls, text) {
   s.className = cls; s.textContent = text;
   return s;
 }
+/* 九模块提示文案键（i18n 暂无 → 直接用中文） */
 const HINT_KEYS = {
-  ideas: "hint.ideas", points: "hint.points", plans: "hint.plans", gaps: "hint.gaps",
+  anchor: "记触发场景/痛点", audience: "记核心受众特征", proposition: "一句话价值主张",
+  modules: "功能拆解：模块+职责", skeleton: "删掉就垮的骨架", boundaries: "明确不做",
+  link: "流程步骤", bottlenecks: "缺什么/卡在哪", feedback: "信息如何回流",
 };
 
 function hintLi(text) {   // 空层占位提示（重构时曾被删定义——空层一渲染就抛错，后续层全部消失）
@@ -331,144 +337,16 @@ function hintLi(text) {   // 空层占位提示（重构时曾被删定义——
   li.textContent = text;
   return li;
 }
-function renderLayer(listEl, kind, goal) {
+function renderLayer(listEl, dim, mod, goal) {
   listEl.replaceChildren();
-  const arr = goal[kind] || [];
-  if (!arr.length) { listEl.appendChild(hintLi(I18N.t(HINT_KEYS[kind]))); return; }
-
-  if (kind === "ideas") {
-    const openArr = arr.filter((it) => !it.done);
-    const doneArr = arr.filter((it) => it.done);
-    // 【动态分组】未实现想法按 group 归类；无 group 的单独平铺
-    const groups = {};
-    const standalone = [];
-    for (const it of openArr) {
-      const g = it.group;
-      if (g) (groups[g] = groups[g] || []).push(it);
-      else standalone.push(it);
-    }
-    const redraw = () => renderLayers(curSkeleton);
-    for (const [gname, items] of Object.entries(groups)) {
-      const key = "ideas:" + gname;
-      const isOpen = !!expGroup[key];
-      listEl.appendChild(mkGroupHead(gname, items.length + " 条", isOpen, "", () => {
-        expGroup[key] = !isOpen;
-        redraw();
-      }));
-      if (isOpen) for (const it of items) listEl.appendChild(mkIdeaLi(it));
-    }
-    for (const it of standalone) listEl.appendChild(mkIdeaLi(it));
-    // 已实现：收进折叠区
-    if (doneArr.length) {
-      const key = "ideas:__done";
-      const isOpen = !!expGroup[key];
-      listEl.appendChild(mkGroupHead("已实现", doneArr.length + " 条", isOpen, "grp-done", () => {
-        expGroup[key] = !isOpen;
-        redraw();
-      }));
-      if (isOpen) for (const it of doneArr) listEl.appendChild(mkIdeaLi(it));
-    }
-  } else if (kind === "points") {
-    for (const it of arr) {
-      if (it.superseded) continue;                     // 被新结论替代：不再渲染
-      const li = mkLi(it.link ? "has-link" : "", { layer: "points", id: it.id });
-      li.appendChild(mkSpan("li-mark", "▸"));
-      li.appendChild(mkSpan("li-text", it.text));
-      if (it.link) {
-        // 理解物索引：点击整行 → 面板内预览完整版；↗ 走系统浏览器
-        li.classList.add("clickable");
-        li.title = "点击预览完整版";
-        const lk = mkSpan("li-act", "↗");
-        lk.title = "浏览器打开完整版";
-        lk.addEventListener("click", (e) => {
-          e.stopPropagation();
-          window.bubbleBridge?.openExternal(it.link);
-        });
-        li.appendChild(lk);
-        li.addEventListener("click", (e) => {
-          if (ovSuppress) return;
-          if (e.target.closest(".li-act")) return;
-          showPreview(it.text, it.link);
-        });
-      }
-      bindItemDrag(li, { layer: "points", id: it.id }, it.text);
-      listEl.appendChild(li);
-    }
-  } else if (kind === "plans") {
-    let num = 0;
-    const mkPlanRow = (it) => {
-      num++;
-      const li = mkLi("pl-row", { layer: "plans", id: it.id });
-      const head = document.createElement("div"); head.className = "pl-head";
-      head.appendChild(mkSpan("li-mark", String(num)));
-      head.appendChild(mkSpan("li-text", it.title));
-      const ops = document.createElement("div"); ops.className = "pl-ops";
-      const bChosen = document.createElement("button");
-      bChosen.className = "pl-btn" + (it.chosen ? " chosen" : "");
-      bChosen.textContent = it.chosen ? I18N.t("plan.adopted") : I18N.t("plan.adopt");
-      bChosen.disabled = !!it.chosen;
-      bChosen.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        await jfetch("/api/action", { projectId: curProjectId, action: "choose-plan", params: { id: it.id } });
-        loadSkeleton(true);
-      });
-      const bDis = document.createElement("button");
-      bDis.className = "pl-btn" + (it.dismissed ? " dismissed" : "");
-      bDis.textContent = it.dismissed ? I18N.t("plan.dismissed") : I18N.t("plan.dismiss");
-      bDis.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        await jfetch("/api/action", { projectId: curProjectId, action: "dismiss-plan", params: { id: it.id } });
-        loadSkeleton(true);
-      });
-      ops.append(bChosen, bDis);
-      head.appendChild(ops);
-      li.appendChild(head);
-      for (const p of it.paths || []) {
-        const pd = mkSpan("pl-path", "· " + (p.step || ""));
-        li.appendChild(pd);
-      }
-      bindItemDrag(li, { layer: "plans", id: it.id }, it.title);
-      return li;
-    };
-    // 【按问题归组】有 group 的方案聚成可折叠组，组头即「针对什么问题」；
-    // 组内含采用方案时组头标「采用中」——一眼看出每个问题当前押注的路线
-    const groups = {}, standalone = [];
-    for (const it of arr) {
-      const g = it.group;
-      if (g) (groups[g] = groups[g] || []).push(it);
-      else standalone.push(it);
-    }
-    for (const [gname, items] of Object.entries(groups)) {
-      const key = "plans:" + gname;
-      const isOpen = !!expGroup[key];
-      const adopted = items.some((x) => x.chosen);
-      listEl.appendChild(mkGroupHead("🎯 " + gname, items.length + " 案" + (adopted ? " · 采用中" : ""), isOpen, adopted ? "grp-adopted" : "", () => {
-        expGroup[key] = !isOpen;
-        renderLayers(curSkeleton);
-      }));
-      if (isOpen) for (const it of items) listEl.appendChild(mkPlanRow(it));
-    }
-    for (const it of standalone) listEl.appendChild(mkPlanRow(it));
-  } else if (kind === "gaps") {
-    for (const it of arr) {
-      const stale = !it.resolved && it.at && (Date.now() - Date.parse(it.at)) > 14 * 86400000;
-      const li = mkLi((it.resolved ? "gp-resolved" : "") + (!it.resolved && stale ? " gp-stale" : ""), { layer: "gaps", id: it.id });
-      const dot = document.createElement("i");
-      dot.className = "gp-dot";
-      li.appendChild(dot);
-      li.appendChild(mkSpan("li-text", it.text));
-      // 已解决标记改为显式 ✓ 按钮——点击行不再误触翻转
-      const ok = mkSpan("li-act", "✓");
-      ok.title = it.resolved ? "重新打开" : "标记已解决";
-      ok.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        await jfetch("/api/action", { projectId: curProjectId, action: "toggle-gap", params: { id: it.id } });
-        loadSkeleton(true);
-      });
-      li.appendChild(ok);
-      bindItemDrag(li, { layer: "gaps", id: it.id }, it.text);
-      listEl.appendChild(li);
-    }
+  const arr = goal?.dims?.[dim]?.[mod] || [];
+  if (!arr.length) { listEl.appendChild(hintLi(HINT_KEYS[mod] || "")); return; }
+  for (const it of arr) {
+    const li = mkLi("", { layer: mod, id: it.id });
+    li.appendChild(mkSpan("li-mark", "▸"));
+    li.appendChild(mkSpan("li-text", it.text ?? it.title));
+    bindItemDrag(li, { dim, mod, id: it.id }, it.text ?? it.title);
+    listEl.appendChild(li);
   }
 }
 
@@ -476,16 +354,23 @@ function renderLayers(sk) {
   const goal = goalOf(sk);
   const c = curSummary?.counts || {};
   renderHp(c);
-  $("#c-ideas").textContent = c.ideas != null ? `${c.ideas + (c.doneIdeas||0)}${I18N.t("unit.items")}` : "";
-  $("#c-points").textContent = c.points ? `${c.points}${I18N.t("unit.items")}` : "";
-  $("#c-plans").textContent = c.plans ? `${c.plans}${I18N.t("unit.plans")}` : "";
-  $("#c-gaps").textContent = c.gaps ? `${c.gaps}${I18N.t("gaps.todo")}` : I18N.t("gaps.clear");
+  // 九模块计数徽标
+  const dimCount = (dim, mod) => (goal?.dims?.[dim]?.[mod] || []).length;
+  const setC = (id, n) => { const el = $("#" + id); if (el) el.textContent = n ? String(n) : ""; };
+  setC("c-anchor", dimCount("why","anchor")); setC("c-audience", dimCount("why","audience")); setC("c-proposition", dimCount("why","proposition"));
+  setC("c-modules", dimCount("what","modules")); setC("c-skeleton", dimCount("what","skeleton")); setC("c-boundaries", dimCount("what","boundaries"));
+  setC("c-link", dimCount("how","link")); setC("c-bottlenecks", dimCount("how","bottlenecks")); setC("c-feedback", dimCount("how","feedback"));
   if (!goal) return;
   renderGoalList(sk);
-  renderLayer($("#list-ideas"), "ideas", goal);
-  renderLayer($("#list-points"), "points", goal);
-  renderLayer($("#list-plans"), "plans", goal);
-  renderLayer($("#list-gaps"), "gaps", goal);
+  renderLayer($("#list-anchor"), "why", "anchor", goal);
+  renderLayer($("#list-audience"), "why", "audience", goal);
+  renderLayer($("#list-proposition"), "why", "proposition", goal);
+  renderLayer($("#list-modules"), "what", "modules", goal);
+  renderLayer($("#list-skeleton"), "what", "skeleton", goal);
+  renderLayer($("#list-boundaries"), "what", "boundaries", goal);
+  renderLayer($("#list-link"), "how", "link", goal);
+  renderLayer($("#list-bottlenecks"), "how", "bottlenecks", goal);
+  renderLayer($("#list-feedback"), "how", "feedback", goal);
 }
 
 /* ── 拖边缩放：抓边条 → 主进程跟随光标 ── */

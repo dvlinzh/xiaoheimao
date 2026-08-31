@@ -58,21 +58,22 @@ export function statusLine3D9M(s) {
   return `[3D×9M] 阶段:${stage} | 价值维:${mark(s.valueDone)} 结构维:${mark(s.structDone)} 路径维:${mark(s.pathDone)} | ${s.currentGoal || "无目标"}`;
 }
 
-/** 从骨架数据读取九模块完成状态
- *  价值维✅ = ideas 层 3d9m-value ≥3 条；路径维✅ = 有 3d9m-path 且有 3d9m-feedback；
- *  结构维✅ = plans 层 3d9m-struct ≥3 条。 */
+/** 从骨架数据读取九模块完成状态（骨架已升维为三维九模块，直接读 dims）
+ *  各维度 done = 该维三个模块都过下限（anchor≥1/audience≥1/proposition≥1、
+ *  modules≥3/skeleton≥2/boundaries≥2、link≥3/bottlenecks≥1/feedback≥1） */
 export function getModuleStatus(skeleton) {
   const st = { valueDone: "todo", structDone: "todo", pathDone: "todo" };
-  if (!skeleton) return st;
-  const val = (skeleton.ideas || []).filter((i) => i.group === "3d9m-value");
-  if (val.length >= 3) st.valueDone = "done";
-  else if (val.length > 0) st.valueDone = "pending";
-  const str = (skeleton.plans || []).filter((p) => p.group === "3d9m-struct");
-  if (str.length >= 3) st.structDone = "done";
-  else if (str.length > 0) st.structDone = "pending";
-  const paths = (skeleton.plans || []).flatMap((p) => p.paths || []).filter((p) => p.type === "3d9m-path");
-  const fb = (skeleton.points || []).filter((p) => p.type === "3d9m-feedback");
-  if (paths.length > 0 && fb.length > 0) st.pathDone = "done";
-  else if (paths.length > 0 || fb.length > 0) st.pathDone = "pending";
+  const dims = skeleton?.dims;
+  if (!dims) return st;
+  const n = (dim, mod) => (dims[dim]?.[mod] || []).length;
+  const whyOk = n("why", "anchor") >= 1 && n("why", "audience") >= 1 && n("why", "proposition") >= 1;
+  const whyAny = n("why", "anchor") + n("why", "audience") + n("why", "proposition") > 0;
+  st.valueDone = whyOk ? "done" : whyAny ? "pending" : "todo";
+  const whatOk = n("what", "modules") >= 3 && n("what", "skeleton") >= 2 && n("what", "boundaries") >= 2;
+  const whatAny = n("what", "modules") + n("what", "skeleton") + n("what", "boundaries") > 0;
+  st.structDone = whatOk ? "done" : whatAny ? "pending" : "todo";
+  const howOk = n("how", "link") >= 3 && n("how", "bottlenecks") >= 1 && n("how", "feedback") >= 1;
+  const howAny = n("how", "link") + n("how", "bottlenecks") + n("how", "feedback") > 0;
+  st.pathDone = howOk ? "done" : howAny ? "pending" : "todo";
   return st;
 }

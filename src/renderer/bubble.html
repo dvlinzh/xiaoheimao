@@ -61,21 +61,44 @@
     </section>
 
     <main id="layers">
-      <details open class="layer" title="第1层 · 想法：对项目的设想、蓝图与目标（愿景层）——过程、事实、任务不进这里">
-        <summary><span data-i18n="layer.ideas">想法</span> <em id="c-ideas"></em></summary>
-        <ul class="items" id="list-ideas"></ul>
+      <!-- 价值维 Why -->
+      <details open class="layer dim-why" title="价值维 · 需求锚点：触发场景/痛点">
+        <summary>需求锚点 <em id="c-anchor"></em></summary>
+        <ul class="items" id="list-anchor"></ul>
       </details>
-      <details open class="layer" title="第2层 · 缺口：从设想到落地的逻辑闭环缺失——要做X，还缺Y">
-        <summary><span data-i18n="layer.gaps">缺口</span> <em id="c-gaps"></em></summary>
-        <ul class="items" id="list-gaps"></ul>
+      <details open class="layer dim-why" title="价值维 · 受众画像：核心受众行为特征">
+        <summary>受众画像 <em id="c-audience"></em></summary>
+        <ul class="items" id="list-audience"></ul>
       </details>
-      <details open class="layer" title="第3层 · 方案：填充缺口的候选路线，采用唯一">
-        <summary><span data-i18n="layer.plans">方案</span> <em id="c-plans"></em></summary>
-        <ul class="items" id="list-plans"></ul>
+      <details open class="layer dim-why" title="价值维 · 价值主张：一句话通过__为__解决__">
+        <summary>价值主张 <em id="c-proposition"></em></summary>
+        <ul class="items" id="list-proposition"></ul>
       </details>
-      <details open class="layer" title="第4层 · 要点：重点预览——结论/表格/分析图/项目地图的提炼，↗ 打开完整版">
-        <summary><span data-i18n="layer.points">要点</span> <em id="c-points"></em></summary>
-        <ul class="items" id="list-points"></ul>
+      <!-- 结构维 What -->
+      <details open class="layer dim-what" title="结构维 · 功能拆解：模块名+一句话职责">
+        <summary>功能拆解 <em id="c-modules"></em></summary>
+        <ul class="items" id="list-modules"></ul>
+      </details>
+      <details open class="layer dim-what" title="结构维 · 骨架识别：删掉就垮的核心模块">
+        <summary>骨架识别 <em id="c-skeleton"></em></summary>
+        <ul class="items" id="list-skeleton"></ul>
+      </details>
+      <details open class="layer dim-what" title="结构维 · 边界定义：明确不做">
+        <summary>边界定义 <em id="c-boundaries"></em></summary>
+        <ul class="items" id="list-boundaries"></ul>
+      </details>
+      <!-- 路径维 How -->
+      <details open class="layer dim-how" title="路径维 · 核心链路：步骤名→输出">
+        <summary>核心链路 <em id="c-link"></em></summary>
+        <ul class="items" id="list-link"></ul>
+      </details>
+      <details open class="layer dim-how" title="路径维 · 依赖与瓶颈：缺什么/卡在哪">
+        <summary>依赖与瓶颈 <em id="c-bottlenecks"></em></summary>
+        <ul class="items" id="list-bottlenecks"></ul>
+      </details>
+      <details open class="layer dim-how" title="路径维 · 反馈闭环：什么信息回流">
+        <summary>反馈闭环 <em id="c-feedback"></em></summary>
+        <ul class="items" id="list-feedback"></ul>
       </details>
     </main>
 

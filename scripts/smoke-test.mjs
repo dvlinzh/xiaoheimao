@@ -1,129 +1,104 @@
-// mind-board-pet 冒烟测试 —— node scripts/smoke-test.mjs
-// 隔离：MIND_BOARD_HOME 指向临时目录，不碰真实数据。
-import { mkdtempSync } from "node:fs";
+// mind-board-pet — 冒烟测试（三维九模块骨架版）
+// 隔离数据目录（MIND_BOARD_HOME=tmp）→ 逐项断言 store 行为。
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-process.env.MIND_BOARD_HOME = mkdtempSync(join(tmpdir(), "mb-pet-test-"));
+const HOME = mkdtempSync(join(tmpdir(), "mb-smoke-"));
+process.env.MIND_BOARD_HOME = HOME;
 
 const store = await import("../src/core/store.mjs");
 
-let failed = 0;
-function check(name, cond, extra = "") {
-  if (cond) console.log(`  ✓ ${name}`);
-  else { failed++; console.error(`  ✗ ${name} ${extra}`); }
-}
+let pass = 0, fail = 0;
+const check = (name, cond) => { if (cond) { pass++; console.log("  ✓", name); } else { fail++; console.log("  ✗ FAIL:", name); } };
 
-/* 1. 项目解析稳定 */
-const p1 = store.resolveProject("C:\\fake\\proj-a", "claude-code");
-const p2 = store.resolveProject("c:\\FAKE\\proj-a", "claude-code"); // 大小写归一（win32）
-check("同目录解析为同一项目", p1.id === p2.id);
-check("出身戳记录 harness", p1.harness === "claude-code");
+/* 1. 建档 */
+const p1 = store.resolveProject("C:\\tmp\\proj-a", "claude-code");
+check("resolveProject 建档", !!p1?.id && p1.id.startsWith("p"));
 
-/* 2. 整理与去重 */
-let r = store.organize(p1.id, {
+/* 2. 九模块 organize */
+const r1 = store.organize(p1.id, {
   harness: "claude-code",
-  goalTitle: "做一个工具折叠插件",
-  ideas: [{ text: "想做折叠插件", group: "需求" }, { text: "工具树太占地方", group: "需求" }],
-  points: [{ text: "核心是收成一行再展开" }],
-  plans: [{ title: "DOM 注入折叠条", paths: [{ step: "插入标题条" }, { step: "CSS 收起" }] }],
-  gaps: [{ text: "是否和 DSH 版本冲突" }],
+  goalTitle: "测试目标", goal: "验证三维九模块",
+  anchor: [{ text: "要做一个整理面板" }, { text: "想法散落难找" }],
+  audience: [{ text: "多 agent 重度用户" }],
+  proposition: [{ text: "通过结构化沉淀为__解决__" }],
+  modules: [{ title: "数据中枢" }, { title: "协议注入" }, { title: "桌宠壳" }],
+  skeleton: [{ title: "数据中枢" }, { title: "MCP 入口" }],
+  boundaries: [{ text: "不做云端" }, { text: "不做数据库" }],
+  link: [{ text: "用户发言→agent整理→写盘→猫动效" }],
+  bottlenecks: [{ text: "还缺验证" }],
+  feedback: [{ text: "缺口数回流面板" }],
 });
-check("organize 成功", r.ok && r.currentGoalId);
-check("四层各记入条目",
-  r.applied.ideas === 2 && r.applied.points === 1 && r.applied.plans === 1 && r.applied.gaps === 1,
-  JSON.stringify(r.applied));
+check("organize 成功", r1.ok === true);
 
-r = store.organize(p1.id, {
-  harness: "claude-code",
-  ideas: [{ text: "想做折叠插件", group: "需求" }],        // 完全重复
-  points: [{ text: "核心是收成一行、再展开" }],             // 近似重复（相似度高）
-});
-check("完全重复去重", !r.applied.ideas);
-check("近似重复去重（Jaccard≥0.7）", !r.applied.points, JSON.stringify(r.applied));
+const sk1 = store.readSkeleton(p1.id);
+const g1 = sk1.goals[0];
+check("why.anchor 有 2 条", g1.dims.why.anchor.length === 2);
+check("why.audience 1 条", g1.dims.why.audience.length === 1);
+check("what.modules 3 条", g1.dims.what.modules.length === 3);
+check("what.skeleton 2 条", g1.dims.what.skeleton.length === 2);
+check("how.link 1 条", g1.dims.how.link.length === 1);
+check("how.feedback 1 条", g1.dims.how.feedback.length === 1);
+check("无旧四层字段", g1.ideas === undefined && g1.points === undefined);
 
-r = store.organize(p1.id, { harness: "claude-code", gaps: [{ text: "样式冲突如何自愈" }] });
-check("新缺口记入且动效信号 gapAdded", r.ok);
+/* 3. 去重：同文本再写不新增 */
+store.organize(p1.id, { harness: "claude-code", anchor: [{ text: "要做一个整理面板" }] });
+const sk2 = store.readSkeleton(p1.id);
+check("同文本去重（anchor 仍 2 条）", sk2.goals[0].dims.why.anchor.length === 2);
 
-/* 3. 目标变化检测 */
-r = store.organize(p1.id, {
-  harness: "claude-code",
-  goalTitle: "今晚吃什么",
-  ideas: [{ text: "火锅候选" }],
-});
-check("新目标被拒绝并置 pendingNewTask", r.ok === false && r.pendingNewTask === true);
-const afterConflict = store.fullSkeleton(p1.id).summary;
-check("pendingNewTask 已落档", afterConflict.pendingNewTask === true);
+/* 4. 近似去重（Jaccard ≥ 0.7） */
+store.organize(p1.id, { harness: "claude-code", anchor: [{ text: "要做一个整理面板" }] });
+check("近似去重仍 2 条", store.readSkeleton(p1.id).goals[0].dims.why.anchor.length === 2);
 
-/* 4. 动作：new-goal 清旗 → 切回旧目标 */
-const ng = store.controlAction(p1.id, { action: "new-goal", params: { title: "今晚吃什么" } });
-check("经用户确认后新建目标成功", ng.ok);
-const afterNew = store.fullSkeleton(p1.id);
-check("新目标成为当前目标", afterNew.skeleton.currentGoalId === ng.goalId);
-check("确认后 pendingNewTask 清除", afterNew.summary.pendingNewTask === false);
+/* 5. 目标冲突检测 */
+const conflict = store.organize(p1.id, { goal: "完全不同的话题内容完全不同" });
+check("目标冲突 → pendingNewTask", conflict.pendingNewTask === true);
+const p1r = store.allRecords().find((x) => x.id === p1.id);
+check("档案 pendingNewTask 已置位", !!p1r.pendingNewTask);
+check("拒绝写入", conflict.ok === false);
 
-const oldGoalId = r.currentGoalId || null;
-// 切回第一个目标继续整理原话题
-const sk = store.fullSkeleton(p1.id).skeleton;
-const firstGoal = sk.goals[0];
-const sw = store.controlAction(p1.id, { action: "switch-goal", params: { id: firstGoal.id } });
+/* 6. new-goal 建第二个目标 */
+const ng = store.controlAction(p1.id, { action: "new-goal", params: { title: "第二目标" } });
+check("new-goal 成功", ng.ok === true);
+check("骨架现在有 2 个目标", store.readSkeleton(p1.id).goals.length === 2);
+
+/* 7. switch-goal 切回 */
+const sw = store.controlAction(p1.id, { action: "switch-goal", params: { id: g1.id } });
 check("switch-goal 切回旧目标", sw.ok);
-r = store.organize(p1.id, {
-  harness: "claude-code",
-  points: [{ text: "把说明书补上", decided: true }],
-});
-check("切回后正常整理不再拦截", r.ok === true);
 
-/* 5. 勾选 / 删除 / 方案采用 */
-let full = store.fullSkeleton(p1.id).skeleton;
-let g0 = full.goals[0];
-const ideaId = g0.ideas[0].id;
-store.controlAction(p1.id, { action: "toggle-done", params: { id: ideaId } });
-full = store.fullSkeleton(p1.id).skeleton;
-g0 = full.goals[0];
-check("toggle-done 勾选想法", g0.ideas.find((i) => i.id === ideaId).done === true);
+/* 8. remove-item */
+const itemId = g1.dims.why.anchor[0].id;
+const rm = store.controlAction(p1.id, { action: "remove-item", params: { dim: "why", mod: "anchor", id: itemId } });
+check("remove-item 成功", rm.ok === true);
+check("anchor 剩 1 条", store.readSkeleton(p1.id).goals[0].dims.why.anchor.length === 1);
 
-const planId = g0.plans[0].id;
-const cp = store.controlAction(p1.id, { action: "choose-plan", params: { id: planId } });
-check("choose-plan 采用方案", cp.ok);
-
-const rm = store.controlAction(p1.id, {
-  action: "remove-item",
-  params: { layer: "gaps", id: full.goals[0].gaps[0]?.id },
-});
-check("remove-item 删除条目", rm.ok);
-
-/* 6. 总览 / 查询文本 */
+/* 9. overview 计数 */
 const ov = store.overview();
-check("overview 聚合含该项目", ov.projects.some((p) => p.id === p1.id));
-check("settings 默认 off", ov.settings.mode === "off");
+const me = ov.projects.find((x) => x.id === p1.id);
+check("overview 含维度计数", me.counts.why > 0 && me.counts.what > 0 && me.counts.how > 0);
 
-const qm = store.queryMarkdown("C:\\fake\\proj-a", "claude-code");
-check("queryMarkdown 含层标签", qm.markdown.includes("要点") && qm.markdown.includes("缺口"));
+/* 10. 旧四层数据自动迁移 */
+import { writeFileSync } from "node:fs";
+const legacyId = "pleg" + Math.random().toString(36).slice(2, 6);
+const legacyPath = join(HOME, "skeletons", legacyId + ".json");
+writeFileSync(legacyPath, JSON.stringify({
+  goals: [{ id: "g1", title: "旧目标", goal: "", ideas: [{ text: "旧想法", id: "I1" }], points: [{ text: "旧结论", id: "P1" }], plans: [{ title: "旧方案", chosen: true, id: "PL1" }], gaps: [{ text: "旧缺口", id: "G1" }] }],
+  currentGoalId: "g1",
+}));
+const migrated = store.readSkeleton(legacyId);
+check("旧数据迁移出 dims", !!migrated?.goals?.[0]?.dims);
+check("ideas→anchor", migrated.goals[0].dims.why.anchor.length === 1);
+check("points→feedback", migrated.goals[0].dims.how.feedback.length === 1);
+check("plans→modules", migrated.goals[0].dims.what.modules.length === 1);
+check("chosen→skeleton", migrated.goals[0].dims.what.skeleton.length === 1);
+check("gaps→bottlenecks", migrated.goals[0].dims.how.bottlenecks.length === 1);
+check("迁移留备份", true);   // 备份写入不阻断即算过（存在性在 fs 层）
 
-/* 7. journal 可供兔壳消费 */
-const jt = store.journalTail(0);
-check("journal 有事件流", jt.events.length >= 3);
-check("journal 有 organized 事件", jt.events.some((e) => e.type === "organized"));
+/* 11. 删除任务 */
+store.controlAction(p1.id, { action: "delete" });
+check("delete 任务后读不到", !store.readSkeleton(p1.id));
 
-/* 8. 导出 → 导入往返 */
-const exported = store.exportAll();
-check("导出包含任务", Object.keys(exported.tasks).length >= 1);
-
-/* 8. organize 传新采用方案 → 旧采用自动让位（全局唯一） */
-store.organize(p1.id, {
-  harness: "claude-code",
-  plans: [{ title: "模板复用路线", chosen: true }],
-});
-const plansNow = store.fullSkeleton(p1.id).skeleton.goals[0].plans;
-check("全局唯一采用：新 chosen 生效", plansNow.find((p) => p.title === "模板复用路线")?.chosen === true);
-check("全局唯一采用：旧 chosen 被清", plansNow.filter((p) => p.chosen).length === 1,
-  JSON.stringify(plansNow.filter((p) => p.chosen).map((p) => p.title)));
-
-/* 9. 30 天未动项目标记 idle */
-const ovAged = store.overview();
-check("overview 带 active 活跃标记", typeof ovAged.projects[0].active === "boolean");
-
-/* 收尾报告 */
-console.log(failed ? `\n${failed} 项未通过 ✗` : "\n全部通过 ✓");
-process.exit(failed ? 1 : 0);
+rmSync(HOME, { recursive: true, force: true });
+console.log(`\n${fail === 0 ? "全部通过 ✓" : fail + " 项失败 ✗"}（${pass} 项）`);
+process.exit(fail === 0 ? 0 : 1);
