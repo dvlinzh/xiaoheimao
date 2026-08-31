@@ -93,9 +93,73 @@ namespace XiaoHeiMao
             EnsureServer();   // 13134 若已不在（比如 Electron 版退了）就现场拉起，面板永远点得开
             ClosePanel(key);
             var pf = new PanelForm(key, url, w, h);
-            PositionNearPet(pf, key == "dashboard");
+            var saved = LoadPanelBounds(key);
+            if (saved.HasValue)   // 位置记忆：用户拖过/调过大小就用上次的（钳制在屏幕内）
+            {
+                var b = saved.Value;
+                var wa = Screen.PrimaryScreen.WorkingArea;
+                pf.Size = new Size(b.Width, b.Height);
+                pf.Location = new Point(
+                    Math.Max(wa.Left, Math.Min(b.X, wa.Right - b.Width)),
+                    Math.Max(wa.Top, Math.Min(b.Y, wa.Bottom - b.Height)));
+            }
+            else PositionNearPet(pf, key == "dashboard");
             _panels[key] = pf;
             pf.Show();
+        }
+
+        /* ── 整理模式开关（纯 HTTP，不依赖页面桥） ── */
+        static readonly System.Net.Http.HttpClient _http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+        public static string ModeCache = "off";
+
+        public static async Task<string> RefreshModeAsync()
+        {
+            try
+            {
+                var s = await _http.GetStringAsync($"http://127.0.0.1:{Port}/api/overview");
+                var j = new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(s);
+                if (j.TryGetValue("settings", out var st) && st is Dictionary<string, object> sd && sd.TryGetValue("mode", out var m))
+                    ModeCache = Convert.ToString(m);
+            }
+            catch { }
+            return ModeCache;
+        }
+
+        public static async Task ToggleModeAsync()
+        {
+            var next = (await RefreshModeAsync()) == "on" ? "off" : "on";
+            try
+            {
+                await _http.PostAsync($"http://127.0.0.1:{Port}/api/mode",
+                    new System.Net.Http.StringContent("{\"mode\":\"" + next + "\"}", System.Text.Encoding.UTF8, "application/json"));
+                ModeCache = next;
+            }
+            catch { }
+        }
+
+        /* ── 面板位置记忆（~/.mind-board/shell-win-ui.json） ── */
+        static Dictionary<string, int[]> _ui;
+        static string UiFile => Path.Combine(DataRoot, "shell-win-ui.json");
+
+        static void LoadUi()
+        {
+            if (_ui != null) return;
+            _ui = new Dictionary<string, int[]>();
+            try { _ui = new JavaScriptSerializer().Deserialize<Dictionary<string, int[]>>(File.ReadAllText(UiFile)) ?? _ui; } catch { }
+        }
+
+        static Rectangle? LoadPanelBounds(string key)
+        {
+            LoadUi();
+            if (_ui.TryGetValue(key, out var a) && a != null && a.Length == 4) return new Rectangle(a[0], a[1], a[2], a[3]);
+            return null;
+        }
+
+        public static void SavePanelBounds(string key, Rectangle b)
+        {
+            LoadUi();
+            _ui[key] = new[] { b.X, b.Y, b.Width, b.Height };
+            try { File.WriteAllText(UiFile, new JavaScriptSerializer().Serialize(_ui)); } catch { }
         }
 
         public static void ClosePanel(string key)
@@ -139,9 +203,10 @@ namespace XiaoHeiMao
                 case "toggleSettings":
                     TogglePanel("settings", $"http://127.0.0.1:{Port}/settings.html", 274, 420);
                     break;
-                case "panelDrag":
-                    if (from != null) { from.Left += m.dx; from.Top += m.dy; }
-                    break;
+                case "panelDragStart": from?.BeginTrack(null); break;   // 拖头挪窗
+                case "resizeStart": from?.BeginTrack(m.u); break;        // .rz 八向手柄（页面只报开始/结束）
+                case "panelDragEnd": from?.EndTrack(); break;
+                case "panelDrag": break;   // 旧协议残留，忽略（位移由宿主按光标算）
                 case "closeBubble": ClosePanel("bubble"); break;
                 case "close": if (from != null) ClosePanel(from.PanelKey); break;
                 case "hideSettings": ClosePanel("settings"); break;
@@ -238,7 +303,8 @@ namespace XiaoHeiMao
     getState: () => new Promise((res) => { const id = ++cbId; pending[id] = res; post({ t: 'getState', id }); }),
     onPrefs: (cb) => { window.__onPrefs = cb; },
     onDockFade: (cb) => { window.__onDockFade = cb; },
-    resizeStart: () => {}, resizeEnd: () => {},
+    resizeStart: (dir) => post({ t: 'resizeStart', u: dir }),
+    resizeEnd: () => post({ t: 'panelDragEnd' }),
     // C# 壳的穿透由分层窗口天然承担，形状上报全部 no-op
     sendChipRects: () => {}, sendDockShape: () => {}, sendPetShape: () => {},
     onDrag: () => {}, onDragPhys: () => {}, onCursorPos: () => {},
@@ -251,15 +317,12 @@ namespace XiaoHeiMao
     const st = document.createElement('style');
     st.textContent = '#settings{margin:0!important;border:none!important;border-radius:0!important}';
     document.head.appendChild(st);
-    // 面板拖动：Electron 用 -webkit-app-region，WebView2 没有——改为 JS 报位移、宿主挪窗
-    let dg = null;
+    // 面板拖动：对齐 Electron 的「主进程追踪光标」模式——JS 只报开始/结束，
+    // 位移由宿主按全局光标计算（比逐条 mousemove 消息稳，不怕消息洪峰）
     document.addEventListener('mousedown', (e) => {
-      if (e.target.closest('#bd-head') && !e.target.closest('button')) { dg = { x: e.screenX, y: e.screenY }; e.preventDefault(); }
+      if (e.target.closest('#bd-head') && !e.target.closest('button')) { post({ t: 'panelDragStart' }); e.preventDefault(); }
     }, true);
-    document.addEventListener('mousemove', (e) => {
-      if (dg) { post({ t: 'panelDrag', dx: e.screenX - dg.x, dy: e.screenY - dg.y }); dg = { x: e.screenX, y: e.screenY }; }
-    }, true);
-    document.addEventListener('mouseup', () => { dg = null; }, true);
+    document.addEventListener('mouseup', () => post({ t: 'panelDragEnd' }), true);
   });
 })();";
 
@@ -311,6 +374,51 @@ namespace XiaoHeiMao
                 SetWindowRgn(Handle, rgn, true);
             }
             catch { }
+        }
+
+        /* ── 拖动/缩放：页面只报开始结束，宿主按全局光标追踪（与 Electron 主进程同款） ── */
+        Timer _trackTimer;
+        Point _cursor0;
+        Rectangle _bounds0;
+        string _trackDir;   // null=移动；n/s/e/w/ne/...=八向缩放
+
+        public void BeginTrack(string dir)
+        {
+            _trackDir = dir;
+            _cursor0 = Cursor.Position;
+            _bounds0 = Bounds;
+            if (_trackTimer == null)
+            {
+                _trackTimer = new Timer { Interval = 10 };
+                _trackTimer.Tick += (_, __) => TrackTick();
+            }
+            _trackTimer.Start();
+        }
+
+        void TrackTick()
+        {
+            var cur = Cursor.Position;
+            int dx = cur.X - _cursor0.X, dy = cur.Y - _cursor0.Y;
+            if (_trackDir == null)
+            {
+                Location = new Point(_bounds0.X + dx, _bounds0.Y + dy);
+                return;
+            }
+            int l = _bounds0.Left, t = _bounds0.Top, r = _bounds0.Right, b = _bounds0.Bottom;
+            bool W = _trackDir.Contains("w"), E = _trackDir.Contains("e"), N = _trackDir.Contains("n"), S = _trackDir.Contains("s");
+            if (W) l = Math.Min(_bounds0.Left + dx, r - 320);
+            if (E) r = Math.Max(_bounds0.Right + dx, l + 320);
+            if (N) t = Math.Min(_bounds0.Top + dy, b - 300);
+            if (S) b = Math.Max(_bounds0.Bottom + dy, t + 300);
+            SetBounds(l, t, r - l, b - t);
+            FixRegion();   // 缩放后圆角区域跟着长
+        }
+
+        public void EndTrack()
+        {
+            if (_trackTimer == null) return;
+            _trackTimer.Stop();
+            Shell.SavePanelBounds(PanelKey, Bounds);   // 落定即记忆
         }
 
         public void AnswerCallback(int id, object value)

@@ -68,6 +68,14 @@ namespace XiaoHeiMao
             menu.Renderer = new DarkMenuRenderer();   // 深色主题，跟面板同色系
             menu.ForeColor = Color.FromArgb(0xec, 0xec, 0xec);
             menu.BackColor = Color.FromArgb(0x14, 0x14, 0x16);
+            var miMode = new ToolStripMenuItem("整理模式");
+            miMode.Click += async (_, __) => { await Shell.ToggleModeAsync(); };
+            menu.Items.Add(miMode);
+            menu.Opening += (_, __) =>
+            {
+                miMode.Text = Shell.ModeCache == "on" ? "整理模式：开（点击关闭）" : "整理模式：关（点击开启）";
+                var ignored = Shell.RefreshModeAsync();   // 后台刷新，下次打开菜单就是新状态
+            };
             menu.Items.Add("思维面板", null, (_, __) => Shell.TogglePanel("bubble", $"http://127.0.0.1:{Shell.Port}/bubble.html?harness=claude-code&side=taskbar", 470, 660));
             menu.Items.Add("项目仪表盘", null, (_, __) => Shell.TogglePanel("dashboard", $"http://127.0.0.1:{Shell.Port}/dashboard.html", 860, 580));
             menu.Items.Add("设置", null, (_, __) => Shell.TogglePanel("settings", $"http://127.0.0.1:{Shell.Port}/settings.html", 274, 420));
