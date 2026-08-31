@@ -65,6 +65,9 @@ namespace XiaoHeiMao
 
             // 右键菜单（无窗口边框，菜单就是唯一操作面）
             var menu = new ContextMenuStrip();
+            menu.Renderer = new DarkMenuRenderer();   // 深色主题，跟面板同色系
+            menu.ForeColor = Color.FromArgb(0xec, 0xec, 0xec);
+            menu.BackColor = Color.FromArgb(0x14, 0x14, 0x16);
             menu.Items.Add("思维面板", null, (_, __) => Shell.TogglePanel("bubble", $"http://127.0.0.1:{Shell.Port}/bubble.html?harness=claude-code&side=taskbar", 470, 660));
             menu.Items.Add("项目仪表盘", null, (_, __) => Shell.TogglePanel("dashboard", $"http://127.0.0.1:{Shell.Port}/dashboard.html", 860, 580));
             menu.Items.Add("设置", null, (_, __) => Shell.TogglePanel("settings", $"http://127.0.0.1:{Shell.Port}/settings.html", 274, 420));
@@ -233,6 +236,35 @@ namespace XiaoHeiMao
         {
             if (disposing) { _anim.Dispose(); _tray.Dispose(); _idle.Bmp.Dispose(); _walk.Bmp.Dispose(); }
             base.Dispose(disposing);
+        }
+    }
+
+    /// <summary>右键菜单深色渲染（对齐面板 --card/--line/--text 配色）</summary>
+    class DarkMenuRenderer : ToolStripProfessionalRenderer
+    {
+        public DarkMenuRenderer() : base(new DarkColors()) { }
+        class DarkColors : ProfessionalColorTable
+        {
+            static readonly Color Bg = Color.FromArgb(0x14, 0x14, 0x16);
+            static readonly Color Hover = Color.FromArgb(0x20, 0x20, 0x24);
+            static readonly Color Line = Color.FromArgb(0x28, 0x28, 0x2e);
+            public override Color MenuStripGradientBegin => Bg;
+            public override Color MenuStripGradientEnd => Bg;
+            public override Color ToolStripDropDownBackground => Bg;
+            public override Color ImageMarginGradientBegin => Bg;
+            public override Color ImageMarginGradientMiddle => Bg;
+            public override Color ImageMarginGradientEnd => Bg;
+            public override Color MenuItemSelected => Hover;
+            public override Color MenuItemBorder => Line;
+            public override Color MenuBorder => Line;
+            public override Color ToolStripBorder => Line;
+            public override Color SeparatorDark => Line;
+            public override Color SeparatorLight => Line;
+            public override Color MenuItemPressedGradientBegin => Hover;
+            public override Color MenuItemPressedGradientMiddle => Hover;
+            public override Color MenuItemPressedGradientEnd => Hover;
+            public override Color MenuItemSelectedGradientBegin => Hover;
+            public override Color MenuItemSelectedGradientEnd => Hover;
         }
     }
 
