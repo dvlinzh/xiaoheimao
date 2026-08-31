@@ -38,6 +38,9 @@ namespace XiaoHeiMao
         const int BURY = 13;
         const double BREATH_AMP = 0.0072, BREATH_MS = 2600;   // 呼吸幅度用户校准：0.012×0.6
         double _scale = 0.42;                      // 体型：0.42 大 / 0.34 中 / 0.27 小（菜单可调，持久化）
+
+        /// <summary>相对基准体型（0.42）的缩放系数：圆环等附属件的几何都按它等比跟动</summary>
+        public double ScaleK => _scale / 0.42;
         const int FOOT_MARGIN = 2;
         const int FRAME_MS = 33;                    // 30fps：呼吸是慢波，30/60 肉眼无差（用户实测确认）
         const int IDLE_SLEEP_MS = 5 * 60 * 1000;    // 闲置 5 分钟趴下
