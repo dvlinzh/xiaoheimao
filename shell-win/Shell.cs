@@ -23,7 +23,6 @@ namespace XiaoHeiMao
     {
         public static PetWindow Pet;
         public static bool Pin = true;
-        public static bool Autostart = false;
         public static readonly string RepoRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".."));
         public static readonly string DataRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".mind-board");
         public static readonly string CrashLog = Path.Combine(DataRoot, "petcat-crash.log");
@@ -32,6 +31,77 @@ namespace XiaoHeiMao
         public static void LogCrash(object ex)
         {
             try { File.AppendAllText(CrashLog, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " " + ex + "\n\n"); } catch { }
+        }
+
+        /* ── 壳状态持久化（置顶/自启读真实来源；面板位置见 UiFile） ── */
+        public static void LoadState()
+        {
+            LoadUi();
+            if (_ui.TryGetValue("_pin", out var p) && p.Length == 1) Pin = p[0] == 1;
+        }
+
+        static void PersistPin()
+        {
+            LoadUi();
+            _ui["_pin"] = new[] { Pin ? 1 : 0 };
+            try { File.WriteAllText(UiFile, new JavaScriptSerializer().Serialize(_ui)); } catch { }
+        }
+
+        public static bool ReadAutostart()
+        {
+            try
+            {
+                using (var rk = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run"))
+                    return rk?.GetValue("XiaoHeiMao") != null;
+            }
+            catch { return false; }
+        }
+
+        /* ── dock 圆环（单击猫开关；原生重画，见 DockRing.cs） ── */
+        static DockRing _ring;
+        public static void ToggleRing()
+        {
+            if (_ring == null || _ring.IsDisposed) _ring = new DockRing();
+            if (_ring.Visible) _ring.Hide();
+            else { _ring.Follow(); _ring.Show(); }
+        }
+        public static void HideRing() { try { _ring?.Hide(); } catch { } }
+
+        /* ── journal 动效：AI 写入思维板 → 猫冒对话框（5s 轮询，增量读取） ── */
+        static long _journalPos;
+        public static void StartJournalWatch()
+        {
+            // 基线：启动时的 journal 末尾，不回放历史
+            try
+            {
+                var s = Http.GetStringAsync($"http://127.0.0.1:{Port}/api/journal?after=0").Result;
+                var j = new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(s);
+                _journalPos = Convert.ToInt64(j["size"]);
+            }
+            catch { }
+            var timer = new Timer { Interval = 5000 };
+            timer.Tick += async (_, __) =>
+            {
+                try
+                {
+                    var s = await Http.GetStringAsync($"http://127.0.0.1:{Port}/api/journal?after={_journalPos}");
+                    var j = new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(s);
+                    long size = Convert.ToInt64(j["size"]);
+                    if (size < _journalPos) { _journalPos = Math.Max(0, size - 4096); return; }   // 轮转了，从尾部附近重来
+                    _journalPos = size;
+                    if (!j.TryGetValue("events", out var evs) || !(evs is object[] arr)) return;
+                    int added = 0;
+                    foreach (var e in arr.Cast<Dictionary<string, object>>())
+                    {
+                        if (Convert.ToString(e.TryGetValue("type", out var t) ? t : "") != "organized") continue;
+                        if (e.TryGetValue("applied", out var ap) && ap is Dictionary<string, object> counts)
+                            foreach (var v in counts.Values) added += Convert.ToInt32(v);
+                    }
+                    if (added > 0) Pet?.ShowSpeech($"喵，记下了 +{added}");
+                }
+                catch { }
+            };
+            timer.Start();
         }
 
         static readonly Dictionary<string, PanelForm> _panels = new Dictionary<string, PanelForm>();
@@ -110,6 +180,7 @@ namespace XiaoHeiMao
 
         /* ── 整理模式开关（纯 HTTP，不依赖页面桥） ── */
         static readonly System.Net.Http.HttpClient _http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+        public static System.Net.Http.HttpClient Http => _http;   // 圆环/面板共用
         public static string ModeCache = "off";
 
         public static async Task<string> RefreshModeAsync()
@@ -218,9 +289,9 @@ namespace XiaoHeiMao
                     Pin = m.v;
                     if (Pet != null) Pet.TopMost = Pin;
                     foreach (var p in _panels.Values) p.TopMost = Pin;
+                    PersistPin();   // 置顶状态跨重启记忆
                     break;
                 case "setAutostart":
-                    Autostart = m.v;
                     try
                     {
                         using (var rk = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true))
@@ -241,7 +312,7 @@ namespace XiaoHeiMao
                         try { System.Diagnostics.Process.Start(m.u); } catch { }
                     break;
                 case "getState":
-                    from?.AnswerCallback(m.id, new { edge = "taskbar", pin = Pin, autostart = Autostart, isDev = false });
+                    from?.AnswerCallback(m.id, new { edge = "taskbar", pin = Pin, autostart = ReadAutostart(), isDev = false });
                     break;
                 case "toggleCalibrator":
                     TogglePanel("calibrator", $"http://127.0.0.1:{Port}/docs/ring-calibrator.html", 720, 620);
@@ -448,20 +519,27 @@ namespace XiaoHeiMao
         [STAThread]
         static void Main()
         {
-            // WinForms 计时器默认粒度 ~15.6ms：60fps 呼吸会抖成 30-50ms 一帧（肉眼可见的卡）
-            // timeBeginPeriod(1) 把本进程计时粒度提到 1ms——动画丝滑的关键
+            // 单实例锁：多开会抢置顶/互写状态（Electron 版同款教训）
+            bool createdNew;
+            var mutex = new System.Threading.Mutex(true, "XiaoHeiMaoPetShell", out createdNew);
+            if (!createdNew) return;
+
+            // WinForms 计时器默认粒度 ~15.6ms：动画帧节奏靠它才稳
             timeBeginPeriod(1);
             // winexe 无控制台：全局异常一律落文件，崩溃有证据
             Directory.CreateDirectory(Shell.DataRoot);
             AppDomain.CurrentDomain.UnhandledException += (_, e) => Shell.LogCrash(e.ExceptionObject);
             Application.ThreadException += (_, e) => Shell.LogCrash("[UI] " + e.Exception);
             Application.EnableVisualStyles();
+            Shell.LoadState();
             Shell.EnsureServer();
             Shell.Pet = new PetWindow();
             Shell.Pet.Show();
+            Shell.StartJournalWatch();
             // 不绑主窗（ApplicationContext）：猫窗意外被关时进程不死、托盘还在
             Application.Run(new ApplicationContext());
             timeEndPeriod(1);
+            System.GC.KeepAlive(mutex);
         }
     }
 }

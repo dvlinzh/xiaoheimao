@@ -689,6 +689,32 @@ function renderOv() {
 }
 
 document.getElementById("btn-overview")?.addEventListener("click", () => setOvMode(!ovMode));
+
+/* ── 字体/字号：挪进面板（原属设置窗），写回 settings，3 秒轮询自动生效 ── */
+const fontPop = document.getElementById("font-pop");
+document.getElementById("btn-font")?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  fontPop.hidden = !fontPop.hidden;
+  if (!fontPop.hidden) {
+    // 打开时同步当前生效值的高亮
+    document.querySelectorAll("#font-pop .fp-opt").forEach((el) => {
+      const on = el.dataset.font
+        ? document.body.dataset.font === el.dataset.font
+        : document.body.dataset.fontFamily === el.dataset.ff;
+      el.classList.toggle("on", !!on);
+    });
+  }
+});
+document.querySelectorAll("#font-pop .fp-opt").forEach((el) =>
+  el.addEventListener("click", async () => {
+    const body = el.dataset.font ? { fontSize: el.dataset.font } : { fontFamily: el.dataset.ff };
+    await jfetch("/api/prefs", body);
+    document.querySelectorAll("#font-pop .fp-opt").forEach((x) =>
+      x.classList.toggle("on", x.dataset.font === body.fontSize || x.dataset.ff === body.fontFamily));
+  }));
+document.addEventListener("mousedown", (e) => {
+  if (fontPop && !fontPop.hidden && !e.target.closest("#font-pop, #btn-font")) fontPop.hidden = true;
+});
 document.getElementById("ov-dashboard")?.addEventListener("click", () =>
   window.bubbleBridge?.openDashboard());
 

@@ -34,8 +34,6 @@ function labels() {
   $("#st-mode-v").textContent = mode === "on" ? I18N.t("on") : I18N.t("off");
   $("#st-interval-v").textContent = organizeInterval + I18N.t("interval.unit");
   $("#st-pin-v").textContent = pin ? I18N.t("on") : I18N.t("off");
-  $("#st-fontfam-v").textContent = I18N.t((FONT_FAMILY.find((f) => f.id === fontFamily) || FONT_FAMILY[0]).label);
-  $("#st-font-v").textContent = FONT_PT[fontSize] || "10pt";
   $("#st-language-v").textContent = LANG_LABEL[language] || "中文";
   $("#st-autostart-v").textContent = autostart ? I18N.t("on") : I18N.t("off");
 }
@@ -94,17 +92,6 @@ bindSub("#st-interval", "#st-interval-sub",
   () => organizeInterval,
   (v) => v + I18N.t("interval.unit"),
   async (v) => { organizeInterval = Number(v); await api("/api/prefs", { organizeInterval }); });
-bindSub("#st-font", "#st-font-sub",
-  () => fontSize,
-  (v) => FONT_PT[v] || v,
-  async (v) => { fontSize = v; await api("/api/prefs", { fontSize }); });
-/* 面板字体：点击循环切换 */
-$("#st-fontfam").addEventListener("click", async () => {
-  const i = FONT_FAMILY.findIndex((f) => f.id === fontFamily);
-  fontFamily = FONT_FAMILY[(i + 1) % FONT_FAMILY.length].id;
-  labels();
-  await api("/api/prefs", { fontFamily });
-});
 /* 语言：点击循环 中文/English */
 $("#st-language").addEventListener("click", async () => {
   language = language === "zh" ? "en" : "zh";
@@ -120,28 +107,14 @@ $("#st-autostart").addEventListener("click", () => {
 });
 $("#st-data").addEventListener("click", () => bridge?.openDataDir());
 $("#st-cal").addEventListener("click", () => bridge?.toggleCalibrator());
-$("#st-tutorial").addEventListener("click", () => {
-  const t = $("#tutorial");
-  t.hidden = !t.hidden;
-  fitHeight();
-});
-$("#st-export").addEventListener("click", () => { location.href = "/api/export"; });
 $("#st-hide").addEventListener("click", () => { bridge?.hidePet(); bridge?.hideDock(); bridge?.hideSettings(); });
 $("#st-quit").addEventListener("click", () => bridge?.quit());
-$("#tt-ok").addEventListener("click", async () => {
-  $("#tutorial").hidden = true;
-  fitHeight();
-  await api("/api/prefs", { tutorialDone: true });
-});
 
 /* 窗口高度自适应内容 —— 用 getBoundingClientRect().bottom（含上 margin）+ 下 margin 8px，
    保证窗口 ≥ 内容，底部圆角不被裁 */
 function fitHeight() {
   const el = document.getElementById("settings");
-  const tut = document.getElementById("tutorial");
-  const bottom = (tut && !tut.hidden)
-    ? Math.ceil(tut.getBoundingClientRect().bottom)
-    : Math.ceil(el.getBoundingClientRect().bottom);
+  const bottom = Math.ceil(el.getBoundingClientRect().bottom);
   bridge?.setWinHeight?.(Math.min(Math.max(bottom + 8, 120), 660));
 }
 

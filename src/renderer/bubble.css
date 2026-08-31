@@ -436,3 +436,26 @@ body[data-font="l"] { zoom: 1.23; }
 
 /* 方案组头（按问题归组）：采用中的组亮青边 */
 .grp-adopted { color: var(--teal); }
+
+/* ── 字体/字号弹层（设置窗迁来）：header 右上角的 Aa ── */
+#btn-font {
+  border: none; background: transparent; cursor: pointer; padding: 4px 6px;
+  border-radius: 7px; color: var(--faint); font-size: 12px; font-family: Georgia, serif;
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  transition: color .15s ease, background .15s ease;
+  -webkit-app-region: no-drag;
+}
+#btn-font:hover { color: var(--amber); background: var(--card2); }
+#font-pop {
+  position: fixed; top: 46px; right: 10px; z-index: 80;
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 8px 10px; box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+.fp-row { display: flex; align-items: center; gap: 5px; padding: 3px 0; }
+.fp-label { font-size: 11px; color: var(--faint); margin-right: 3px; flex: none; }
+.fp-opt {
+  border: 1px solid var(--line2); border-radius: 999px; background: transparent;
+  color: var(--dim); font-size: 11px; font-family: inherit; padding: 2px 9px; cursor: pointer;
+}
+.fp-opt:hover { color: var(--text); border-color: var(--dim); }
+.fp-opt.on { background: var(--amber-soft); color: var(--amber); border-color: var(--amber-border); }

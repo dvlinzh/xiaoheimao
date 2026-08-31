@@ -28,8 +28,18 @@
         <div id="proj-menu" hidden></div>
       </div>
       <button id="btn-overview" class="hd-btn" type="button" title="项目总览：一屏看全部项目">☰</button>
+      <button id="btn-font" class="hd-btn" type="button" title="面板字体 / 字号">Aa</button>
       <button id="btn-pin" class="hd-btn" type="button" title="钉住：常显不自动收起"></button>
     </header>
+    <!-- 字体/字号弹层（放 header 外：header 是拖动区，弹层点击不能触发拖动） -->
+    <div id="font-pop" hidden>
+      <div class="fp-row"><span class="fp-label">字号</span>
+        <button class="fp-opt" data-font="s">小</button><button class="fp-opt" data-font="m">中</button><button class="fp-opt" data-font="l">大</button>
+      </div>
+      <div class="fp-row"><span class="fp-label">字体</span>
+        <button class="fp-opt" data-ff="georgia">衬线</button><button class="fp-opt" data-ff="song">宋体</button><button class="fp-opt" data-ff="kai">楷体</button><button class="fp-opt" data-ff="sans">无衬线</button><button class="fp-opt" data-ff="hei">黑体</button>
+      </div>
+    </div>
 
     <!-- 总览视图：一屏看全部项目，点行切换 -->
     <div id="overview-view" hidden>
