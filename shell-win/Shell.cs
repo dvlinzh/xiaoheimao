@@ -397,9 +397,14 @@ namespace XiaoHeiMao
     st.textContent = '#settings{margin:0!important;border:none!important;border-radius:0!important}';
     document.head.appendChild(st);
     // 面板拖动：对齐 Electron 的「主进程追踪光标」模式——JS 只报开始/结束，
-    // 位移由宿主按全局光标计算（比逐条 mousemove 消息稳，不怕消息洪峰）
+    // 位移由宿主按全局光标计算（比逐条 mousemove 消息稳，不怕消息洪峰）。
+    // 排除 input/textarea/contenteditable：改名输入框在头部，拖动拦截会吃掉焦点（改名框秒消失的根因）
     document.addEventListener('mousedown', (e) => {
-      if (e.target.closest('#bd-head') && !e.target.closest('button')) { post({ t: 'panelDragStart' }); e.preventDefault(); }
+      if (e.target.closest('#bd-head')
+          && !e.target.closest('button, input, textarea, select, [contenteditable]')
+          && !e.target.isContentEditable) {
+        post({ t: 'panelDragStart' }); e.preventDefault();
+      }
     }, true);
     document.addEventListener('mouseup', () => post({ t: 'panelDragEnd' }), true);
   });
@@ -431,6 +436,8 @@ namespace XiaoHeiMao
                     {
                         try { Shell.OnBridgeMessage(this, _json.Deserialize<BridgeMsg>(ev.WebMessageAsJson)); } catch { }
                     };
+                    // Esc → 页面 window.close() → 这里收尾销毁（WebView2 不会自动关宿主窗）
+                    _wv.CoreWebView2.WindowCloseRequested += (_, __) => Shell.ClosePanel(PanelKey);
                     _wv.Source = new Uri(url);
                 }
                 catch (Exception ex)

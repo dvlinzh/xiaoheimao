@@ -459,3 +459,9 @@ body[data-font="l"] { zoom: 1.23; }
 }
 .fp-opt:hover { color: var(--text); border-color: var(--dim); }
 .fp-opt.on { background: var(--amber-soft); color: var(--amber); border-color: var(--amber-border); }
+
+/* ── 折叠态：只留头部+目标区（关闭按钮改为折叠；Esc 才彻底关） ── */
+body.collapsed #layers,
+body.collapsed #overview-view,
+body.collapsed #pending-banner { display: none; }
+body.collapsed #goal-bar { padding-bottom: 8px; }

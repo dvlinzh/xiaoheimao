@@ -47,11 +47,25 @@ if (new URLSearchParams(location.search).get("side") === "left") {
 // Esc 关闭面板（钉住时也有效，属明确指令）
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") window.close(); });
 
-/* ── 关闭按钮：等同再点一次 harness 芯片（Esc 同效） ── */
+/* ── 折叠按钮（原关闭）：折叠时只留头部+目标区；Esc 仍是彻底关闭 ── */
 const pinBtn = $("#btn-pin");
-pinBtn.title = "关闭面板（Esc 同效）";
+pinBtn.title = "折叠面板（只留目标行）";
 pinBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M18 6 6 18"/><path d="M6 6 18 18"/></svg>`;
-pinBtn.addEventListener("click", () => window.close());
+
+function fitHeight() {
+  const b = document.getElementById("wrap").getBoundingClientRect();
+  window.petBridge?.setWinHeight?.(Math.min(Math.max(Math.ceil(b.bottom), 120), 900));
+}
+function setCollapsed(v) {
+  document.body.classList.toggle("collapsed", v);
+  pinBtn.classList.toggle("on", v);
+  try { localStorage.setItem("mb.collapsed", v ? "1" : "0"); } catch {}
+  setTimeout(fitHeight, 30);
+}
+setCollapsed(localStorage.getItem("mb.collapsed") === "1");   // 重开面板恢复折叠态
+pinBtn.addEventListener("click", () => setCollapsed(!document.body.classList.contains("collapsed")));
+setTimeout(fitHeight, 200);
+setInterval(fitHeight, 2000);   // 内容增高窗口跟着长（对齐设置窗策略）
 
 let curProjectId = null;
 let curSkeleton = null;
