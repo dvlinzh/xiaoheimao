@@ -123,7 +123,10 @@ namespace XiaoHeiMao
             // 托盘图标：专用 tray.png（老版同款猫头标）；缺失时退回猫帧缩略
             Icon trayIcon;
             var trayPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets", "tray.png");
-            if (File.Exists(trayPath)) trayIcon = new Icon(trayPath);
+            if (File.Exists(trayPath)) {
+                // tray.png 是 PNG：new Icon(path) 只吃 ICO 格式会抛 ArgumentException（启动即崩）
+                using (var bmp = new Bitmap(trayPath)) trayIcon = Icon.FromHandle(bmp.GetHicon());
+            }
             else trayIcon = Icon.FromHandle(((Bitmap)_idle.Bmp.Clone()).GetHicon());
 
             _tray = new NotifyIcon
