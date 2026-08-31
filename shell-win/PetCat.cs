@@ -253,7 +253,7 @@ namespace XiaoHeiMao
                 var size = g.MeasureString(text, font);
                 int bw = Math.Min((int)size.Width + 20, 210), bh = (int)size.Height + 10;
                 int bx = (WIN_W - bw) / 2;
-                int by = Math.Max(2, headTopY - bh - 6);   // 气泡底(含尾巴)贴猫头顶
+                int by = Math.Max(2, headTopY - bh - 26);   // 气泡与猫头顶拉开 26px（尾巴 6 + 间隙 20，用户校准）
                 using (var path = RoundedRect(bx, by, bw, bh, 9))
                 using (var bg = new SolidBrush(Color.FromArgb(0x14, 0x14, 0x16)))
                 using (var pen = new Pen(Color.FromArgb(0x28, 0x28, 0x2e)))
