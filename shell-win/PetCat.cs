@@ -135,7 +135,7 @@ namespace XiaoHeiMao
                 Icon = trayIcon,
                 Visible = true,
             };
-            _tray.DoubleClick += (_, __) => { Show(); Location = SnapPos(Location.X); };
+            _tray.DoubleClick += (_, __) => { Show(); Location = SnapPos(Location.X); Shell.PetHidden = false; };
             _tray.ContextMenuStrip = menu;
 
             _clickTimer.Tick += (_, __) => { _clickTimer.Stop(); Shell.ToggleRing(); };

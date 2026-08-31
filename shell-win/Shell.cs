@@ -42,8 +42,20 @@ namespace XiaoHeiMao
             if (_ui.TryGetValue("_pin", out var p) && p.Length == 1) Pin = p[0] == 1;
             if (_ui.TryGetValue("_catscale", out var cs) && cs.Length == 1 && cs[0] >= 150 && cs[0] <= 600)
                 CatScale = cs[0] / 1000.0;
+            if (_ui.TryGetValue("_hid", out var hd) && hd.Length == 1) PetHidden = hd[0] == 1;
         }
 
+        static void PersistPetHidden()
+        {
+            LoadUi();
+            _ui["_hid"] = new[] { PetHidden ? 1 : 0 };
+            try { File.WriteAllText(UiFile, new JavaScriptSerializer().Serialize(_ui)); } catch { }
+        }
+        static void NotifyPetHidden()
+        {
+            if (_panels.TryGetValue("settings", out var pf) && pf != null && !pf.IsDisposed)
+                pf.PostJson("{\"t\":\"prefs\",\"v\":{\"petHidden\":" + (PetHidden ? "true" : "false") + "}}");
+        }
         static void PersistPin()
         {
             LoadUi();
@@ -70,6 +82,7 @@ namespace XiaoHeiMao
 
         /* ── dock 圆环（单击猫开关；原生重画，见 DockRing.cs） ── */
         static DockRing _ring;
+        public static bool PetHidden = false;   // 猫隐藏态：设置面板据此把「躲一下」切换为「出现」
         public static void ToggleRing()
         {
             if (_ring == null || _ring.IsDisposed) _ring = new DockRing();
@@ -120,6 +133,16 @@ namespace XiaoHeiMao
         static CoreWebView2Environment _wvEnv;
 
         /// <summary>数据服务不在就拉起（Node app.mjs，零依赖）。已在跑（如 Electron 版）则直接复用。</summary>
+        /** dock 环诊断日志（数据根下 dock-debug.log）*/
+        public static void Log(object msg)
+        {
+            try
+            {
+                System.IO.File.AppendAllText(System.IO.Path.Combine(DataRoot, "dock-debug.log"),
+                    DateTime.Now.ToString("HH:mm:ss") + " " + msg + Environment.NewLine);
+            }
+            catch { }
+        }
         public static void EnsureServer()
         {
             if (ServerAlive()) return;
@@ -294,8 +317,10 @@ namespace XiaoHeiMao
                 case "close": if (from != null) ClosePanel(from.PanelKey); break;
                 case "hideSettings": ClosePanel("settings"); break;
                 case "hideDock": break;   // dock 圆环 M2 原生重画，页面桥暂为 no-op
-                case "hidePet": Pet?.Hide(); break;
-                case "showPet": Pet?.Show(); break;
+                case "hidePet":
+                    Pet?.Hide(); PetHidden = true; PersistPetHidden(); NotifyPetHidden(); break;
+                case "showPet":
+                    Pet?.Show(); PetHidden = false; PersistPetHidden(); NotifyPetHidden(); break;
                 case "quit": Application.Exit(); break;
                 case "setPin":
                     Pin = m.v;
@@ -324,7 +349,7 @@ namespace XiaoHeiMao
                         try { System.Diagnostics.Process.Start(m.u); } catch { }
                     break;
                 case "getState":
-                    from?.AnswerCallback(m.id, new { edge = "taskbar", pin = Pin, autostart = ReadAutostart(), isDev = false });
+                    from?.AnswerCallback(m.id, new { edge = "taskbar", pin = Pin, autostart = ReadAutostart(), isDev = false, petHidden = PetHidden });
                     break;
                 case "toggleCalibrator":
                     TogglePanel("calibrator", $"http://127.0.0.1:{Port}/docs/ring-calibrator.html", 720, 620);
@@ -351,6 +376,11 @@ namespace XiaoHeiMao
 
         public readonly string PanelKey;
         WebView2 _wv;
+
+        public void PostJson(string json)
+        {
+            try { _wv?.CoreWebView2?.PostWebMessageAsJson(json); } catch { }
+        }
         static readonly JavaScriptSerializer _json = new JavaScriptSerializer();
 
         /// <summary>注入页面的桥垫片：接口与 Electron preload.cjs 同语义</summary>

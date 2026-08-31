@@ -19,6 +19,7 @@ const LANG_LABEL = { zh: "中文", en: "English" };
 let mode = "off";
 let fontSize = "m";
 let pin = true;
+let petHidden = false;   // 猫隐藏态（由 getState/onPrefs 同步，点「出现/躲一下」切换）
 let autostart = false;
 let organizeInterval = 2;
 let fontFamily = "georgia";
@@ -36,6 +37,8 @@ function labels() {
   $("#st-pin-v").textContent = pin ? I18N.t("on") : I18N.t("off");
   $("#st-language-v").textContent = LANG_LABEL[language] || "中文";
   $("#st-autostart-v").textContent = autostart ? I18N.t("on") : I18N.t("off");
+  $("#st-hide .st-lb").textContent = petHidden ? "出现" : I18N.t("hide");
+  $("#st-hide .st-note").textContent = petHidden ? "唤回小黑猫" : I18N.t("hide.note");
 }
 
 async function pull() {
@@ -106,7 +109,11 @@ $("#st-autostart").addEventListener("click", () => {
   bridge?.setAutostart(autostart);
 });
 $("#st-data").addEventListener("click", () => bridge?.openDataDir());
-$("#st-hide").addEventListener("click", () => { bridge?.hidePet(); bridge?.hideDock(); bridge?.hideSettings(); });
+$("#st-hide").addEventListener("click", () => {
+  if (petHidden) { bridge?.showPet(); petHidden = false; }
+  else { bridge?.hidePet(); bridge?.hideDock(); bridge?.hideSettings(); petHidden = true; }
+  labels();
+});
 $("#st-quit").addEventListener("click", () => bridge?.quit());
 
 /* 窗口高度自适应内容 —— 用 getBoundingClientRect().bottom（含上 margin）+ 下 margin 8px，
@@ -117,6 +124,8 @@ function fitHeight() {
   bridge?.setWinHeight?.(Math.min(Math.max(bottom + 8, 120), 660));
 }
 
+bridge?.onPrefs?.((v) => { if (v && typeof v.petHidden === "boolean") { petHidden = v.petHidden; labels(); } });
+bridge?.getState?.().then((s) => { if (typeof s.petHidden === "boolean") { petHidden = s.petHidden; } });
 bridge?.getState?.().then((s) => {
   pin = s.pin; autostart = s.autostart;
   labels();

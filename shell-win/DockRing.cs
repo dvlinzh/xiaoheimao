@@ -112,11 +112,10 @@ namespace XiaoHeiMao
                 _modeOn = ov.TryGetValue("settings", out var st) && st is Dictionary<string, object> sd
                     && sd.TryGetValue("mode", out var m) && Convert.ToString(m) == "on";
                 var live = new Dictionary<string, long>();
-                // 注意：JavaScriptSerializer 把 JSON 数组解成 ArrayList 而非 object[]（实测），
-                // 此前用 is object[] 判定恒 false → 芯片恒空 → 环隐形。集合一律走 IEnumerable。
                 if (ov.TryGetValue("projects", out var ps) && ps is System.Collections.IEnumerable en)
                     foreach (var pobj in en)
-                    {
+                      try
+                      {
                         if (!(pobj is Dictionary<string, object> p)) continue;
                         long liveAt = (long)Math.Round(Convert.ToDouble(p.TryGetValue("liveAtMs", out var l) ? l : 0));
                         if (p.TryGetValue("harnesses", out var hs) && hs is System.Collections.IEnumerable hen)
@@ -125,16 +124,23 @@ namespace XiaoHeiMao
                                 var h = Convert.ToString(h0);
                                 if (h != null && (!live.TryGetValue(h, out var cur) || liveAt > cur)) live[h] = liveAt;
                             }
-                    }
+                      }
+                      catch (Exception pex)
+                      {
+                        Shell.Log("项目解析失败: " + pex.Message);
+                      }
                 _liveAt = live;
                 var keys = live.Keys.OrderBy(k => k).ToList();
+                Shell.Log("keys: " + string.Join(",", keys.ToArray()) + " | 模式on=" + _modeOn);
                 if (!keys.SequenceEqual(_chips.Select(c => c.H)) || Math.Abs((Shell.Pet?.ScaleK ?? 1.0) - _lastK) > 0.001) { _lastK = Shell.Pet?.ScaleK ?? 1.0; LayoutChips(keys); }
                 _dirty = true;
                 Render();
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Shell.Log("RefreshData EX: " + ex.Message);
+            }
         }
-
         void LayoutChips(List<string> keys)
         {
             _chips = new List<Chip>();
