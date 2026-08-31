@@ -87,11 +87,11 @@ namespace XiaoHeiMao
             if (Visible) { Follow(); var ignored = RefreshData(); }
         }
 
-        /// <summary>环贴猫头顶：弧心（窗内 140,140）对到猫耳上方。猫动了就跟着动。</summary>
+        /// <summary>环贴猫头顶：弧心（窗内 140,140）对到猫耳上方（用户校准：圆心=猫顶-10px、左偏5px）。</summary>
         public void Follow()
         {
             if (Shell.Pet == null) return;
-            Location = new Point(Shell.Pet.Location.X, Math.Max(0, Shell.Pet.Location.Y - 30));
+            Location = new Point(Shell.Pet.Location.X - 5, Math.Max(0, Shell.Pet.Location.Y - 10));
         }
 
         /// <summary>拉总览：harness 去重并集 + 各 harness 最近写盘时间 + 整理模式</summary>
@@ -133,8 +133,8 @@ namespace XiaoHeiMao
             int n = keys.Count;
             for (int i = 0; i < n; i++)
             {
-                // 弧线：-165°..-15° 均布；单枚偏左上（-120°，猫耳左上侧，用户校准）
-                double ang = n == 1 ? -120 : -165 + (150.0 / (n - 1)) * i;
+                // 扇形朝左：-180°..-90°（一条边垂直向上，扇开向左侧）；单枚定在 -120°（用户校准位）
+                double ang = n == 1 ? -120 : -180 + (90.0 / (n - 1)) * i;
                 double rad = ang * Math.PI / 180;
                 _chips.Add(new Chip
                 {
@@ -223,19 +223,19 @@ namespace XiaoHeiMao
                     var center = new PointF(RING_W / 2f, RING_H - 10);
                     using (var pen = new Pen(Color.FromArgb(0xf0, 0x71, 0x6c)) { DashStyle = DashStyle.Dash })
                     {
-                        g.DrawArc(pen, center.X - (float)ARC_R, center.Y - (float)ARC_R, (float)ARC_R * 2, (float)ARC_R * 2, -165f, 150f);
+                        g.DrawArc(pen, center.X - (float)ARC_R, center.Y - (float)ARC_R, (float)ARC_R * 2, (float)ARC_R * 2, -180f, 90f);
                         g.DrawLine(pen, center.X - 10, center.Y, center.X + 10, center.Y);
                         g.DrawLine(pen, center.X, center.Y - 10, center.X, center.Y + 10);
                         g.DrawLine(pen, center.X, center.Y,
-                            center.X + (float)(ARC_R * Math.Cos(-165 * Math.PI / 180)), center.Y + (float)(ARC_R * Math.Sin(-165 * Math.PI / 180)));
+                            center.X + (float)(ARC_R * Math.Cos(-180 * Math.PI / 180)), center.Y + (float)(ARC_R * Math.Sin(-180 * Math.PI / 180)));
                         g.DrawLine(pen, center.X, center.Y,
-                            center.X + (float)(ARC_R * Math.Cos(-15 * Math.PI / 180)), center.Y + (float)(ARC_R * Math.Sin(-15 * Math.PI / 180)));
+                            center.X + (float)(ARC_R * Math.Cos(-90 * Math.PI / 180)), center.Y + (float)(ARC_R * Math.Sin(-90 * Math.PI / 180)));
                     }
                     using (var fg = new SolidBrush(Color.FromArgb(0xf0, 0x71, 0x6c)))
                     using (var font = new Font("Microsoft YaHei", 7.5f))
                     {
                         var sc = Location;
-                        g.DrawString($"圆心(屏 {sc.X + 140},{sc.Y + 140})  半径{ARC_R}  弧 -165°..-15°", font, fg, 4, 2);
+                        g.DrawString($"圆心(屏 {sc.X + 140},{sc.Y + 140})  半径{ARC_R}  弧 -180°..-90°", font, fg, 4, 2);
                     }
                 }
                 Premultiply(bmp);
