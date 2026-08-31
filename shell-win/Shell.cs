@@ -89,10 +89,11 @@ namespace XiaoHeiMao
                     long size = Convert.ToInt64(j["size"]);
                     if (size < _journalPos) { _journalPos = Math.Max(0, size - 4096); return; }   // 轮转了，从尾部附近重来
                     _journalPos = size;
-                    if (!j.TryGetValue("events", out var evs) || !(evs is object[] arr)) return;
+                    if (!j.TryGetValue("events", out var evs) || !(evs is System.Collections.IEnumerable arr)) return;
                     int added = 0;
-                    foreach (var e in arr.Cast<Dictionary<string, object>>())
+                    foreach (var e0 in arr)   // JavaScriptSerializer 数组=ArrayList，非 object[]
                     {
+                        if (!(e0 is Dictionary<string, object> e)) continue;
                         if (Convert.ToString(e.TryGetValue("type", out var t) ? t : "") != "organized") continue;
                         if (e.TryGetValue("applied", out var ap) && ap is Dictionary<string, object> counts)
                             foreach (var v in counts.Values) added += Convert.ToInt32(v);

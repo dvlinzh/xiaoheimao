@@ -100,13 +100,19 @@ namespace XiaoHeiMao
                 _modeOn = ov.TryGetValue("settings", out var st) && st is Dictionary<string, object> sd
                     && sd.TryGetValue("mode", out var m) && Convert.ToString(m) == "on";
                 var live = new Dictionary<string, long>();
-                if (ov.TryGetValue("projects", out var ps) && ps is object[] arr)
-                    foreach (Dictionary<string, object> p in arr.Cast<Dictionary<string, object>>())
+                // 注意：JavaScriptSerializer 把 JSON 数组解成 ArrayList 而非 object[]（实测），
+                // 此前用 is object[] 判定恒 false → 芯片恒空 → 环隐形。集合一律走 IEnumerable。
+                if (ov.TryGetValue("projects", out var ps) && ps is System.Collections.IEnumerable en)
+                    foreach (var pobj in en)
                     {
-                        long liveAt = Convert.ToInt64(p.TryGetValue("liveAtMs", out var l) ? l : 0);
-                        if (p.TryGetValue("harnesses", out var hs) && hs is object[] harr)
-                            foreach (var h in harr.Select(Convert.ToString))
-                                if (!live.TryGetValue(h, out var cur) || liveAt > cur) live[h] = liveAt;
+                        if (!(pobj is Dictionary<string, object> p)) continue;
+                        long liveAt = (long)Math.Round(Convert.ToDouble(p.TryGetValue("liveAtMs", out var l) ? l : 0));
+                        if (p.TryGetValue("harnesses", out var hs) && hs is System.Collections.IEnumerable hen)
+                            foreach (var h0 in hen)
+                            {
+                                var h = Convert.ToString(h0);
+                                if (h != null && (!live.TryGetValue(h, out var cur) || liveAt > cur)) live[h] = liveAt;
+                            }
                     }
                 _liveAt = live;
                 var keys = live.Keys.OrderBy(k => k).ToList();
