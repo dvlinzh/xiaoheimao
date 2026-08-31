@@ -16,10 +16,11 @@ try { input = JSON.parse(stdin || "{}"); } catch {}
 // 目录归一化后再比：CLAUDE_PROJECT_DIR 可能是正斜杠形式，projectDir 存的是反斜杠，裸比较永不命中
 import { resolve } from "node:path";
 import { homedir } from "node:os";
+import { readFileSync } from "node:fs";
 
 function readUi3d9m() {
   try {
-    const raw = JSON.parse(fs.readFileSync(resolve(homedir(), ".mind-board", "settings.json"), "utf8"));
+    const raw = JSON.parse(readFileSync(resolve(homedir(), ".mind-board", "settings.json"), "utf8"));
     return raw.plugins?.["3d9m"] || { enabled: true };
   } catch { return { enabled: true }; }
 }
