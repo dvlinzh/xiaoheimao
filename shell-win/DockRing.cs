@@ -33,9 +33,10 @@ namespace XiaoHeiMao
 
         const int WS_EX_LAYERED = 0x80000, WS_EX_TOOLWINDOW = 0x80;
 
-        const int RING_W = 280, RING_H = 150;      // 环窗尺寸（与猫窗同宽，悬在猫头顶上方）
-        const int CHIP_D = 36;                      // 芯片直径（对齐 dock.js 视觉）
+        const int RING_W = 280, RING_H = 150;      // 环窗尺寸（与猫窗同宽，悬在猫身侧）
+        const int CHIP_D = 29;                      // 芯片直径（用户校准：缩小 20%）
         const double ARC_R = 96;                    // 弧线半径
+        const double ARC_A0 = -210, ARC_A1 = -90;   // 扇形 120° 朝左：一条边垂直，容纳多 harness（用户校准）
         const double LIVE_MS = 10 * 60 * 1000;      // 10 分钟内有写盘 = 运行中
 
         // 配色/图标对齐 dock.js
@@ -87,11 +88,11 @@ namespace XiaoHeiMao
             if (Visible) { Follow(); var ignored = RefreshData(); }
         }
 
-        /// <summary>环位置（用户校准：圆心=猫顶+190px、左偏25px——芯片落在猫左侧脚边）。</summary>
+        /// <summary>环位置（用户校准：圆心=猫顶+10px、左偏25px）。</summary>
         public void Follow()
         {
             if (Shell.Pet == null) return;
-            Location = new Point(Shell.Pet.Location.X - 25, Shell.Pet.Location.Y + 190);
+            Location = new Point(Shell.Pet.Location.X - 25, Shell.Pet.Location.Y + 10);
         }
 
         /// <summary>拉总览：harness 去重并集 + 各 harness 最近写盘时间 + 整理模式</summary>
@@ -133,8 +134,8 @@ namespace XiaoHeiMao
             int n = keys.Count;
             for (int i = 0; i < n; i++)
             {
-                // 扇形朝左：-180°..-90°（一条边垂直向上，扇开向左侧）；单枚定在 -120°（用户校准位）
-                double ang = n == 1 ? -120 : -180 + (90.0 / (n - 1)) * i;
+                // 扇形 120° 朝左：-210°..-90°（一条边垂直）；单枚定在 -120°（用户校准位）
+                double ang = n == 1 ? -120 : ARC_A0 + ((ARC_A1 - ARC_A0) / (n - 1)) * i;
                 double rad = ang * Math.PI / 180;
                 _chips.Add(new Chip
                 {
@@ -201,7 +202,7 @@ namespace XiaoHeiMao
                         using (var ia = new ImageAttributes())
                         {
                             ia.SetColorMatrix(cm);
-                            int s = 20;
+                            int s = 16;   // 用户校准：缩小 20%
                             g.DrawImage(icon, new Rectangle((int)(c.Center.X - s / 2), (int)(c.Center.Y - s / 2), s, s),
                                 0, 0, icon.Width, icon.Height, GraphicsUnit.Pixel, ia);
                         }
@@ -223,19 +224,19 @@ namespace XiaoHeiMao
                     var center = new PointF(RING_W / 2f, RING_H - 10);
                     using (var pen = new Pen(Color.FromArgb(0xf0, 0x71, 0x6c)) { DashStyle = DashStyle.Dash })
                     {
-                        g.DrawArc(pen, center.X - (float)ARC_R, center.Y - (float)ARC_R, (float)ARC_R * 2, (float)ARC_R * 2, -180f, 90f);
+                        g.DrawArc(pen, center.X - (float)ARC_R, center.Y - (float)ARC_R, (float)ARC_R * 2, (float)ARC_R * 2, (float)ARC_A0, (float)(ARC_A1 - ARC_A0));
                         g.DrawLine(pen, center.X - 10, center.Y, center.X + 10, center.Y);
                         g.DrawLine(pen, center.X, center.Y - 10, center.X, center.Y + 10);
                         g.DrawLine(pen, center.X, center.Y,
-                            center.X + (float)(ARC_R * Math.Cos(-180 * Math.PI / 180)), center.Y + (float)(ARC_R * Math.Sin(-180 * Math.PI / 180)));
+                            center.X + (float)(ARC_R * Math.Cos(ARC_A0 * Math.PI / 180)), center.Y + (float)(ARC_R * Math.Sin(ARC_A0 * Math.PI / 180)));
                         g.DrawLine(pen, center.X, center.Y,
-                            center.X + (float)(ARC_R * Math.Cos(-90 * Math.PI / 180)), center.Y + (float)(ARC_R * Math.Sin(-90 * Math.PI / 180)));
+                            center.X + (float)(ARC_R * Math.Cos(ARC_A1 * Math.PI / 180)), center.Y + (float)(ARC_R * Math.Sin(ARC_A1 * Math.PI / 180)));
                     }
                     using (var fg = new SolidBrush(Color.FromArgb(0xf0, 0x71, 0x6c)))
                     using (var font = new Font("Microsoft YaHei", 7.5f))
                     {
                         var sc = Location;
-                        g.DrawString($"圆心(屏 {sc.X + 140},{sc.Y + 140})  半径{ARC_R}  弧 -180°..-90°", font, fg, 4, 2);
+                        g.DrawString($"圆心(屏 {sc.X + 140},{sc.Y + 140})  半径{ARC_R}  弧 {ARC_A0}°..{ARC_A1}°", font, fg, 4, 2);
                     }
                 }
                 Premultiply(bmp);
