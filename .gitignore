@@ -23,3 +23,6 @@ shell-win/roslyn/
 shell-win/wv2/
 shell-win/WebView2Loader.dll
 shell-win/*_PetCat.exe
+
+# 调试截图（托盘/形状校验产物）
+shell-win/*.png
