@@ -106,7 +106,6 @@ $("#st-autostart").addEventListener("click", () => {
   bridge?.setAutostart(autostart);
 });
 $("#st-data").addEventListener("click", () => bridge?.openDataDir());
-$("#st-cal").addEventListener("click", () => bridge?.toggleCalibrator());
 $("#st-hide").addEventListener("click", () => { bridge?.hidePet(); bridge?.hideDock(); bridge?.hideSettings(); });
 $("#st-quit").addEventListener("click", () => bridge?.quit());
 
