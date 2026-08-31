@@ -114,9 +114,13 @@ namespace XiaoHeiMao
                 f.Location = new Point(wa.Left + (wa.Width - f.Width) / 2, wa.Top + (wa.Height - f.Height) / 2);
                 return;
             }
-            int x = Pet.Location.X - f.Width - 8;
-            if (x < wa.Left) x = Pet.Right + 8;   // 猫太靠左就弹右侧
-            int y = Math.Max(wa.Top + 8, Math.Min(Pet.Location.Y - 60, wa.Bottom - f.Height - 8));
+            // 对齐 Electron 版：面板贴猫左侧（space 6/8px），垂直与猫身居中；猫太靠左则弹右侧
+            int gap = f is PanelForm pf && pf.PanelKey == "settings" ? 6 : 8;
+            int x = Pet.Location.X - f.Width - gap;
+            if (x < wa.Left + 8) x = Pet.Location.X + 280 + 8;
+            int y = Pet.Location.Y + (250 - f.Height) / 2;
+            x = Math.Max(wa.Left + 8, Math.Min(x, wa.Right - f.Width - 8));
+            y = Math.Max(wa.Top + 8, Math.Min(y, wa.Bottom - f.Height - 8));
             f.Location = new Point(x, y);
         }
 
@@ -126,13 +130,16 @@ namespace XiaoHeiMao
             switch (m.t)
             {
                 case "openBubble":
-                    TogglePanel("bubble", $"http://127.0.0.1:{Port}/bubble.html?harness={Uri.EscapeDataString(m.h ?? "claude-code")}&side=taskbar", 380, 660);
+                    TogglePanel("bubble", $"http://127.0.0.1:{Port}/bubble.html?harness={Uri.EscapeDataString(m.h ?? "claude-code")}&side=taskbar", 470, 660);
                     break;
                 case "openDashboard":
                     TogglePanel("dashboard", $"http://127.0.0.1:{Port}/dashboard.html", 860, 580);
                     break;
                 case "toggleSettings":
-                    TogglePanel("settings", $"http://127.0.0.1:{Port}/settings.html", 340, 480);
+                    TogglePanel("settings", $"http://127.0.0.1:{Port}/settings.html", 274, 420);
+                    break;
+                case "panelDrag":
+                    if (from != null) { from.Left += m.dx; from.Top += m.dy; }
                     break;
                 case "closeBubble": ClosePanel("bubble"); break;
                 case "close": if (from != null) ClosePanel(from.PanelKey); break;
@@ -185,6 +192,7 @@ namespace XiaoHeiMao
         public int id;            // 回调 id（getState）
         public bool v;            // 布尔参数（setPin/setAutostart）
         public int hh;            // 高度（setWinHeight）
+        public int dx, dy;        // 面板拖动位移
     }
 
     public class PanelForm : Form
@@ -236,6 +244,22 @@ namespace XiaoHeiMao
   };
   window.petBridge = bridge;
   window.bubbleBridge = bridge;
+  document.addEventListener('DOMContentLoaded', () => {
+    // 窗口视觉对齐 Electron 透明窗：设置页卡片去掉外圈留白/边框，
+    // 圆角由宿主窗口的区域裁剪提供（WebView2 子 HWND 不支持真透明）
+    const st = document.createElement('style');
+    st.textContent = '#settings{margin:0!important;border:none!important;border-radius:0!important}';
+    document.head.appendChild(st);
+    // 面板拖动：Electron 用 -webkit-app-region，WebView2 没有——改为 JS 报位移、宿主挪窗
+    let dg = null;
+    document.addEventListener('mousedown', (e) => {
+      if (e.target.closest('#bd-head') && !e.target.closest('button')) { dg = { x: e.screenX, y: e.screenY }; e.preventDefault(); }
+    }, true);
+    document.addEventListener('mousemove', (e) => {
+      if (dg) { post({ t: 'panelDrag', dx: e.screenX - dg.x, dy: e.screenY - dg.y }); dg = { x: e.screenX, y: e.screenY }; }
+    }, true);
+    document.addEventListener('mouseup', () => { dg = null; }, true);
+  });
 })();";
 
         public PanelForm(string key, string url, int w, int h)
@@ -258,7 +282,7 @@ namespace XiaoHeiMao
                     opt.AdditionalBrowserArguments = "--disable-features=CalculateNativeWinOcclusion --disable-backgrounding-occluded-windows --disable-renderer-backgrounding";
                     var env = await CoreWebView2Environment.CreateAsync(null, Path.Combine(Shell.DataRoot, "webview2-udata"), opt);
                     await _wv.EnsureCoreWebView2Async(env);
-                    _wv.DefaultBackgroundColor = Color.FromArgb(0x2b, 0x27, 0x23);   // 与面板底色一致，避免白闪
+                    _wv.DefaultBackgroundColor = Color.FromArgb(0x14, 0x14, 0x16);   // = 面板 --card，避免异色边框
                     await _wv.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(SHIM);
                     _wv.CoreWebView2.WebMessageReceived += (_, ev) =>
                     {
@@ -271,6 +295,8 @@ namespace XiaoHeiMao
                     MessageBox.Show("面板初始化失败: " + ex.Message, "小黑猫");
                 }
             };
+            // 设置窗失焦自动收起（对齐 Electron 版 blur→hide）；气泡/仪表盘不收
+            Deactivate += (_, __) => { if (PanelKey == "settings") Shell.ClosePanel(PanelKey); };
         }
 
         protected override void OnHandleCreated(EventArgs e) { base.OnHandleCreated(e); FixRegion(); }

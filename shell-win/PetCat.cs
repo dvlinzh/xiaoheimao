@@ -65,9 +65,9 @@ namespace XiaoHeiMao
 
             // 右键菜单（无窗口边框，菜单就是唯一操作面）
             var menu = new ContextMenuStrip();
-            menu.Items.Add("思维面板", null, (_, __) => Shell.TogglePanel("bubble", $"http://127.0.0.1:{Shell.Port}/bubble.html?harness=claude-code&side=taskbar", 380, 660));
+            menu.Items.Add("思维面板", null, (_, __) => Shell.TogglePanel("bubble", $"http://127.0.0.1:{Shell.Port}/bubble.html?harness=claude-code&side=taskbar", 470, 660));
             menu.Items.Add("项目仪表盘", null, (_, __) => Shell.TogglePanel("dashboard", $"http://127.0.0.1:{Shell.Port}/dashboard.html", 860, 580));
-            menu.Items.Add("设置", null, (_, __) => Shell.TogglePanel("settings", $"http://127.0.0.1:{Shell.Port}/settings.html", 340, 480));
+            menu.Items.Add("设置", null, (_, __) => Shell.TogglePanel("settings", $"http://127.0.0.1:{Shell.Port}/settings.html", 274, 420));
             menu.Items.Add("隐藏（托盘找回）", null, (_, __) => Hide());
             menu.Items.Add("退出", null, (_, __) => Application.Exit());
             ContextMenuStrip = menu;
