@@ -33,7 +33,7 @@ namespace XiaoHeiMao
 
         const int WS_EX_LAYERED = 0x80000, WS_EX_TOOLWINDOW = 0x80;
 
-        const int RING_W = 280, RING_H = 150;      // 环窗尺寸（与猫窗同宽，悬在猫身侧）
+        const int RING_W = 280, RING_H = 260;      // 环窗尺寸（高 260：Follow 锚定头部后，窗底须延到锚点下方 ≥56px，-210° 斜下芯片才不裁）
         const int CHIP_D = 29;                      // 芯片直径（用户校准：缩小 20%）
         const double ARC_R = 96;                    // 弧线半径（大档基准，随体型等比）
         const double ARC_A0 = -210, ARC_A1 = -90;   // 扇形 120° 朝左：一条边垂直，容纳多 harness（用户校准）
