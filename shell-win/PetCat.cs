@@ -24,6 +24,9 @@ namespace XiaoHeiMao
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         struct BLENDFUNCTION { public byte Op, Flags, Alpha, Fmt; }
         [DllImport("user32.dll")] static extern bool UpdateLayeredWindow(IntPtr hwnd, IntPtr hdcDst, ref POINT dst, ref SIZE size, IntPtr hdcSrc, ref POINT src, int crKey, ref BLENDFUNCTION blend, uint flags);
+        [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr hWnd, IntPtr after, int X, int Y, int cx, int cy, uint flags);
+        static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
+        const uint SWP_NOMOVE = 0x2, SWP_NOSIZE = 0x1, SWP_NOACTIVATE = 0x10;
         [DllImport("user32.dll")] static extern IntPtr GetDC(IntPtr hwnd);
         [DllImport("user32.dll")] static extern int ReleaseDC(IntPtr hwnd, IntPtr dc);
         [DllImport("gdi32.dll")] static extern IntPtr CreateCompatibleDC(IntPtr dc);
@@ -36,7 +39,7 @@ namespace XiaoHeiMao
 
         /* ── 配置（与 Electron 版 skin-cat.js 对齐） ────────── */
         const int WIN_W = 280, WIN_H = 250;
-        const int BURY = 13;
+        const int BURY = 8;                        // 脚底没入任务栏（用户校准：原 13，上移 5）
         const double BREATH_AMP = 0.0072, BREATH_MS = 2600;   // 呼吸幅度用户校准：0.012×0.6
         double _scale = 0.42;                      // 体型：0.42 大 / 0.34 中 / 0.27 小（菜单可调，持久化）
         const int FOOT_MARGIN = 2;                 // 原版 canvas bottom:2px
@@ -72,6 +75,7 @@ namespace XiaoHeiMao
         DateTime _lastActive = DateTime.UtcNow;
         volatile string _speech; volatile int _speechUntilSec = -1;   // AI 写入时头顶冒泡（秒数相对 _t0）
         readonly Timer _clickTimer = new Timer { Interval = 280 };   // 单击/双击消歧
+        readonly Timer _zTimer = new Timer { Interval = 2000 };      // 压过任务栏：任务栏同属置顶层，谁后激活谁在上
         readonly NotifyIcon _tray;
 
         public PetWindow()
@@ -139,6 +143,9 @@ namespace XiaoHeiMao
             _tray.ContextMenuStrip = menu;
 
             _clickTimer.Tick += (_, __) => { _clickTimer.Stop(); Shell.ToggleRing(); };
+            // 每 2s 重申 HWND_TOPMOST：被任务栏（同为 topmost）或别的置顶窗压住时自动爬回最上层
+            _zTimer.Tick += (_, __) => { if (IsHandleCreated && !Shell.PetHidden) SetWindowPos(Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE); };
+            _zTimer.Start();
         }
 
         protected override CreateParams CreateParams
