@@ -151,7 +151,7 @@ namespace XiaoHeiMao
                 var server = Path.Combine(RepoRoot, "src", "server", "app.mjs");
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                 {
-                    FileName = "node",
+                    FileName = FindNode(),
                     Arguments = "\"" + server + "\"",
                     WorkingDirectory = RepoRoot,
                     CreateNoWindow = true,
@@ -161,6 +161,33 @@ namespace XiaoHeiMao
                 for (int i = 0; i < 25 && !ServerAlive(); i++) System.Threading.Thread.Sleep(200);
             }
             catch { /* 没有 Node 环境时面板打不开，猫本体不受影响 */ }
+        }
+
+        /// <summary>定位 node.exe：PATH 可能没有它（从终端/托盘/自启动拉起壳时常发生），按常见位置兜底。</summary>
+        static string FindNode()
+        {
+            var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            var candidates = new[]
+            {
+                Path.Combine(profile, ".workbuddy", "binaries", "node", "versions", "current", "node.exe"),
+                @"C:\Program Files\nodejs\node.exe",
+                Path.Combine(local, "Programs", "nodejs", "node.exe"),
+            };
+            foreach (var p in candidates) if (File.Exists(p)) return p;
+            // workbuddy 版本目录兜底：versions\<ver>\node.exe 取字典序最大
+            try
+            {
+                var vd = Path.Combine(profile, ".workbuddy", "binaries", "node", "versions");
+                if (Directory.Exists(vd))
+                {
+                    var latest = Directory.GetDirectories(vd).OrderByDescending(x => x).FirstOrDefault();
+                    var np = latest == null ? null : Path.Combine(latest, "node.exe");
+                    if (np != null && File.Exists(np)) return np;
+                }
+            }
+            catch { }
+            return "node";   // 最后赌一把 PATH
         }
 
         static bool ServerAlive()
