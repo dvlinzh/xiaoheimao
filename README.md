@@ -92,7 +92,7 @@ mind-board-pet/
 │   ├── renderer/pet.*       猫页（透明 + 逐像素命中，WebView2/Electron 通用）
 │   ├── renderer/dock.*      harness 图标环页（120° 扇形，以猫头为圆心）
 │   ├── renderer/bubble.*    思维板面板（四层骨架可视化，可拖拽删除/归档）
-│   └── renderer/docs/       技术图解与标定工具（ring-calibrator.html 等）
+│   └── renderer/docs/       技术图解与文档（架构 / 流程 / 组件 / 风格指南）
 └── scripts/smoke-test.mjs   冒烟测试
 ```
 
