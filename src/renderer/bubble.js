@@ -186,13 +186,20 @@ function goalOf(sk) {
 }
 
 /* 目标竖排：当前目标 22px 大字（点击改名），其余纯文字行（点击切换），末尾虚线新建 */
+/* 折叠：超过 3 个时只留 3 行 + 「⋯」展开；选中某个目标（切换后重渲染）自动收拢 */
+let goalExpanded = false;
 function renderGoalList(sk) {
   const box = $("#goal-list");
   box.replaceChildren();
   if (!sk || !sk.goals?.length) return;
-  const goals = sk.goals.slice(-6).reverse();
-  goals.sort((a, b) => (a.id === sk.currentGoalId ? -1 : b.id === sk.currentGoalId ? 1 : 0));   // 当前目标置顶
-  for (const g of goals) {
+  const pool = sk.goals.slice().reverse();   // 全部目标（新→旧）；折叠态只露前 3 行
+  pool.sort((a, b) => (a.id === sk.currentGoalId ? -1 : b.id === sk.currentGoalId ? 1 : 0));   // 当前目标置顶
+
+  const MAX_VISIBLE = 3;
+  const collapsible = pool.length > MAX_VISIBLE;
+  const rows = (collapsible && !goalExpanded) ? pool.slice(0, MAX_VISIBLE) : pool;
+
+  for (const g of rows) {
     if (g.id === sk.currentGoalId) {
       const el = document.createElement("div");
       el.className = "mt-goal-current";
@@ -208,12 +215,22 @@ function renderGoalList(sk) {
       b.textContent = g.title || I18N.t("goal.untitled");
       b.title = I18N.t("goal.switch") + " · " + I18N.t("dz.del");
       b.addEventListener("click", async () => {
+        goalExpanded = false;   // 选择后收拢
         await jfetch("/api/action", { projectId: curProjectId, action: "switch-goal", params: { id: g.id } });
         loadSkeleton(true);
       });
       bindItemDrag(b, { id: g.id }, g.title || I18N.t("goal.untitled"), { action: "remove-goal" });
       box.appendChild(b);
     }
+  }
+  if (collapsible) {
+    const more = document.createElement("button");
+    more.type = "button";
+    more.className = "mt-goal-tab mt-goal-more";
+    more.textContent = goalExpanded ? I18N.t("goal.less") : I18N.t("goal.more");
+    more.title = goalExpanded ? I18N.t("goal.less.tip") : I18N.t("goal.more.tip");
+    more.addEventListener("click", () => { goalExpanded = !goalExpanded; renderGoalList(curSkeleton); });
+    box.appendChild(more);
   }
   const add = document.createElement("button");
   add.type = "button";

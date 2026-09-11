@@ -1,8 +1,8 @@
-// skin-cat.js — 小黑猫皮肤：三姿态（idle 坐立 / sleep 趴卧 / walk 拎起）
+// skin-cat.js — 小黑猫皮肤：四姿态（idle 坐立 / walk 拎起 / rest 趴卧 / sleep 闭眼深睡）
 // 单层渲染：整猫一体呼吸；拖拽绕后颈弹簧摆；素材替换走 scripts/swap-pose.cjs
 (function () {
   const POSE_FILES = {
-    idle: "cat-idle.png", walk: "cat-walk.png", sleep: "cat-sleep.png",
+    idle: "cat-idle.png", walk: "cat-walk.png", rest: "cat-rest.png", sleep: "cat-sleep.png",
   };
   const MOOD_POSE = {
     idle: "idle", sleep: "sleep",   // alert/ask/celebrate 已按需求移除
@@ -26,6 +26,9 @@
        * （idle 14px / ask 89px / sleep 89px…），按图片底边对齐会让角色悬空
        * （趴睡会飘在任务栏上方）。渲染统一按脚底对齐画布底——窗口底即脚底，
        * 任务栏偏移即微埋量。 */
+      /* 姿态垂直微调（canvas px，正=下移）：坐姿素材影子底被当脚底 → 浮高；
+         24 canvas px ≈ 屏幕 10px（×0.42），对齐 C# 壳的 DyOff=10 */
+      const POSE_DY = { idle: 24 };
       const bottomRow = {};
       for (const [k, img] of Object.entries(imgs)) {
         const oc = document.createElement("canvas");
@@ -64,7 +67,7 @@
         const ox = Math.floor((cvs.width - img.width) / 2);
         // 脚底对齐画布底：各姿态底部留白不同（idle 14px / sleep 89px…），
         // 按图片底边会悬空。bottomRow 无数据（异常）时回退图片底边。
-        const oy = cvs.height - 1 - (bottomRow[pose] ?? img.height - 1);
+        const oy = cvs.height - 1 - (bottomRow[pose] ?? img.height - 1) + (POSE_DY[pose] || 0);
         const filter = dragging ? "none" : (MOOD_FILTER[mood] || "none");
         const breath = Math.sin((t / BREATH.period) * Math.PI * 2);
         // 拎起摆动弹簧：角度向速度目标收敛（主进程 16ms 发一次光标水平速度）
@@ -80,7 +83,7 @@
         }
         ctx.filter = filter;
         ctx.translate(cx, cy);
-        ctx.scale(1 + BREATH.bodyAmp * breath, 1 + BREATH.bodyAmp * 0.6 * breath);
+        ctx.scale(1, 1 + BREATH.bodyAmp * breath);   // 呼吸只做纵向：X 宽度不变
         ctx.translate(-cx, -cy);
         ctx.drawImage(img, ox, oy);
         ctx.restore();
