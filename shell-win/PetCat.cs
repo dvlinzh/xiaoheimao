@@ -3,7 +3,7 @@
 // 渲染：独立线程稳帧 30fps（Stopwatch 配速，避开消息队列的 WM_TIMER 合并抖动）；
 //       画布复用不逐帧分配；尺寸/脚底对齐/呼吸参数对齐 Electron 版（原图 × 0.42）。
 // 交互：拖拽（走姿+摆动弹簧）/ 单击=圆环开关（280ms 消歧）/ 双击=颠 / 右键菜单 / 托盘。
-// 生命感：闲置 5 分钟趴下（睡眠姿态）；AI 写入思维板 → 头顶冒对话框（journal 联动）。
+// 生命感：闲置 5 分钟趴下休息；趴满 10 分钟或整理模式关闭 → 闭眼深睡；AI 写入思维板 → 头顶冒对话框（journal 联动）。
 
 using System;
 using System.IO;
@@ -39,8 +39,12 @@ namespace XiaoHeiMao
 
         /* ── 配置（与 Electron 版 skin-cat.js 对齐） ────────── */
         const int WIN_W = 280, WIN_H = 250;
+        // 裁切下扩 20：素材底边（坐姿尾尖/影子）= 窗底 + DyOff-2 = 超出窗底 8px 被裁。
+        // 只扩窗口/画布向下（窗底没入任务栏 8→28），素材锚定公式与 WIN_H 无关——
+        // 猫的屏幕位置不动，尾巴完整显示。窗口顶（Location 锚）不受影响。
+        const int WIN_TAIL_ROOM = 20;
         const int BURY = 8;                        // 脚底没入任务栏（用户校准：原 13，上移 5）
-        const double BREATH_AMP = 0.0072, BREATH_MS = 2600;   // 呼吸幅度用户校准：0.012×0.6
+        const double BREATH_AMP = 0.0072, BREATH_MS = 2600;   // 呼吸幅度用户校准（0.012×0.6），仅纵向
         double _scale = 0.42;                      // 体型：0.42 大 / 0.34 中 / 0.27 小（菜单可调，持久化）
         const int FOOT_MARGIN = 2;                 // 原版 canvas bottom:2px
 
@@ -57,10 +61,11 @@ namespace XiaoHeiMao
         }
 
         const int FRAME_MS = 33;                    // 30fps：呼吸是慢波，30/60 肉眼无差（用户实测确认）
-        const int IDLE_SLEEP_MS = 5 * 60 * 1000;    // 闲置 5 分钟趴下
+        const int IDLE_REST_MS = 5 * 60 * 1000;     // 闲置 5 分钟 → 趴卧休息
+        const int REST_TO_SLEEP_MS = 10 * 60 * 1000; // 趴卧满 10 分钟 → 闭眼深睡（整理模式关则直接深睡）
 
-        class Pose { public Bitmap Bmp; public int FootRow; }
-        readonly Pose _idle, _walk, _sleep;
+        class Pose { public Bitmap Bmp; public int FootRow; public int DyOff; }   // DyOff：素材垂直微调（窗口px，正=下移）
+        readonly Pose _idle, _walk, _rest, _sleep;
 
         /* 渲染线程专用状态（UI 线程只写位置缓存/标志位） */
         volatile bool _running = true;
@@ -73,9 +78,11 @@ namespace XiaoHeiMao
         bool _dragging; Point _dragOffset;
         double _hop, _swingAng, _swingTarget; Point _lastCursor;
         DateTime _lastActive = DateTime.UtcNow;
+        volatile bool _modeOn = true;              // 整理模式（渲染线程读取；UI 定时器 3s 刷新）
         volatile string _speech; volatile int _speechUntilSec = -1;   // AI 写入时头顶冒泡（秒数相对 _t0）
         readonly Timer _clickTimer = new Timer { Interval = 280 };   // 单击/双击消歧
         readonly Timer _zTimer = new Timer { Interval = 2000 };      // 压过任务栏：任务栏同属置顶层，谁后激活谁在上
+        readonly Timer _modeTimer = new Timer { Interval = 3000 };   // 整理模式轮询（关=闭眼深睡）
         readonly NotifyIcon _tray;
 
         public PetWindow()
@@ -84,12 +91,27 @@ namespace XiaoHeiMao
             StartPosition = FormStartPosition.Manual;
             ShowInTaskbar = false;
             TopMost = Shell.Pin;
-            Size = new Size(WIN_W, WIN_H);
+            Size = new Size(WIN_W, WIN_H + WIN_TAIL_ROOM);   // 窗底向下扩（窗口顶不动，素材位置不变）
 
             var dir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets");
-            _idle = Prepare(Image.FromFile(System.IO.Path.Combine(dir, "cat-idle.png")));
-            _walk = Prepare(Image.FromFile(System.IO.Path.Combine(dir, "cat-walk.png")));
-            _sleep = Prepare(Image.FromFile(System.IO.Path.Combine(dir, "cat-sleep.png")));
+            // 素材兜底：任意一张缺失/损坏都不能让构造函数抛——那等于双击启动即崩、还无任何提示
+            // （cat-rest.png 是后加姿态，新克隆的仓库没被 build.bat 复制到就会触发，此前真崩过一次）。
+            // 单张坏 → 退到坐姿（同款描摹）；坐姿也坏 → 透明空形态：猫看不见，但托盘/菜单/面板照常，进程不死。
+            _idle = TryLoadPose(Path.Combine(dir, "cat-idle.png"));
+            if (_idle == null)
+            {
+                Shell.LogCrash("assets 降级：cat-idle.png 缺失或损坏，以空形态继续运行");
+                _idle = _walk = _rest = _sleep = BlankPose();
+            }
+            else
+            {
+                _walk = TryLoadPose(Path.Combine(dir, "cat-walk.png")) ?? _idle;
+                _rest = TryLoadPose(Path.Combine(dir, "cat-rest.png")) ?? _idle;
+                _sleep = TryLoadPose(Path.Combine(dir, "cat-sleep.png")) ?? _idle;
+            }
+            // 坐姿下沉校准：新坐姿素材自带影子，脚底扫描把影底当脚底 → 猫体浮高 ≈10px。
+            // 趴卧/闭眼影子贴身不显，拎起无影子，均不调。
+            _idle.DyOff = 10;
             _scale = Shell.CatScale;
 
             var wa0 = Screen.PrimaryScreen.WorkingArea;
@@ -146,6 +168,9 @@ namespace XiaoHeiMao
             // 每 2s 重申 HWND_TOPMOST：被任务栏（同为 topmost）或别的置顶窗压住时自动爬回最上层
             _zTimer.Tick += (_, __) => { if (IsHandleCreated && !Shell.PetHidden) SetWindowPos(Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE); };
             _zTimer.Start();
+            // 每 3s 拉一次整理模式：关 → 猫闭眼深睡；拉取失败时 RefreshModeAsync 返回缓存旧值，不会误睡
+            _modeTimer.Tick += async (_, __) => _modeOn = (await Shell.RefreshModeAsync()) != "off";
+            _modeTimer.Start();
         }
 
         protected override CreateParams CreateParams
@@ -172,6 +197,24 @@ namespace XiaoHeiMao
             var wa = Screen.PrimaryScreen.WorkingArea;
             int x = Math.Max(wa.Left, Math.Min(dropX, wa.Right - WIN_W));
             return new Point(x, wa.Bottom - WIN_H + BURY);
+        }
+
+        /// <summary>加载一张姿态图 → Pose。文件缺失/解码失败一律返回 null（交调用方降级），绝不抛。</summary>
+        static Pose TryLoadPose(string path)
+        {
+            try
+            {
+                if (!File.Exists(path)) return null;
+                // using：Image.FromFile 会锁住文件直到释放；早释放 = 运行中重编译/换素材不被占用
+                using (var img = Image.FromFile(path)) return Prepare(img);
+            }
+            catch (Exception ex) { Shell.LogCrash(ex); return null; }
+        }
+
+        /// <summary>全素材不可用时的透明占位（1px）：渲染循环照常跑，只是画不出猫。</summary>
+        static Pose BlankPose()
+        {
+            return new Pose { Bmp = new Bitmap(1, 1, PixelFormat.Format32bppArgb), FootRow = 0 };
         }
 
         /// <summary>源图预处理：①扫描脚底行（最低不透明行，alpha>8——各姿态底部留白不同，
@@ -209,7 +252,7 @@ namespace XiaoHeiMao
         /* ── 渲染循环（独立线程，稳帧） ─────────────────────── */
         void RenderLoop()
         {
-            _frame = new Bitmap(WIN_W, WIN_H, PixelFormat.Format32bppArgb);
+            _frame = new Bitmap(WIN_W, WIN_H + WIN_TAIL_ROOM, PixelFormat.Format32bppArgb);
             var sw = Stopwatch.StartNew();
             while (_running)
             {
@@ -226,9 +269,12 @@ namespace XiaoHeiMao
             double t = (Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency * 1000.0) / BREATH_MS * 2 * Math.PI;
             double breath = Math.Sin(t);
 
-            // 闲置趴下：超时且不在拖拽 → 睡眠姿态
-            bool asleep = !_dragging && (DateTime.UtcNow - _lastActive).TotalMilliseconds > IDLE_SLEEP_MS;
-            var pose = _dragging ? _walk : (asleep ? _sleep : _idle);
+            // 睡姿状态机（拖拽优先，手里拎着永远是走姿）：
+            //   闲置 5min → 趴卧休息；趴满 10min 或整理模式关 → 闭眼深睡
+            long idleMs = (long)(DateTime.UtcNow - _lastActive).TotalMilliseconds;
+            bool deepSleep = !_dragging && (!_modeOn || idleMs > IDLE_REST_MS + REST_TO_SLEEP_MS);
+            bool rest = !_dragging && !deepSleep && idleMs > IDLE_REST_MS;
+            var pose = _dragging ? _walk : (deepSleep ? _sleep : rest ? _rest : _idle);
             var src = pose.Bmp;
 
             // 拖拽摆动弹簧：手速驱动目标摆角，角度向目标收敛（对齐 skin-cat.js）
@@ -242,11 +288,11 @@ namespace XiaoHeiMao
             _swingAng += (_swingTarget - _swingAng) * 0.10;
             _lastCursor = cur;
 
-            double scaleX = _scale * (1 + BREATH_AMP * breath);
-            double scaleY = _scale * (1 + BREATH_AMP * 0.6 * breath);
+            double scaleX = _scale;                            // 呼吸只做纵向：X 宽度不变
+            double scaleY = _scale * (1 + BREATH_AMP * breath);   // 纵向全幅起伏（脚底锚定，头顶起伏）
             int dw = (int)(src.Width * scaleX), dh = (int)(src.Height * scaleY);
             int dx = (WIN_W - dw) / 2;
-            int dy = WIN_H - FOOT_MARGIN - (int)((pose.FootRow + 1) * scaleY) - (int)_hop;
+            int dy = WIN_H - FOOT_MARGIN - (int)((pose.FootRow + 1) * scaleY) - (int)_hop + pose.DyOff;
             _rDx = dx; _rDy = dy; _rDw = dw; _rDh = dh;   // 供圆环锚点读取
 
             using (var g = Graphics.FromImage(_frame))
@@ -340,7 +386,7 @@ namespace XiaoHeiMao
             IntPtr old = SelectObject(mem, hbmp);
             var dst = new POINT { X = _locX, Y = _locY };
             var src = new POINT { X = 0, Y = 0 };
-            var size = new SIZE { CX = WIN_W, CY = WIN_H };
+            var size = new SIZE { CX = WIN_W, CY = WIN_H + WIN_TAIL_ROOM };
             var blend = new BLENDFUNCTION { Op = 255, Flags = 0, Alpha = 255, Fmt = AC_SRC_ALPHA };
             UpdateLayeredWindow(Handle, screen, ref dst, ref size, mem, ref src, 0, ref blend, 2 /*ULW_ALPHA*/);
             SelectObject(mem, old);
@@ -402,7 +448,7 @@ namespace XiaoHeiMao
                 _running = false;
                 try { if (_renderThread != null && !_renderThread.Join(500)) _renderThread.Abort(); } catch { }
                 _frame?.Dispose(); _tray.Dispose();
-                _idle.Bmp.Dispose(); _walk.Bmp.Dispose(); _sleep.Bmp.Dispose();
+                _idle.Bmp.Dispose(); _walk.Bmp.Dispose(); _rest.Bmp.Dispose(); _sleep.Bmp.Dispose();
             }
             base.Dispose(disposing);
         }

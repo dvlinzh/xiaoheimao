@@ -99,6 +99,76 @@ check("迁移留备份", true);   // 备份写入不阻断即算过（存在性�
 store.controlAction(p1.id, { action: "delete" });
 check("delete 任务后读不到", !store.readSkeleton(p1.id));
 
+/* 12. 素材完整性（防"本地有、仓库没有"类事故）
+   真实事故：cat-rest.png 曾只存在于开发者本机、没进 git；build.bat 只 copy 什么就崩在哪，
+   新克隆的仓库里没有这张图 → 壳构造函数 Image.FromFile 抛异常 → 启动即崩无提示。
+   注意：只断言"文件在磁盘存在"抓不到这个 bug（本机永远有），必须断言"被 git 跟踪"。 */
+import { existsSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+
+const REPO_ROOT = join(import.meta.dirname, "..");
+const ASSET_DIR = join(REPO_ROOT, "src", "renderer", "assets");
+const CAT_DIR = join(ASSET_DIR, "cat");
+const POSES = ["cat-idle.png", "cat-walk.png", "cat-rest.png", "cat-sleep.png"];
+
+// 8 字节 PNG 签名 → 校验文件头；IHDR 恒为第一个块，偏移 16/20 是宽高（大端 u32）
+const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const readPngSize = (buf) => {
+  if (buf.length < 24 || !buf.subarray(0, 8).equals(PNG_SIG)) return null;
+  if (buf.toString("ascii", 12, 16) !== "IHDR") return null;   // 不合规：首个块不是 IHDR
+  return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
+};
+
+// git 跟踪查询：只认源目录（shell-win/assets/ 是 build.bat 复制出的部署副本，被 .gitignore 忽略）
+const inGitRepo = (() => {
+  try { execFileSync("git", ["rev-parse", "--is-inside-work-tree"], { cwd: REPO_ROOT, stdio: "pipe" }); return true; }
+  catch { return false; }
+})();
+const gitTracked = (rel) => {
+  try { execFileSync("git", ["ls-files", "--error-unmatch", rel], { cwd: REPO_ROOT, stdio: "pipe" }); return true; }
+  catch { return false; }
+};
+
+// 四张姿态图：存在 → 合法且尺寸合理 → 被 git 跟踪
+for (const f of POSES) {
+  const p = join(CAT_DIR, f);
+  check(`姿态图存在：${f}`, existsSync(p));
+  const sz = existsSync(p) ? readPngSize(readFileSync(p)) : null;
+  check(`姿态图是合法 PNG 且宽高>0：${f}${sz ? ` (${sz.w}×${sz.h})` : ""}`, !!sz && sz.w > 0 && sz.h > 0);
+  if (inGitRepo) check(`姿态图已被 git 跟踪：${f}`, gitTracked(`src/renderer/assets/cat/${f}`));
+}
+if (!inGitRepo) console.log("  - 跳过 git 跟踪断言（当前目录不是 git 仓库）");
+
+/* 13. 壳素材清单与源目录一致：解析 PetCat.cs 里 Image.FromFile(...) 引用的 "cat-*.png"
+   不另抄一份清单常量——抄一份就会退化成"永远同步"的假断言；真解析才能抓住
+   "往 PetCat.cs 加姿态却忘了放素材/入库"这类漂移。 */
+const SHELL_DIR = join(REPO_ROOT, "shell-win");
+const PETCAT = join(SHELL_DIR, "PetCat.cs");
+if (existsSync(PETCAT)) {
+  // 只抽「带引号的 cat-*.png 字面量」，不按「与 Image.FromFile 同行」判定：
+  // 素材加载会被抽进辅助函数（如 TryLoadPose(path)），文件名与加载调用不再同行。
+  // 先剥行注释，防注释里出现的文件名被误当成素材清单。
+  const src = readFileSync(PETCAT, "utf8")
+    .split(/\r?\n/).map((l) => l.replace(/\/\/.*$/, "")).join("\n");
+  const shellPoses = new Set();
+  for (const m of src.matchAll(/"(cat-[^"]+\.png)"/g)) shellPoses.add(m[1]);
+  check("从 PetCat.cs 解析出姿态清单（非空）", shellPoses.size > 0);
+  for (const name of shellPoses) {
+    const p = join(CAT_DIR, name);
+    check(`壳素材存在：${name}`, existsSync(p));
+    if (inGitRepo) check(`壳素材已被 git 跟踪：${name}`, gitTracked(`src/renderer/assets/cat/${name}`));
+  }
+} else {
+  console.log("  - 跳过壳素材清单断言（shell-win/ 不存在，环境被裁剪）");
+}
+
+/* 14. 托盘图：曾因 PNG/ICO 格式不符让壳启动即崩（见 ~/.mind-board/petcat-crash.log） */
+const trayPath = join(ASSET_DIR, "tray.png");
+check("托盘图存在：assets/tray.png", existsSync(trayPath));
+const traySz = existsSync(trayPath) ? readPngSize(readFileSync(trayPath)) : null;
+check(`托盘图是合法 PNG 且宽高>0${traySz ? ` (${traySz.w}×${traySz.h})` : ""}`, !!traySz && traySz.w > 0 && traySz.h > 0);
+if (inGitRepo) check("托盘图已被 git 跟踪", gitTracked("src/renderer/assets/tray.png"));
+
 rmSync(HOME, { recursive: true, force: true });
 console.log(`\n${fail === 0 ? "全部通过 ✓" : fail + " 项失败 ✗"}（${pass} 项）`);
 process.exit(fail === 0 ? 0 : 1);

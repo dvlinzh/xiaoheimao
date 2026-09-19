@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -114,19 +115,39 @@ namespace XiaoHeiMao
                     if (size < _journalPos) { _journalPos = Math.Max(0, size - 4096); return; }   // 轮转了，从尾部附近重来
                     _journalPos = size;
                     if (!j.TryGetValue("events", out var evs) || !(evs is System.Collections.IEnumerable arr)) return;
+                    // 一轮（5s）多条事件只冒一条：紧急 > 提示 > 计数，避免刷屏
+                    string urgent = null, note = null;
                     int added = 0;
                     foreach (var e0 in arr)   // JavaScriptSerializer 数组=ArrayList，非 object[]
                     {
                         if (!(e0 is Dictionary<string, object> e)) continue;
-                        if (Convert.ToString(e.TryGetValue("type", out var t) ? t : "") != "organized") continue;
-                        if (e.TryGetValue("applied", out var ap) && ap is Dictionary<string, object> counts)
-                            foreach (var v in counts.Values) added += Convert.ToInt32(v);
+                        switch (Str(e, "type"))
+                        {
+                            case "organized":   // 整理写入：累计 applied 计数
+                                if (e.TryGetValue("applied", out var ap) && ap is Dictionary<string, object> counts)
+                                    foreach (var v in counts.Values) added += Convert.ToInt32(v);
+                                break;
+                            // 熔断：AI 疑似换目标，待人拍板——最高价值，绝不能静默
+                            case "goal-conflict": if (urgent == null) urgent = $"喵？换目标？{Str(e, "hint")}"; break;
+                            // 数据文件损坏：唯一「真坏了」的信号，必须让人看见
+                            case "json-corrupt": if (urgent == null) urgent = $"喵！数据损坏：{Str(e, "path")}"; break;
+                            case "goal-switched": if (note == null) note = $"喵，换目标：{Str(e, "to")}"; break;
+                            case "project-new": if (note == null) note = $"喵，新板子：{Str(e, "title")}"; break;
+                            // 其余（harness-join/task-deleted/item-removed/archived/imported）是噪音，不接：接了猫变话痨
+                        }
                     }
-                    if (added > 0) Pet?.ShowSpeech($"喵，记下了 +{added}");
+                    var text = urgent ?? note ?? (added > 0 ? $"喵，记下了 +{added}" : null);
+                    if (text != null) Pet?.ShowSpeech(text);
                 }
                 catch { }
             };
             timer.Start();
+        }
+
+        /// <summary>事件字段取值：缺失/非字符串一律给空串（气泡文案拼装不必处处判空）</summary>
+        static string Str(Dictionary<string, object> e, string key)
+        {
+            return e.TryGetValue(key, out var v) ? Convert.ToString(v) : "";
         }
 
         static readonly Dictionary<string, PanelForm> _panels = new Dictionary<string, PanelForm>();
@@ -145,11 +166,12 @@ namespace XiaoHeiMao
         }
         public static void EnsureServer()
         {
-            if (ServerAlive()) return;
+            if (ServerAlive()) return;   // 已有服务（如 Electron 版）→ 复用即可；不记句柄，退出时自然不会误杀它
             try
             {
                 var server = Path.Combine(RepoRoot, "src", "server", "app.mjs");
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                // 记句柄：只有这条「本壳亲手拉起」的路径能赋值，退出时据此精确级联清理（见 KillSpawnedServer）
+                _serverProc = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                 {
                     FileName = FindNode(),
                     Arguments = "\"" + server + "\"",
@@ -161,6 +183,17 @@ namespace XiaoHeiMao
                 for (int i = 0; i < 25 && !ServerAlive(); i++) System.Threading.Thread.Sleep(200);
             }
             catch { /* 没有 Node 环境时面板打不开，猫本体不受影响 */ }
+        }
+
+        static Process _serverProc;   // 仅「本壳亲手拉起」的 node 有句柄；复用的服务保持 null
+
+        /// <summary>退出收尾：只杀本壳拉起的 node。_serverProc 为 null = 服务是复用的（别人在跑），绝不碰。
+        /// 服务端（app.mjs）不 spawn 孙进程，故普通 Kill 足矣，无需 Job Object / taskkill /T。</summary>
+        public static void KillSpawnedServer()
+        {
+            var p = _serverProc; _serverProc = null;
+            if (p == null) return;
+            try { if (!p.HasExited) { p.Kill(); p.WaitForExit(3000); } } catch { }
         }
 
         /// <summary>定位 node.exe：PATH 可能没有它（从终端/托盘/自启动拉起壳时常发生），按常见位置兜底。</summary>
@@ -378,9 +411,6 @@ namespace XiaoHeiMao
                 case "getState":
                     from?.AnswerCallback(m.id, new { edge = "taskbar", pin = Pin, autostart = ReadAutostart(), isDev = false, petHidden = PetHidden });
                     break;
-                case "toggleCalibrator":
-                    TogglePanel("calibrator", $"http://127.0.0.1:{Port}/docs/ring-calibrator.html", 720, 620);
-                    break;
             }
         }
     }
@@ -437,7 +467,6 @@ namespace XiaoHeiMao
     setAutostart: (v) => post({ t: 'setAutostart', v: !!v }),
     setWinHeight: (h) => post({ t: 'setWinHeight', hh: Number(h) || 0 }),
     openDataDir: () => post({ t: 'openDataDir' }),
-    toggleCalibrator: () => post({ t: 'toggleCalibrator' }),
     openExternal: (u) => post({ t: 'openExternal', u }),
     openDashboard: () => post({ t: 'openDashboard' }),
     getState: () => new Promise((res) => { const id = ++cbId; pending[id] = res; post({ t: 'getState', id }); }),
@@ -607,6 +636,9 @@ namespace XiaoHeiMao
             AppDomain.CurrentDomain.UnhandledException += (_, e) => Shell.LogCrash(e.ExceptionObject);
             Application.ThreadException += (_, e) => Shell.LogCrash("[UI] " + e.Exception);
             Application.EnableVisualStyles();
+            // 退出钩子选 ApplicationExit：托盘「退出」/桥 quit 都走 Application.Exit()，
+            // 且主窗不绑 ApplicationContext，FormClosing 不会触发——这里才是所有正常退出的唯一汇合点
+            Application.ApplicationExit += (_, __) => Shell.KillSpawnedServer();
             Shell.LoadState();
             Shell.EnsureServer();
             Shell.Pet = new PetWindow();

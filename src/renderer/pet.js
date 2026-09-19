@@ -8,7 +8,7 @@ if (!bridge) document.documentElement.classList.add("in-browser");
 let mode = "off";
 let lastDataAt = Date.now();
 let lastInteraction = Date.now();
-let modules = { juggle: true, autoJuggle: true, speech: true, tutorial: true, celebrate: true };
+let modules = { juggle: true, autoJuggle: true, speech: true, tutorial: true };
 let Pet = null;            // 当前皮肤 API
 let greeted = false;
 
